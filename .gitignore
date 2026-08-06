@@ -1,4 +1,5 @@
 .worktrees/
+.wxt/
 node_modules/
 .output/
 coverage/
