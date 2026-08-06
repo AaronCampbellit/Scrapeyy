@@ -7,5 +7,13 @@ export default defineConfig({
     description: "Capture structured data and design references from websites.",
     permissions: ["activeTab", "scripting", "storage", "downloads", "alarms"],
     optional_host_permissions: ["http://*/*", "https://*/*"],
+    browser_specific_settings: {
+      gecko: {
+        id: "scrapeyy@local",
+        data_collection_permissions: {
+          required: ["none"],
+        },
+      },
+    },
   },
 });
