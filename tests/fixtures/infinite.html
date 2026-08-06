@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Scrapeyy Infinite Scroll Fixture</title>
+    <style>.card { min-height: 70vh; }</style>
+  </head>
+  <body>
+    <main id="products">
+      <article class="card" data-product-id="alpha"><h2>Alpha</h2></article>
+      <article class="card" data-product-id="beta"><h2>Beta</h2></article>
+    </main>
+    <script>
+      const remaining = ["Gamma", "Delta"];
+      window.addEventListener("scroll", () => {
+        if (window.innerHeight + window.scrollY < document.body.scrollHeight - 20) return;
+        const title = remaining.shift();
+        if (!title) return;
+        document.querySelector("#products").insertAdjacentHTML(
+          "beforeend",
+          `<article class="card" data-product-id="${title.toLowerCase()}"><h2>${title}</h2></article>`,
+        );
+      });
+    </script>
+  </body>
+</html>

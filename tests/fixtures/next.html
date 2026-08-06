@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Scrapeyy Next Fixture</title>
+  </head>
+  <body>
+    <main id="products">
+      <article class="card" data-product-id="alpha"><h2>Alpha</h2></article>
+    </main>
+    <button class="next" type="button">Next</button>
+    <script>
+      const pages = [["Beta"], ["Gamma"]];
+      let page = 0;
+      document.querySelector(".next").addEventListener("click", (event) => {
+        const title = pages[page++];
+        if (!title) {
+          event.currentTarget.disabled = true;
+          return;
+        }
+        document.querySelector("#products").innerHTML =
+          `<article class="card" data-product-id="${title.toLowerCase()}"><h2>${title}</h2></article>`;
+      });
+    </script>
+  </body>
+</html>
