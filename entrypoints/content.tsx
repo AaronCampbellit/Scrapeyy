@@ -1,7 +1,7 @@
 import { createRoot, type Root } from "react-dom/client";
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root";
 
-import type { Recipe } from "../src/contracts/models";
+import type { Recipe, RunError } from "../src/contracts/models";
 import { createDesignSnapshot } from "../src/design/snapshot";
 import { extractRecords } from "../src/extraction/extract";
 import { fingerprintRecord } from "../src/extraction/fingerprint";
@@ -15,6 +15,8 @@ import { advanceNextControl } from "../src/traversal/next";
 import { runTraversal } from "../src/traversal/run-traversal";
 
 async function executeRecipe(recipe: Recipe) {
+  const errors: RunError[] = [];
+  let matchedAPage = false;
   const result = await runTraversal(
     recipe.traversal,
     {
@@ -26,8 +28,32 @@ async function executeRecipe(recipe: Recipe) {
       advanceScroll: (stepPx, timeoutMs) =>
         advanceInfiniteScroll(window, stepPx, timeoutMs),
     },
-    async () =>
-      extractRecords(document, recipe.containerSelector, recipe.fields),
+    async () => {
+      const selectorMatched =
+        document.querySelector(recipe.containerSelector) !== null;
+      if (!selectorMatched) {
+        const authenticationVisible =
+          document.querySelector('input[type="password"]') !== null;
+        errors.push({
+          code: authenticationVisible ? "AUTHENTICATION_REQUIRED" : "SELECTOR_CHANGED",
+          message: authenticationVisible
+            ? "The site requires an authenticated browser session."
+            : matchedAPage
+              ? "The item selector stopped matching on a later page."
+              : "The configured item selector no longer matches this page.",
+          recoverable: true,
+          pageUrl: window.location.href,
+          selector: recipe.containerSelector,
+        });
+        return [];
+      }
+      matchedAPage = true;
+      return extractRecords(
+        document,
+        recipe.containerSelector,
+        recipe.fields,
+      );
+    },
     (record) => fingerprintRecord(record, recipe.fields),
   );
   const selected = document.querySelector(recipe.containerSelector);
@@ -35,10 +61,24 @@ async function executeRecipe(recipe: Recipe) {
     selected && recipe.mode !== "data"
       ? await createDesignSnapshot(selected)
       : undefined;
+  const bounds = selected?.getBoundingClientRect();
   return {
     records: result.records,
     warnings: result.warnings,
+    errors,
     ...(design === undefined ? {} : { design }),
+    ...(design && bounds
+      ? {
+          designBounds: {
+            left: bounds.left,
+            top: bounds.top,
+            width: bounds.width,
+            height: bounds.height,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+          },
+        }
+      : {}),
   };
 }
 
@@ -63,20 +103,19 @@ export default defineContentScript({
         onMount(container) {
           const root = createRoot(container);
           const close = () => ui?.remove();
-          const send = (type: string, capture: PickerCapture) => {
-            void browser.runtime.sendMessage({ type, capture });
+          const send = async (type: string, capture: PickerCapture) => {
+            await browser.runtime.sendMessage({ type, capture });
+            close();
           };
           root.render(
             <PickerApp
               ownerDocument={document}
               projectId="default-project"
               projectName="Local captures"
-              onCapture={(capture) =>
-                send("SCRAPEYY_QUICK_CAPTURE", capture)
-              }
+              onCapture={(capture) => void send("SCRAPEYY_QUICK_CAPTURE", capture)}
               onClose={close}
               onSaveRecipe={(capture) =>
-                send("SCRAPEYY_SAVE_PICKER_RECIPE", capture)
+                void send("SCRAPEYY_SAVE_PICKER_RECIPE", capture)
               }
             />,
           );

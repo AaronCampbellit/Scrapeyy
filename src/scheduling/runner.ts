@@ -4,11 +4,15 @@ import type {
   Recipe,
   RunError,
 } from "../contracts/models";
+import type { DesignSnapshot } from "../design/snapshot";
+import type { ElementBounds } from "../platform/screenshots";
 
 export interface PageExecutionResult {
   records: CaptureRecord[];
   warnings: string[];
   errors?: RunError[];
+  design?: DesignSnapshot;
+  designBounds?: ElementBounds;
 }
 
 export interface RunRecipeDependencies {

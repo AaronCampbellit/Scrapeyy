@@ -19,7 +19,10 @@ export async function downloadBundle(
   saveAs = false,
   api: DownloadApi = defaultApi,
 ): Promise<number> {
-  const url = URL.createObjectURL(bundle);
+  const objectUrlSupported = typeof URL.createObjectURL === "function";
+  const url = objectUrlSupported
+    ? URL.createObjectURL(bundle)
+    : await blobDataUrl(bundle);
   try {
     return await api.download({
       url,
@@ -28,6 +31,18 @@ export async function downloadBundle(
       conflictAction: "uniquify",
     });
   } finally {
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    if (objectUrlSupported) {
+      globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
   }
+}
+
+async function blobDataUrl(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return `data:${blob.type || "application/octet-stream"};base64,${btoa(binary)}`;
 }
