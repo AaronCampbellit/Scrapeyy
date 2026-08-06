@@ -1,0 +1,7 @@
+.worktrees/
+node_modules/
+.output/
+coverage/
+dist/
+*.zip
+.DS_Store
