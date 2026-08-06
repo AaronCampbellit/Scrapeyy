@@ -558,6 +558,15 @@
   font-size: 12px;
 }
 
+.permission-settings {
+  border-top: 1px solid var(--border-soft);
+}
+
+.permission-settings code {
+  color: var(--ink-soft);
+  font: 12px var(--mono);
+}
+
 .file-button input {
   display: none;
 }

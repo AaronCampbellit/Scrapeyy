@@ -23,20 +23,35 @@ result does not count as browser acceptance.
 
 | # | Workflow | Chrome | Firefox |
 |---:|---|---|---|
-| 1 | Quick Data capture from `list.html` | PENDING | PENDING |
-| 2 | Quick Design capture from `assets.html` | PENDING | PENDING |
-| 3 | Both-mode capture | PENDING | PENDING |
-| 4 | Save and rerun a repeated-list recipe | PENDING | PENDING |
-| 5 | Next-button traversal from `next.html` | PENDING | PENDING |
-| 6 | Infinite-scroll traversal from `infinite.html` | PENDING | PENDING |
-| 7 | One-time active-tab access | PENDING | PENDING |
-| 8 | Grant and revoke persistent origin access | PENDING | PENDING |
-| 9 | Manual recipe run | PENDING | PENDING |
-| 10 | Scheduled run and at-most-one catch-up | PENDING | PENDING |
-| 11 | Inbox preview, pinning, deletion, and 20-run retention | PENDING | PENDING |
-| 12 | Automatic and manual ZIP export | PENDING | PENDING |
-| 13 | Project/recipe configuration export and import | PENDING | PENDING |
-| 14 | Selector-change and login-required recovery | PENDING | PENDING |
+| 1 | Quick Data capture from `list.html` | BLOCKED | BLOCKED |
+| 2 | Quick Design capture from `assets.html` | BLOCKED | BLOCKED |
+| 3 | Both-mode capture | BLOCKED | BLOCKED |
+| 4 | Save and rerun a repeated-list recipe | BLOCKED | BLOCKED |
+| 5 | Next-button traversal from `next.html` | BLOCKED | BLOCKED |
+| 6 | Infinite-scroll traversal from `infinite.html` | BLOCKED | BLOCKED |
+| 7 | One-time active-tab access | BLOCKED | BLOCKED |
+| 8 | Grant and revoke persistent origin access | BLOCKED | BLOCKED |
+| 9 | Manual recipe run | BLOCKED | BLOCKED |
+| 10 | Scheduled run and at-most-one catch-up | BLOCKED | BLOCKED |
+| 11 | Inbox preview, pinning, deletion, and 20-run retention | BLOCKED | BLOCKED |
+| 12 | Automatic and manual ZIP export | BLOCKED | BLOCKED |
+| 13 | Project/recipe configuration export and import | BLOCKED | BLOCKED |
+| 14 | Selector-change and login-required recovery | BLOCKED | BLOCKED |
+
+### Interactive evidence from 2026-08-06
+
+- Chrome acceptance is blocked because the installed-Chrome browser connection
+  was unavailable to the test runtime. It was not replaced with a different
+  automation path.
+- Official Firefox acceptance is blocked because Firefox was not installed.
+- Firefox-family compatibility smoke testing in Zen 1.21.10b (Firefox
+  153.0.1) passed temporary add-on loading, dashboard rendering, recipe
+  creation, the website-access settings UI, and safe missing-origin-permission
+  failure handling.
+- Persistent website access was intentionally left ungranted because expanding
+  persistent browser access requires explicit confirmation at action time.
+- The Zen compatibility smoke is supporting evidence only and does not count
+  as Firefox acceptance in the table above.
 
 ## Export inspection
 

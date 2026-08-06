@@ -68,6 +68,7 @@ describe("DashboardApp", () => {
         projects: [project],
         recipes: [recipe],
         runs: [partialRun],
+        permissions: { "https://example.test": false },
       }),
       exportRun,
       runRecipe: vi.fn(),
@@ -78,6 +79,8 @@ describe("DashboardApp", () => {
       syncSchedules: vi.fn(),
       exportConfiguration: vi.fn(),
       importConfiguration: vi.fn(),
+      requestOriginAccess: vi.fn(),
+      revokeOriginAccess: vi.fn(),
     };
 
     render(<DashboardApp services={services} />);
@@ -90,5 +93,39 @@ describe("DashboardApp", () => {
     expect(exportButton).toBeEnabled();
     await user.click(exportButton);
     expect(exportRun).toHaveBeenCalledWith("run-1");
+  });
+
+  it("reports a failed manual run without claiming capture success", async () => {
+    const user = userEvent.setup();
+    const services: DashboardServices = {
+      load: vi.fn().mockResolvedValue({
+        projects: [project],
+        recipes: [recipe],
+        runs: [],
+        permissions: { "https://example.test": false },
+      }),
+      runRecipe: vi.fn().mockResolvedValue({
+        ...partialRun,
+        status: "failed",
+        recordCount: 0,
+        records: [],
+      }),
+      exportRun: vi.fn(),
+      saveProject: vi.fn(),
+      saveRecipe: vi.fn(),
+      deleteRun: vi.fn(),
+      pinRun: vi.fn(),
+      syncSchedules: vi.fn(),
+      exportConfiguration: vi.fn(),
+      importConfiguration: vi.fn(),
+      requestOriginAccess: vi.fn(),
+      revokeOriginAccess: vi.fn(),
+    };
+
+    render(<DashboardApp services={services} />);
+    await user.click(await screen.findByRole("tab", { name: "Recipes" }));
+    await user.click(screen.getAllByRole("button", { name: "Run" })[0]!);
+
+    expect(await screen.findByText("Capture failed. Review the inbox.")).toBeVisible();
   });
 });

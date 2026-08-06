@@ -71,7 +71,15 @@ async function loadPopup() {
         }}
         onTogglePersistentAccess={async (siteOrigin, enable) => {
           if (enable) await requestOriginAccess(siteOrigin);
-          else await revokeOriginAccess(siteOrigin);
+          else {
+            const revoked = await revokeOriginAccess(siteOrigin);
+            if (revoked) {
+              await extensionBrowser.runtime.sendMessage({
+                type: "SCRAPEYY_PERMISSION_REVOKED",
+                origin: siteOrigin,
+              });
+            }
+          }
           window.location.reload();
         }}
       />

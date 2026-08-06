@@ -11,24 +11,32 @@ export interface DashboardData {
   projects: Project[];
   recipes: Recipe[];
   runs: CaptureRun[];
+  permissions: Record<string, boolean>;
 }
 
 export interface DashboardServices {
   load(): Promise<DashboardData>;
   saveProject(project: Project): Promise<void>;
   saveRecipe(recipe: Recipe): Promise<void>;
-  runRecipe(recipeId: string): Promise<unknown>;
+  runRecipe(recipeId: string): Promise<CaptureRun>;
   exportRun(runId: string): Promise<void>;
   deleteRun(runId: string): Promise<void>;
   pinRun(runId: string, pinned: boolean): Promise<void>;
   syncSchedules(): Promise<void>;
   exportConfiguration(): Promise<void>;
   importConfiguration(configuration: ConfigurationV1): Promise<void>;
+  requestOriginAccess(origin: string): Promise<boolean>;
+  revokeOriginAccess(origin: string): Promise<boolean>;
 }
 
 type View = "projects" | "recipes" | "inbox" | "settings";
 
-const emptyData: DashboardData = { projects: [], recipes: [], runs: [] };
+const emptyData: DashboardData = {
+  projects: [],
+  recipes: [],
+  runs: [],
+  permissions: {},
+};
 
 function newRecipe(projectId: string): Recipe {
   const now = new Date().toISOString();
@@ -87,9 +95,15 @@ export function DashboardApp({ services }: { services: DashboardServices }) {
 
   const runAndRefresh = async (recipeId: string) => {
     setNotice("Capture running…");
-    await services.runRecipe(recipeId);
+    const run = await services.runRecipe(recipeId);
     await refresh();
-    setNotice("Capture saved to the inbox.");
+    setNotice(
+      run.status === "failed" || run.status === "missed"
+        ? "Capture failed. Review the inbox."
+        : run.status === "partial"
+          ? "Partial capture saved. Review the inbox."
+          : "Capture saved to the inbox.",
+    );
   };
 
   return (
@@ -272,6 +286,48 @@ export function DashboardApp({ services }: { services: DashboardServices }) {
                   <p>Keep the latest 20 runs per recipe. Pinned runs are kept.</p>
                 </div>
                 <input aria-label="Runs retained per recipe" type="number" value="20" readOnly />
+              </div>
+              <div className="permission-settings">
+                <div className="settings-row">
+                  <div>
+                    <strong>Website access</strong>
+                    <p>
+                      Grant only the origins needed for scheduled or dashboard
+                      runs.
+                    </p>
+                  </div>
+                </div>
+                {[...new Set(data.recipes.map((recipe) => recipe.origin))].map(
+                  (origin) => {
+                    const allowed = data.permissions[origin] ?? false;
+                    return (
+                      <div className="settings-row" key={origin}>
+                        <code>{origin}</code>
+                        <span
+                          className={`run-status ${
+                            allowed ? "status-success" : "status-missed"
+                          }`}
+                        >
+                          {allowed ? "Allowed" : "One-time only"}
+                        </span>
+                        <button
+                          className="button"
+                          type="button"
+                          onClick={async () => {
+                            if (allowed) {
+                              await services.revokeOriginAccess(origin);
+                            } else {
+                              await services.requestOriginAccess(origin);
+                            }
+                            await refresh();
+                          }}
+                        >
+                          {allowed ? "Revoke access" : "Allow access"}
+                        </button>
+                      </div>
+                    );
+                  },
+                )}
               </div>
             </section>
           ) : null}

@@ -415,6 +415,31 @@ export default defineBackground(() => {
       if (value.type === "SCRAPEYY_SYNC_SCHEDULES") {
         return syncSchedules().then(() => ({ ok: true }));
       }
+      if (
+        value.type === "SCRAPEYY_PERMISSION_REVOKED" &&
+        typeof value.origin === "string"
+      ) {
+        return recipes.list().then(async (savedRecipes) => {
+          await Promise.all(
+            savedRecipes
+              .filter(
+                (recipe) =>
+                  recipe.origin === value.origin && recipe.schedule?.enabled,
+              )
+              .map((recipe) =>
+                recipes.put({
+                  ...recipe,
+                  schedule: recipe.schedule
+                    ? { ...recipe.schedule, enabled: false }
+                    : null,
+                  updatedAt: new Date().toISOString(),
+                }),
+              ),
+          );
+          await syncSchedules();
+          return { ok: true };
+        });
+      }
       return undefined;
     },
   );

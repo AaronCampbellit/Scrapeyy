@@ -12,7 +12,13 @@ import {
   type DashboardServices,
 } from "../../src/features/dashboard/DashboardApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
+import {
+  hasOriginAccess,
+  requestOriginAccess,
+  revokeOriginAccess,
+} from "../../src/platform/permissions";
 import { CaptureDatabase } from "../../src/storage/capture-database";
+import { migrateConfiguration } from "../../src/storage/migrations";
 import {
   createSettingsRepository,
   type StorageArea,
@@ -25,11 +31,18 @@ const captures = new CaptureDatabase();
 
 const services: DashboardServices = {
   async load() {
+    const savedRecipes = await recipes.list();
+    const origins = [...new Set(savedRecipes.map((recipe) => recipe.origin))];
     return {
       projects: await projects.list(),
-      recipes: await recipes.list(),
+      recipes: savedRecipes,
       runs: (await captures.listRuns()).sort((a, b) =>
         b.startedAt.localeCompare(a.startedAt),
+      ),
+      permissions: Object.fromEntries(
+        await Promise.all(
+          origins.map(async (origin) => [origin, await hasOriginAccess(origin)]),
+        ),
       ),
     };
   },
@@ -73,11 +86,20 @@ const services: DashboardServices = {
     URL.revokeObjectURL(url);
   },
   async importConfiguration(configuration) {
-    if (configuration.version !== 1) {
-      throw new Error("Unsupported Scrapeyy configuration version");
+    const migrated = migrateConfiguration(configuration);
+    await Promise.all(migrated.projects.map((project) => projects.put(project)));
+    await Promise.all(migrated.recipes.map((recipe) => recipes.put(recipe)));
+  },
+  requestOriginAccess,
+  async revokeOriginAccess(origin) {
+    const revoked = await revokeOriginAccess(origin);
+    if (revoked) {
+      await extensionBrowser.runtime.sendMessage({
+        type: "SCRAPEYY_PERMISSION_REVOKED",
+        origin,
+      });
     }
-    await Promise.all(configuration.projects.map((project) => projects.put(project)));
-    await Promise.all(configuration.recipes.map((recipe) => recipes.put(recipe)));
+    return revoked;
   },
 };
 
