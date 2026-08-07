@@ -147,6 +147,19 @@ export default defineContentScript({
       | Awaited<ReturnType<typeof createShadowRootUi<Root>>>
       | undefined;
 
+    const setCaptureUiHidden = async (hidden: boolean) => {
+      const shadowHost = ui?.shadowHost;
+      if (!shadowHost) return;
+      shadowHost.style.visibility = hidden ? "hidden" : "";
+      if (hidden) {
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => resolve());
+          });
+        });
+      }
+    };
+
     const mountPicker = async (
       variant: "quick" | "recipe",
       initialRecipe?: Recipe,
@@ -206,6 +219,12 @@ export default defineContentScript({
       const value = message as Record<string, unknown>;
       if (value.type === "SCRAPEYY_PING") {
         return Promise.resolve({ ok: true });
+      }
+      if (
+        value.type === "SCRAPEYY_SET_CAPTURE_UI_HIDDEN" &&
+        typeof value.hidden === "boolean"
+      ) {
+        return setCaptureUiHidden(value.hidden).then(() => ({ ok: true }));
       }
       if (
         value.type === "SCRAPEYY_START_QUICK_PICKER" ||

@@ -18,6 +18,11 @@ export interface ImageCropper {
   crop(dataUrl: string, bounds: ElementBounds): Promise<Blob>;
 }
 
+export interface ScreenshotUiVisibility {
+  hide(): Promise<void>;
+  show(): Promise<void>;
+}
+
 const defaultApi: ScreenshotApi = {
   async getTab(tabId) {
     const tab = await extensionBrowser.tabs.get(tabId);
@@ -76,6 +81,7 @@ export async function captureElementScreenshot(
   bounds: ElementBounds,
   api: ScreenshotApi = defaultApi,
   cropper: ImageCropper = offscreenCropper,
+  uiVisibility?: ScreenshotUiVisibility,
 ): Promise<Blob | undefined> {
   if (
     !Number.isFinite(bounds.width) ||
@@ -87,11 +93,20 @@ export async function captureElementScreenshot(
   ) {
     return undefined;
   }
+  let uiHidden = false;
   try {
     const tab = await api.getTab(tabId);
+    if (uiVisibility) {
+      await uiVisibility.hide();
+      uiHidden = true;
+    }
     const dataUrl = await api.captureVisibleTab(tab.windowId);
     return await cropper.crop(dataUrl, bounds);
   } catch {
     return undefined;
+  } finally {
+    if (uiHidden) {
+      await uiVisibility?.show().catch(() => undefined);
+    }
   }
 }

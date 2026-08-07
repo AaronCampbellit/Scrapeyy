@@ -91,4 +91,49 @@ describe("origin permissions", () => {
 
     expect(await screenshot?.text()).toBe("320x180");
   });
+
+  it("hides extension UI before screenshot capture and restores it afterward", async () => {
+    const events: string[] = [];
+    let uiHidden = false;
+    const api: ScreenshotApi = {
+      getTab: async () => ({ windowId: 7 }),
+      captureVisibleTab: async () => {
+        events.push(`capture:${uiHidden}`);
+        return "data:image/png;base64,c2NyYXBleXk=";
+      },
+    };
+    const cropper: ImageCropper = {
+      crop: async () => {
+        events.push(`crop:${uiHidden}`);
+        return new Blob(["clean"], { type: "image/png" });
+      },
+    };
+
+    await captureElementScreenshot(
+      42,
+      {
+        left: 10,
+        top: 20,
+        width: 320,
+        height: 180,
+        viewportWidth: 1_280,
+        viewportHeight: 720,
+      },
+      api,
+      cropper,
+      {
+        hide: async () => {
+          uiHidden = true;
+          events.push("hide");
+        },
+        show: async () => {
+          uiHidden = false;
+          events.push("show");
+        },
+      },
+    );
+
+    expect(events).toEqual(["hide", "capture:true", "crop:true", "show"]);
+    expect(uiHidden).toBe(false);
+  });
 });

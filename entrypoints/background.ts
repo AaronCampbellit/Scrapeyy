@@ -308,6 +308,24 @@ export default defineBackground(() => {
       const screenshot = await captureElementScreenshot(
         tabId,
         execution.designBounds,
+        undefined,
+        undefined,
+        {
+          hide: () =>
+            extensionBrowser.tabs
+              .sendMessage(tabId, {
+                type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN",
+                hidden: true,
+              })
+              .then(() => undefined),
+          show: () =>
+            extensionBrowser.tabs
+              .sendMessage(tabId, {
+                type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN",
+                hidden: false,
+              })
+              .then(() => undefined),
+        },
       );
       if (screenshot) execution.design.screenshot = screenshot;
     }
