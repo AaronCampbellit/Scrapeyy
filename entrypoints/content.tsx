@@ -146,7 +146,10 @@ export default defineContentScript({
       | Awaited<ReturnType<typeof createShadowRootUi<Root>>>
       | undefined;
 
-    const mountPicker = async (variant: "quick" | "recipe") => {
+    const mountPicker = async (
+      variant: "quick" | "recipe",
+      initialRecipe?: Recipe,
+    ) => {
       if (ui) {
         ui.remove();
         ui = undefined;
@@ -172,6 +175,7 @@ export default defineContentScript({
               variant={variant}
               projectId="default-project"
               projectName="Local captures"
+              {...(initialRecipe ? { initialRecipe } : {})}
               onQuickCapture={(capture) =>
                 browser.runtime
                   .sendMessage({ type: "SCRAPEYY_QUICK_CAPTURE", capture })
@@ -207,7 +211,10 @@ export default defineContentScript({
         return mountPicker("quick").then(() => ({ ok: true }));
       }
       if (value.type === "SCRAPEYY_START_RECIPE_PICKER") {
-        return mountPicker("recipe").then(() => ({ ok: true }));
+        return mountPicker(
+          "recipe",
+          value.recipe as Recipe | undefined,
+        ).then(() => ({ ok: true }));
       }
       if (
         value.type === "SCRAPEYY_EXECUTE_QUICK_CAPTURE" &&

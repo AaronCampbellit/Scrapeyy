@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
-  PickerCapture,
   QuickCaptureRequest,
 } from "../../src/features/picker/PickerApp";
+import type { Recipe } from "../../src/contracts/models";
 import { PickerApp } from "../../src/features/picker/PickerApp";
 
 describe("PickerApp", () => {
@@ -39,6 +39,7 @@ describe("PickerApp", () => {
     expect(
       screen.getByText("Click content to select · Esc to cancel"),
     ).toBeVisible();
+    expect(document.documentElement.style.cursor).toBe("crosshair");
     expect(screen.queryByText("Fields")).toBeNull();
     expect(screen.queryByText("Pagination")).toBeNull();
     expect(screen.queryByText("Safety limits")).toBeNull();
@@ -47,6 +48,7 @@ describe("PickerApp", () => {
     fireEvent.pointerMove(target);
     fireEvent.click(target);
 
+    expect(document.documentElement.style.cursor).toBe("");
     expect(screen.getByRole("group", { name: "Capture type" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Data" })).toHaveAttribute(
       "aria-pressed",
@@ -71,7 +73,7 @@ describe("PickerApp", () => {
 
   it("keeps advanced options inside Create Recipe", async () => {
     const user = userEvent.setup();
-    let recipe: PickerCapture | undefined;
+    let recipe: Recipe | undefined;
     render(
       <PickerApp
         ownerDocument={document}
@@ -89,13 +91,23 @@ describe("PickerApp", () => {
     fireEvent.pointerMove(target);
     fireEvent.click(target);
 
-    expect(screen.getByText("Fields")).toBeVisible();
-    expect(screen.getByText("Pagination")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Selection" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByRole("heading", { name: "Fields" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByRole("heading", { name: "Pagination" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByLabelText("Recipe name")).toBeVisible();
     expect(screen.getByText("Safety limits")).toBeVisible();
-    expect(screen.getByText("2 matches")).toBeVisible();
+    expect(screen.getByText("Schedule")).toBeVisible();
+    expect(screen.getByLabelText("Download after each run")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByRole("heading", { name: "Review" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Save recipe" }));
     expect(recipe).toMatchObject({
+      version: 1,
+      name: "New recipe",
       mode: "both",
       containerSelector: "article.product-card",
       traversal: {
@@ -104,6 +116,45 @@ describe("PickerApp", () => {
         maxPages: 5,
         maxItems: 250,
       },
+      destinations: { inbox: true, autoDownload: false },
     });
+  });
+
+  it("opens an existing recipe at its saved selection", () => {
+    const existing: Recipe = {
+      version: 1,
+      id: "recipe-1",
+      projectId: "project-1",
+      name: "Existing cards",
+      origin: "http://localhost",
+      startUrl: "http://localhost/",
+      mode: "data",
+      containerSelector: "article.product-card",
+      fields: [{ id: "title", name: "Title", kind: "text", selector: "h2" }],
+      traversal: {
+        kind: "none",
+        maxPages: 1,
+        maxItems: 100,
+        delayMs: 0,
+        timeoutMs: 10_000,
+      },
+      destinations: { inbox: true, autoDownload: true },
+      schedule: null,
+      createdAt: "2026-08-06T12:00:00.000Z",
+      updatedAt: "2026-08-06T12:00:00.000Z",
+    };
+
+    render(
+      <PickerApp
+        ownerDocument={document}
+        variant="recipe"
+        projectId="project-1"
+        projectName="Acme research"
+        initialRecipe={existing}
+      />,
+    );
+
+    expect(screen.getByText("Create Recipe")).toBeVisible();
+    expect(screen.getByText("2 matches")).toBeVisible();
   });
 });

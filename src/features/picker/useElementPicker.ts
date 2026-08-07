@@ -9,11 +9,13 @@ import {
 export function useElementPicker(
   ownerDocument: Document,
   onCancel?: () => void,
+  initialSelected?: Element,
 ) {
-  const [phase, setPhase] = useState<SelectionPhase>("hovering");
-  const [hovered, setHovered] = useState<Element>();
-  const [selected, setSelected] = useState<Element>();
-  const phaseRef = useRef<SelectionPhase>("hovering");
+  const initialPhase: SelectionPhase = initialSelected ? "selected" : "hovering";
+  const [phase, setPhase] = useState<SelectionPhase>(initialPhase);
+  const [hovered, setHovered] = useState<Element | undefined>(initialSelected);
+  const [selected, setSelected] = useState<Element | undefined>(initialSelected);
+  const phaseRef = useRef<SelectionPhase>(initialPhase);
   const cancelRef = useRef(onCancel);
 
   useEffect(() => {

@@ -56,24 +56,15 @@ function fallbackProject(now: string): Project {
 function recipeFromPicker(
   capture: PickerCapture,
   startUrl: string,
-  id = crypto.randomUUID(),
 ): Recipe {
   const now = new Date().toISOString();
   const url = new URL(startUrl);
   return {
-    version: 1,
-    id,
+    ...capture,
     projectId: capture.projectId || DEFAULT_PROJECT_ID,
-    name: `Capture from ${url.hostname}`,
     origin: url.origin,
     startUrl,
-    mode: capture.mode,
-    containerSelector: capture.containerSelector,
-    fields: capture.fields,
-    traversal: capture.traversal,
-    destinations: { inbox: true, autoDownload: false },
-    schedule: null,
-    createdAt: now,
+    createdAt: capture.createdAt || now,
     updatedAt: now,
   };
 }
@@ -375,13 +366,27 @@ export default defineBackground(() => {
         value.type === "SCRAPEYY_START_RECIPE_PICKER" &&
         typeof value.tabId === "number"
       ) {
-        return ensureContentScript(value.tabId)
-          .then(() =>
-            extensionBrowser.tabs.sendMessage(value.tabId as number, {
-              type: "SCRAPEYY_START_RECIPE_PICKER",
-            }),
-          )
-          .then(() => ({ ok: true }));
+        return Promise.all([
+          ensureContentScript(value.tabId),
+          typeof value.recipeId === "string"
+            ? recipes.get(value.recipeId)
+            : Promise.resolve(undefined),
+          extensionBrowser.tabs.get(value.tabId),
+        ]).then(async ([, recipe, tab]) => {
+          if (
+            recipe &&
+            (!tab.url || new URL(tab.url).origin !== recipe.origin)
+          ) {
+            throw new Error(
+              `Open ${recipe.origin} before editing this recipe.`,
+            );
+          }
+          await extensionBrowser.tabs.sendMessage(value.tabId as number, {
+            type: "SCRAPEYY_START_RECIPE_PICKER",
+            ...(recipe ? { recipe } : {}),
+          });
+          return { ok: true };
+        });
       }
       if (
         value.type === "SCRAPEYY_QUICK_CAPTURE" &&
