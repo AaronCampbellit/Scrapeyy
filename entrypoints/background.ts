@@ -1,6 +1,7 @@
 import type {
   CaptureRun,
   Project,
+  QuickCaptureRequest,
   Recipe,
 } from "../src/contracts/models";
 import type { DesignSnapshot } from "../src/design/snapshot";
@@ -13,6 +14,10 @@ import { downloadBundle } from "../src/platform/downloads";
 import { hasOriginAccess } from "../src/platform/permissions";
 import { captureElementScreenshot } from "../src/platform/screenshots";
 import { acquireRecipeTab, releaseRecipeTab } from "../src/platform/tabs";
+import {
+  createQuickCaptureResult,
+  type QuickPageExecutionResult,
+} from "../src/run/quick-run";
 import {
   type PageExecutionResult,
   runRecipe,
@@ -124,7 +129,7 @@ export default defineBackground(() => {
   const storeRunArtifacts = async (
     run: CaptureRun,
     recipe: Recipe,
-    result: PageExecutionResult,
+    result: Pick<PageExecutionResult, "design">,
     storeRecipeSnapshot = false,
   ) => {
     if (storeRecipeSnapshot) {
@@ -294,47 +299,41 @@ export default defineBackground(() => {
   };
 
   const runQuickCapture = async (
-    capture: PickerCapture,
+    request: QuickCaptureRequest,
     tabId: number,
     tabUrl: string,
   ): Promise<CaptureRun> => {
     const project =
-      (await projects.get(capture.projectId)) ?? (await ensureDefaultProject());
-    const recipe = recipeFromPicker(capture, tabUrl);
-    const startedAt = new Date().toISOString();
-    const result = await executeOnTab(recipe, tabId);
-    if (result.design && result.designBounds) {
+      (await projects.get(request.projectId)) ?? (await ensureDefaultProject());
+    await ensureContentScript(tabId);
+    const execution = (await extensionBrowser.tabs.sendMessage(tabId, {
+      type: "SCRAPEYY_EXECUTE_QUICK_CAPTURE",
+      request,
+    })) as QuickPageExecutionResult;
+    if (
+      execution.design &&
+      execution.designBounds
+    ) {
       const screenshot = await captureElementScreenshot(
         tabId,
-        result.designBounds,
+        execution.designBounds,
       );
-      if (screenshot) result.design.screenshot = screenshot;
+      if (screenshot) execution.design.screenshot = screenshot;
     }
-    const errors = result.errors ?? [];
-    const run: CaptureRun = {
+    const now = new Date().toISOString();
+    const { recipe, run } = createQuickCaptureResult({
+      request,
+      project,
+      startUrl: tabUrl,
+      execution,
       id: crypto.randomUUID(),
-      recipeId: recipe.id,
-      projectId: project.id,
-      trigger: "manual",
-      status:
-        errors.length > 0
-          ? result.records.length > 0
-            ? "partial"
-            : "failed"
-          : result.warnings.length > 0
-            ? "warning"
-            : "success",
-      startedAt,
-      completedAt: new Date().toISOString(),
-      recordCount: result.records.length,
-      records: result.records,
-      errors,
-      pinned: false,
-      exportState: "none",
-    };
+      recipeId: crypto.randomUUID(),
+      now,
+    });
     await captures.putRun(run);
-    await storeRunArtifacts(run, recipe, result, true);
-    executionResults.delete(recipe.id);
+    await storeRunArtifacts(run, recipe, execution, true);
+    const expired = applyRetention(await captures.listRuns(), 20);
+    await Promise.all(expired.map((id) => captures.deleteRun(id)));
     return run;
   };
 
@@ -360,13 +359,26 @@ export default defineBackground(() => {
       if (typeof message !== "object" || message === null) return undefined;
       const value = message as Record<string, unknown>;
       if (
-        value.type === "SCRAPEYY_START_PICKER" &&
+        (value.type === "SCRAPEYY_START_PICKER" ||
+          value.type === "SCRAPEYY_START_QUICK_PICKER") &&
         typeof value.tabId === "number"
       ) {
         return ensureContentScript(value.tabId)
           .then(() =>
             extensionBrowser.tabs.sendMessage(value.tabId as number, {
-              type: "SCRAPEYY_START_PICKER",
+              type: "SCRAPEYY_START_QUICK_PICKER",
+            }),
+          )
+          .then(() => ({ ok: true }));
+      }
+      if (
+        value.type === "SCRAPEYY_START_RECIPE_PICKER" &&
+        typeof value.tabId === "number"
+      ) {
+        return ensureContentScript(value.tabId)
+          .then(() =>
+            extensionBrowser.tabs.sendMessage(value.tabId as number, {
+              type: "SCRAPEYY_START_RECIPE_PICKER",
             }),
           )
           .then(() => ({ ok: true }));
@@ -378,7 +390,7 @@ export default defineBackground(() => {
         sender.tab.url
       ) {
         return runQuickCapture(
-          value.capture as PickerCapture,
+          value.capture as QuickCaptureRequest,
           sender.tab.id,
           sender.tab.url,
         );

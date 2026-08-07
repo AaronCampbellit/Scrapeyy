@@ -4,6 +4,7 @@ import type {
   CaptureMode,
   CaptureRecord,
   FieldDefinition,
+  QuickCaptureRequest,
   TraversalSettings,
 } from "../../contracts/models";
 import { extractRecords } from "../../extraction/extract";
@@ -20,11 +21,7 @@ export interface PickerCapture {
   traversal: TraversalSettings;
 }
 
-export interface QuickCaptureRequest {
-  projectId: string;
-  mode: CaptureMode;
-  containerSelector: string;
-}
+export type { QuickCaptureRequest } from "../../contracts/models";
 
 export interface PickerAppProps {
   ownerDocument: Document;

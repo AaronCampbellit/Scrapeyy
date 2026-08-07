@@ -1,15 +1,21 @@
 import { createRoot, type Root } from "react-dom/client";
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root";
 
-import type { Recipe, RunError } from "../src/contracts/models";
+import type {
+  QuickCaptureRequest,
+  Recipe,
+  RunError,
+} from "../src/contracts/models";
 import { createDesignSnapshot } from "../src/design/snapshot";
 import { extractRecords } from "../src/extraction/extract";
 import { fingerprintRecord } from "../src/extraction/fingerprint";
+import { extractQuickData } from "../src/extraction/quick-extract";
 import {
   PickerApp,
   type PickerCapture,
 } from "../src/features/picker/PickerApp";
 import "../src/features/picker/picker.css";
+import type { QuickPageExecutionResult } from "../src/run/quick-run";
 import { advanceInfiniteScroll } from "../src/traversal/infinite-scroll";
 import { advanceNextControl } from "../src/traversal/next";
 import { runTraversal } from "../src/traversal/run-traversal";
@@ -82,6 +88,56 @@ async function executeRecipe(recipe: Recipe) {
   };
 }
 
+async function executeQuickCapture(
+  request: QuickCaptureRequest,
+): Promise<QuickPageExecutionResult> {
+  const selected = document.querySelector(request.containerSelector);
+  if (!selected) {
+    return {
+      strategy: "generic",
+      fields: [],
+      records: [],
+      warnings: [],
+      errors: [
+        {
+          code: "SELECTOR_CHANGED",
+          message: "The selected content is no longer available. Reselect it.",
+          recoverable: true,
+          pageUrl: window.location.href,
+          selector: request.containerSelector,
+        },
+      ],
+    };
+  }
+  const extraction =
+    request.mode === "design"
+      ? { strategy: "generic" as const, fields: [], records: [] }
+      : extractQuickData(selected, window.location.href);
+  const design =
+    request.mode === "data"
+      ? undefined
+      : await createDesignSnapshot(selected);
+  const bounds = selected.getBoundingClientRect();
+  return {
+    ...extraction,
+    warnings: [],
+    errors: [],
+    ...(design ? { design } : {}),
+    ...(design
+      ? {
+          designBounds: {
+            left: bounds.left,
+            top: bounds.top,
+            width: bounds.width,
+            height: bounds.height,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+          },
+        }
+      : {}),
+  };
+}
+
 export default defineContentScript({
   registration: "runtime",
   cssInjectionMode: "ui",
@@ -90,10 +146,10 @@ export default defineContentScript({
       | Awaited<ReturnType<typeof createShadowRootUi<Root>>>
       | undefined;
 
-    const mountPicker = async () => {
+    const mountPicker = async (variant: "quick" | "recipe") => {
       if (ui) {
-        ui.mount();
-        return;
+        ui.remove();
+        ui = undefined;
       }
       ui = await createShadowRootUi(ctx, {
         name: "scrapeyy-picker",
@@ -103,20 +159,28 @@ export default defineContentScript({
         onMount(container) {
           const root = createRoot(container);
           const close = () => ui?.remove();
-          const send = async (type: string, capture: PickerCapture) => {
-            await browser.runtime.sendMessage({ type, capture });
+          const saveRecipe = async (capture: PickerCapture) => {
+            await browser.runtime.sendMessage({
+              type: "SCRAPEYY_SAVE_PICKER_RECIPE",
+              capture,
+            });
             close();
           };
           root.render(
             <PickerApp
               ownerDocument={document}
+              variant={variant}
               projectId="default-project"
               projectName="Local captures"
-              onCapture={(capture) => void send("SCRAPEYY_QUICK_CAPTURE", capture)}
-              onClose={close}
-              onSaveRecipe={(capture) =>
-                void send("SCRAPEYY_SAVE_PICKER_RECIPE", capture)
+              onQuickCapture={(capture) =>
+                browser.runtime
+                  .sendMessage({ type: "SCRAPEYY_QUICK_CAPTURE", capture })
+                  .then(() => {
+                    window.setTimeout(close, 900);
+                  })
               }
+              onClose={close}
+              onSaveRecipe={saveRecipe}
             />,
           );
           return root;
@@ -136,8 +200,20 @@ export default defineContentScript({
       if (value.type === "SCRAPEYY_PING") {
         return Promise.resolve({ ok: true });
       }
-      if (value.type === "SCRAPEYY_START_PICKER") {
-        return mountPicker().then(() => ({ ok: true }));
+      if (
+        value.type === "SCRAPEYY_START_QUICK_PICKER" ||
+        value.type === "SCRAPEYY_START_PICKER"
+      ) {
+        return mountPicker("quick").then(() => ({ ok: true }));
+      }
+      if (value.type === "SCRAPEYY_START_RECIPE_PICKER") {
+        return mountPicker("recipe").then(() => ({ ok: true }));
+      }
+      if (
+        value.type === "SCRAPEYY_EXECUTE_QUICK_CAPTURE" &&
+        value.request
+      ) {
+        return executeQuickCapture(value.request as QuickCaptureRequest);
       }
       if (value.type === "SCRAPEYY_RUN_RECIPE" && value.recipe) {
         return executeRecipe(value.recipe as Recipe);

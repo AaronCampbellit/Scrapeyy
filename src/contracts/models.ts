@@ -63,6 +63,12 @@ export interface CaptureDestinations {
   autoDownload: boolean;
 }
 
+export interface QuickCaptureRequest {
+  projectId: string;
+  mode: CaptureMode;
+  containerSelector: string;
+}
+
 export interface Recipe {
   version: 1;
   id: string;
