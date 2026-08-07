@@ -1,8 +1,66 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createFullPageCaptureController } from "../../src/platform/full-page-controller";
+import {
+  createCaptureUiVisibility,
+  findCaptureUiHost,
+} from "../../src/platform/capture-ui";
+import { captureFullPageScreenshot } from "../../src/platform/screenshots";
 
 describe("full-page capture controller", () => {
+  it("keeps the active picker hidden for every full-page screenshot tile", async () => {
+    const pickerHost = document.createElement("scrapeyy-picker");
+    document.body.replaceChildren(pickerHost);
+    Object.defineProperties(document.documentElement, {
+      scrollWidth: { configurable: true, value: 100 },
+      scrollHeight: { configurable: true, value: 200 },
+    });
+    Object.defineProperties(window, {
+      innerWidth: { configurable: true, value: 100 },
+      innerHeight: { configurable: true, value: 100 },
+      scrollX: { configurable: true, writable: true, value: 0 },
+      scrollY: { configurable: true, writable: true, value: 0 },
+    });
+    vi.spyOn(window, "scrollTo").mockImplementation((x, y) => {
+      Object.defineProperty(window, "scrollX", {
+        configurable: true,
+        value: Number(x),
+      });
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: Number(y),
+      });
+    });
+    const visibility = createCaptureUiVisibility(
+      () => findCaptureUiHost(document),
+      async () => undefined,
+    );
+    const controller = createFullPageCaptureController(
+      window,
+      document,
+      (hidden) => (hidden ? visibility.hide() : visibility.show()),
+      async () => undefined,
+    );
+    const statesAtCapture: string[] = [];
+
+    await captureFullPageScreenshot(42, controller, {
+      api: {
+        getTab: async () => ({ windowId: 7 }),
+        captureVisibleTab: async () => {
+          statesAtCapture.push(pickerHost.style.getPropertyValue("display"));
+          return "data:image/png;base64,c2NyYXBleXk=";
+        },
+      },
+      stitcher: {
+        stitch: async () => new Blob(["full-page"], { type: "image/png" }),
+      },
+      wait: async () => undefined,
+    });
+
+    expect(statesAtCapture).toEqual(["none", "none"]);
+    expect(pickerHost.style.getPropertyValue("display")).toBe("");
+  });
+
   it("hides capture UI, suppresses repeated fixed content, and restores page state", async () => {
     const fixed = document.createElement("header");
     fixed.style.position = "fixed";

@@ -4,6 +4,7 @@ import {
   createCaptureUiVisibility,
   findCaptureUiHost,
 } from "../../src/platform/capture-ui";
+import { captureElementScreenshot } from "../../src/platform/screenshots";
 
 describe("capture UI visibility", () => {
   it("finds the currently mounted picker instead of relying on a stale UI instance", () => {
@@ -46,5 +47,48 @@ describe("capture UI visibility", () => {
     expect(pickerHost.style.getPropertyValue("visibility")).toBe("visible");
     expect(pickerHost.style.getPropertyPriority("visibility")).toBe("important");
     expect(waitForPaint).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the active picker hidden while the browser captures an element screenshot", async () => {
+    const pickerHost = document.createElement("scrapeyy-picker");
+    document.body.replaceChildren(pickerHost);
+    const visibility = createCaptureUiVisibility(
+      () => findCaptureUiHost(document),
+      async () => undefined,
+    );
+    const statesAtCapture: Array<{ display: string; visibility: string }> = [];
+
+    const screenshot = await captureElementScreenshot(
+      42,
+      {
+        left: 0,
+        top: 0,
+        width: 320,
+        height: 180,
+        viewportWidth: 1_280,
+        viewportHeight: 720,
+      },
+      {
+        getTab: async () => ({ windowId: 7 }),
+        captureVisibleTab: async () => {
+          statesAtCapture.push({
+            display: pickerHost.style.getPropertyValue("display"),
+            visibility: pickerHost.style.getPropertyValue("visibility"),
+          });
+          return "data:image/png;base64,c2NyYXBleXk=";
+        },
+      },
+      {
+        crop: async () => new Blob(["clean"], { type: "image/png" }),
+      },
+      visibility,
+    );
+
+    expect(await screenshot?.text()).toBe("clean");
+    expect(statesAtCapture).toEqual([
+      { display: "none", visibility: "hidden" },
+    ]);
+    expect(pickerHost.style.getPropertyValue("display")).toBe("");
+    expect(pickerHost.style.getPropertyValue("visibility")).toBe("");
   });
 });
