@@ -9,9 +9,12 @@ the same checklist in current Chrome and Firefox against
 - [x] TypeScript strict type check.
 - [x] Unit and integration tests for contracts, extraction, selectors, design
   sanitization, traversal, storage, retention, permissions, schedules, exports,
-  picker, popup, dashboard, content injection, and the cross-module run service.
+  smart Quick Capture, direct element selection, the popup workspace, staged
+  recipe creation, content injection, and the cross-module run service.
 - [x] Chrome Manifest V3 production build.
 - [x] Firefox Manifest V2 production build.
+- [x] Production builds contain the popup, background, and content script with
+  no standalone dashboard page or dashboard asset.
 - [x] Chrome uses `optional_host_permissions`; Firefox uses
   `optional_permissions` for the same HTTP/HTTPS runtime grant.
 - [x] Production dependency audit reports zero vulnerabilities.
@@ -23,35 +26,37 @@ result does not count as browser acceptance.
 
 | # | Workflow | Chrome | Firefox |
 |---:|---|---|---|
-| 1 | Quick Data capture from `list.html` | BLOCKED | BLOCKED |
-| 2 | Quick Design capture from `assets.html` | BLOCKED | BLOCKED |
-| 3 | Both-mode capture | BLOCKED | BLOCKED |
-| 4 | Save and rerun a repeated-list recipe | BLOCKED | BLOCKED |
-| 5 | Next-button traversal from `next.html` | BLOCKED | BLOCKED |
-| 6 | Infinite-scroll traversal from `infinite.html` | BLOCKED | BLOCKED |
-| 7 | One-time active-tab access | BLOCKED | BLOCKED |
-| 8 | Grant and revoke persistent origin access | BLOCKED | BLOCKED |
-| 9 | Manual recipe run | BLOCKED | BLOCKED |
-| 10 | Scheduled run and at-most-one catch-up | BLOCKED | BLOCKED |
-| 11 | Inbox preview, pinning, deletion, and 20-run retention | BLOCKED | BLOCKED |
-| 12 | Automatic and manual ZIP export | BLOCKED | BLOCKED |
-| 13 | Project/recipe configuration export and import | BLOCKED | BLOCKED |
+| 1 | Popup contains Capture, Recipes, Inbox, and Settings | BLOCKED | PASS |
+| 2 | Quick Capture directly selects a page link without navigating | BLOCKED | PASS |
+| 3 | Quick Data capture saves smart inferred data to Inbox | BLOCKED | PASS |
+| 4 | Data, Design, and Both choices are available after selection | BLOCKED | PASS |
+| 5 | Inbox shows the saved run, data preview, and export/retry/pin/delete actions | BLOCKED | PASS |
+| 6 | Create Recipe opens Selection, Data, Traversal, Delivery, and Review | BLOCKED | PASS |
+| 7 | Save a bounded repeated-list recipe and see it in popup Recipes | BLOCKED | PASS |
+| 8 | One-time active-tab access | BLOCKED | PASS |
+| 9 | Quick Design and Both-mode artifacts | BLOCKED | BLOCKED |
+| 10 | Grant and revoke persistent origin access | BLOCKED | BLOCKED |
+| 11 | Manual and scheduled recipe runs | BLOCKED | BLOCKED |
+| 12 | Next-button and infinite-scroll traversal | BLOCKED | BLOCKED |
+| 13 | Automatic/manual ZIP export and configuration import/export | BLOCKED | BLOCKED |
 | 14 | Selector-change and login-required recovery | BLOCKED | BLOCKED |
 
 ### Interactive evidence from 2026-08-06
 
-- Chrome acceptance is blocked because the installed-Chrome browser connection
-  was unavailable to the test runtime. It was not replaced with a different
-  automation path.
-- Official Firefox acceptance is blocked because Firefox was not installed.
-- Firefox-family compatibility smoke testing in Zen 1.21.10b (Firefox
-  153.0.1) passed temporary add-on loading, dashboard rendering, recipe
-  creation, the website-access settings UI, and safe missing-origin-permission
-  failure handling.
+- Chrome connected successfully, and the ChatGPT browser extension and native
+  host both passed diagnostics. Interactive Scrapeyy acceptance is blocked
+  because browser-control policy does not allow access to Chrome's internal
+  extension manager to load the unpacked build.
+- The current official Firefox build was downloaded from Mozilla and run from
+  a temporary location with an isolated profile. The Firefox MV2 package was
+  installed as a temporary add-on through `web-ext`.
+- Firefox passed popup rendering, direct link selection without navigation,
+  Quick Data capture, Inbox storage and preview, all five recipe stages, recipe
+  save, and popup recipe visibility.
 - Persistent website access was intentionally left ungranted because expanding
   persistent browser access requires explicit confirmation at action time.
-- The Zen compatibility smoke is supporting evidence only and does not count
-  as Firefox acceptance in the table above.
+- The temporary Firefox app, profile, and mounted disk image were removed after
+  acceptance. No existing tabs or browser profile files were deleted.
 
 ## Export inspection
 

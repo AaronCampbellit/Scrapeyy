@@ -6,9 +6,11 @@ until the user exports them.
 
 ## What it does
 
-- Visual selection of one element or a repeated list/card pattern.
+- Direct page-click selection with no separate selection HUD.
+- Smart Quick Capture for tables, repeated lists/cards, and ordinary regions.
 - Data, Design, and Both capture modes.
-- Text, link, image, safe attribute, and sanitized HTML fields.
+- Popup-only management for captures, projects, recipes, inbox runs, exports,
+  permissions, and settings.
 - Bounded Next-button and infinite-scroll traversal.
 - Reusable projects and recipes with manual or scheduled runs.
 - Local capture inbox with partial/error recovery.
@@ -54,9 +56,29 @@ Firefox:
 2. Choose **Load Temporary Add-on**.
 3. Select `.output/firefox-mv2/manifest.json`.
 
-Use the toolbar popup for Quick Capture, running a saved recipe, or opening the
-dashboard. One-time capture uses the active-tab grant. Enable “Allow scheduled
-captures” only for origins that should retain permission.
+The toolbar popup contains the complete product.
+
+For a one-time capture:
+
+1. Press **Quick Capture**.
+2. Hover and click the desired page region.
+3. Choose **Data**, **Design**, or **Both**.
+4. Press **Capture**.
+5. Reopen the popup and use **Inbox** to preview or export the run.
+
+Quick Data capture automatically recognizes tables and repeated cards/lists.
+Other regions are captured as normalized visible text, links, images, source
+URL, and an element description.
+
+Use **Create Recipe** when the capture needs named fields, pagination,
+infinite scrolling, schedules, project assignment, limits, or automatic
+downloads. Recipe setup uses Selection, Data, Traversal, Delivery, and Review
+steps on the page. Saved recipes, inbox runs, and settings remain in the popup;
+there is no separate dashboard page.
+
+One-time capture uses the active-tab grant. Grant persistent website access
+only to origins that should support manual recipe runs from the popup or
+scheduled captures.
 
 ## Scheduling and exports
 
