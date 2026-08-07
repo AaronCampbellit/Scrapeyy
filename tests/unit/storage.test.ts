@@ -144,6 +144,25 @@ describe("local repositories", () => {
     expect(artifacts[0]?.sourceUrl).toBe("https://example.test/snapshot");
   });
 
+  it("clears unpinned inbox runs and preserves pinned captures", async () => {
+    const database = new CaptureDatabase(`scrapeyy-test-${crypto.randomUUID()}`);
+    databases.push(database);
+    await database.putRun(run("remove", "2026-08-06T12:00:00.000Z"));
+    await database.putRun(
+      run("keep", "2026-08-06T12:01:00.000Z", { pinned: true }),
+    );
+    await database.putArtifact({
+      id: "remove:screenshot",
+      runId: "remove",
+      name: "screenshot.png",
+      blob: new Blob(["remove"]),
+    });
+
+    expect(await database.clearUnpinnedRuns()).toBe(1);
+    expect((await database.listRuns()).map(({ id }) => id)).toEqual(["keep"]);
+    expect(await database.getArtifact("remove:screenshot")).toBeUndefined();
+  });
+
   it("downloads reference images at capture time and reloads them for export", async () => {
     const database = new CaptureDatabase(`scrapeyy-test-${crypto.randomUUID()}`);
     databases.push(database);

@@ -123,6 +123,11 @@ const services: PopupServices = {
     });
   },
   deleteRun: (runId) => captures.deleteRun(runId),
+  clearInbox: () => captures.clearUnpinnedRuns().then(() => undefined),
+  async loadRunScreenshot(runId) {
+    const artifact = await captures.getArtifact(`${runId}:screenshot`);
+    return artifact ? URL.createObjectURL(artifact.blob) : undefined;
+  },
   async pinRun(runId, pinned) {
     const run = await captures.getRun(runId);
     if (run) await captures.putRun({ ...run, pinned });

@@ -1,8 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createCaptureUiVisibility } from "../../src/platform/capture-ui";
+import {
+  createCaptureUiVisibility,
+  findCaptureUiHost,
+} from "../../src/platform/capture-ui";
 
 describe("capture UI visibility", () => {
+  it("finds the currently mounted picker instead of relying on a stale UI instance", () => {
+    const staleHost = document.createElement("scrapeyy-picker");
+    const activeHost = document.createElement("scrapeyy-picker");
+    document.body.replaceChildren(activeHost);
+
+    expect(staleHost.isConnected).toBe(false);
+    expect(findCaptureUiHost(document)).toBe(activeHost);
+  });
+
   it("hides the picker host with important styles and restores its exact inline state", async () => {
     const before = document.createElement("div");
     const pickerHost = document.createElement("scrapeyy-picker");

@@ -90,6 +90,7 @@ export function createQuickCaptureResult({
     completedAt: now,
     recordCount: execution.records.length,
     records: execution.records,
+    warnings: execution.warnings,
     errors: execution.errors,
     pinned: false,
     exportState: "none",

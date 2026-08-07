@@ -52,6 +52,7 @@ export function buildRunManifest(
       startedAt: run.startedAt,
       completedAt: run.completedAt ?? null,
       recordCount: run.recordCount,
+      warnings: run.warnings ?? [],
       errors: run.errors,
     },
     artifacts,

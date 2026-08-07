@@ -118,6 +118,12 @@ export class CaptureDatabase {
     await transactionComplete(transaction);
   }
 
+  async clearUnpinnedRuns(): Promise<number> {
+    const unpinned = (await this.listRuns()).filter((run) => !run.pinned);
+    await Promise.all(unpinned.map((run) => this.deleteRun(run.id)));
+    return unpinned.length;
+  }
+
   async putArtifact(artifact: CaptureArtifact): Promise<void> {
     const transaction = (await this.#open()).transaction(
       "artifacts",

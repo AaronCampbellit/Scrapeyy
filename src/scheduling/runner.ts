@@ -60,6 +60,7 @@ export async function runRecipe(
       completedAt: dependencies.now().toISOString(),
       recordCount: 0,
       records: [],
+      warnings: [],
       errors: [
         {
           code: "ORIGIN_PERMISSION_REQUIRED",
@@ -80,6 +81,7 @@ export async function runRecipe(
       completedAt: dependencies.now().toISOString(),
       recordCount: result.records.length,
       records: result.records,
+      warnings: result.warnings,
       errors: result.errors ?? [],
     };
     await dependencies.saveRun(run);
@@ -91,6 +93,7 @@ export async function runRecipe(
       completedAt: dependencies.now().toISOString(),
       recordCount: 0,
       records: [],
+      warnings: [],
       errors: [
         {
           code: "PAGE_EXECUTION_FAILED",

@@ -117,6 +117,7 @@ export interface CaptureRun {
   completedAt?: string;
   recordCount: number;
   records: CaptureRecord[];
+  warnings?: string[];
   errors: RunError[];
   pinned: boolean;
   exportState: "none" | "queued" | "complete" | "failed";

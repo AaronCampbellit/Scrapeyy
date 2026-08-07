@@ -57,4 +57,32 @@ describe("createQuickCaptureResult", () => {
       exportState: "none",
     });
   });
+
+  it("persists warning details on warning runs", () => {
+    const result = createQuickCaptureResult({
+      request: {
+        projectId: project.id,
+        mode: "both",
+        containerSelector: "article",
+        scope: "element",
+      },
+      project,
+      startUrl: "https://example.test/post",
+      execution: {
+        strategy: "generic",
+        fields: [],
+        records: [{ text: "Useful text" }],
+        warnings: ["Could not download the referenced image."],
+        errors: [],
+      },
+      id: "run-warning",
+      recipeId: "quick-warning",
+      now: "2026-08-06T12:01:00.000Z",
+    });
+
+    expect(result.run).toMatchObject({
+      status: "warning",
+      warnings: ["Could not download the referenced image."],
+    });
+  });
 });

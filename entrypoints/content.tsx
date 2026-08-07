@@ -16,7 +16,10 @@ import {
   type PickerCapture,
 } from "../src/features/picker/PickerApp";
 import "../src/features/picker/picker.css";
-import { createCaptureUiVisibility } from "../src/platform/capture-ui";
+import {
+  createCaptureUiVisibility,
+  findCaptureUiHost,
+} from "../src/platform/capture-ui";
 import { createFullPageCaptureController } from "../src/platform/full-page-controller";
 import type { FullPageCaptureController } from "../src/platform/screenshots";
 import type { AppTheme } from "../src/storage/app-settings";
@@ -162,7 +165,7 @@ export default defineContentScript({
         });
       });
     const captureUiVisibility = createCaptureUiVisibility(
-      () => ui?.shadowHost,
+      () => findCaptureUiHost(document),
       waitForPaint,
     );
     const setCaptureUiHidden = (hidden: boolean) =>
@@ -222,7 +225,7 @@ export default defineContentScript({
       ui.mount();
     };
 
-    browser.runtime.onMessage.addListener((message: unknown) => {
+    const handleRuntimeMessage = (message: unknown) => {
       if (typeof message !== "object" || message === null) {
         return undefined;
       }
@@ -303,6 +306,10 @@ export default defineContentScript({
         return executeRecipe(value.recipe as Recipe);
       }
       return undefined;
+    };
+    browser.runtime.onMessage.addListener(handleRuntimeMessage);
+    ctx.onInvalidated(() => {
+      browser.runtime.onMessage.removeListener(handleRuntimeMessage);
     });
   },
 });

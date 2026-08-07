@@ -78,4 +78,18 @@ describe("extractQuickData", () => {
       element: "section#hero",
     });
   });
+
+  it("excludes embedded scripts and styles from readable text", () => {
+    document.body.innerHTML = `
+      <article id="post">
+        <script>SML.load(["internal-module"]);</script>
+        <style>.post { color: red; }</style>
+        <h1>Useful title</h1>
+        <p>Useful body text.</p>
+      </article>`;
+
+    const result = extractQuickData(document.querySelector("#post")!);
+
+    expect(result.records[0]?.text).toBe("Useful title Useful body text.");
+  });
 });

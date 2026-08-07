@@ -1,5 +1,13 @@
 import type { ScreenshotUiVisibility } from "./screenshots";
 
+export function findCaptureUiHost(
+  ownerDocument: Document,
+): HTMLElement | undefined {
+  return (
+    ownerDocument.querySelector<HTMLElement>("scrapeyy-picker") ?? undefined
+  );
+}
+
 export function createCaptureUiVisibility(
   getHost: () => HTMLElement | undefined,
   waitForPaint: () => Promise<void>,

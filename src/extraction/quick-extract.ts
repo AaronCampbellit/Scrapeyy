@@ -196,6 +196,14 @@ function descriptor(element: Element): string {
   return `${element.tagName.toLowerCase()}${id}${classes}`;
 }
 
+function readableText(element: Element): string | null {
+  const clone = element.cloneNode(true) as Element;
+  clone
+    .querySelectorAll("script, style, noscript, template, svg")
+    .forEach((node) => node.remove());
+  return normalizeWhitespace(clone.textContent ?? "") || null;
+}
+
 function extractGeneric(
   selected: Element,
   baseUrl: string,
@@ -218,7 +226,7 @@ function extractGeneric(
     })
     .filter((value): value is string => Boolean(value));
   const record: CaptureRecord = {
-    text: normalizeWhitespace(selected.textContent ?? "") || null,
+    text: readableText(selected),
     links: linkLines.join("\n") || null,
     images: imageLines.join("\n") || null,
     source_url: baseUrl,

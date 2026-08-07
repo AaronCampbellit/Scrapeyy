@@ -152,6 +152,10 @@ describe("capture exports", () => {
     expect(
       await zip.file("assets/001-reference-image.svg")?.async("string"),
     ).toBe("<svg></svg>");
+    expect(
+      JSON.parse((await zip.file("manifest.json")?.async("string")) ?? "{}")
+        .run.warnings,
+    ).toEqual([]);
   });
 
   it("produces byte-identical bundles for the same run", async () => {

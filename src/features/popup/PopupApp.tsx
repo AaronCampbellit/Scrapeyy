@@ -40,6 +40,8 @@ export interface PopupServices {
   saveProject(project: Project): Promise<void>;
   exportRun(runId: string): Promise<void>;
   deleteRun(runId: string): Promise<void>;
+  clearInbox(): Promise<void>;
+  loadRunScreenshot(runId: string): Promise<string | undefined>;
   pinRun(runId: string, pinned: boolean): Promise<void>;
   requestOriginAccess(origin: string): Promise<boolean>;
   revokeOriginAccess(origin: string): Promise<boolean>;
@@ -112,7 +114,9 @@ export function PopupApp({ services }: { services: PopupServices }) {
       data-theme={data.settings.theme}
     >
       <header className="popup-header">
-        <div className="brand-mark" aria-hidden="true">S</div>
+        <div className="brand-mark" aria-hidden="true">
+          <img alt="" src="/icon/32.png" />
+        </div>
         <div>
           <h1>Scrapeyy</h1>
           <p>Local capture studio</p>
@@ -184,7 +188,14 @@ export function PopupApp({ services }: { services: PopupServices }) {
             onDelete={(runId) =>
               performAndRefresh(() => services.deleteRun(runId), "Run deleted.")
             }
+            onClear={() =>
+              performAndRefresh(
+                services.clearInbox,
+                "Unpinned captures cleared.",
+              )
+            }
             onExport={(runId) => perform(() => services.exportRun(runId), "Export started.")}
+            onLoadScreenshot={services.loadRunScreenshot}
             onPin={(runId, pinned) =>
               performAndRefresh(() => services.pinRun(runId, pinned))
             }

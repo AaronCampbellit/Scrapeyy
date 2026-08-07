@@ -6,8 +6,10 @@ interface InboxViewProps {
   runs: CaptureRun[];
   recipes: Recipe[];
   disabled: boolean;
+  onClear(): void | Promise<void>;
   onDelete(runId: string): void | Promise<void>;
   onExport(runId: string): void | Promise<void>;
+  onLoadScreenshot(runId: string): Promise<string | undefined>;
   onPin(runId: string, pinned: boolean): void | Promise<void>;
   onRetry(recipeId: string): void | Promise<void>;
 }
@@ -16,20 +18,59 @@ export function InboxView({
   runs,
   recipes,
   disabled,
+  onClear,
   onDelete,
   onExport,
+  onLoadScreenshot,
   onPin,
   onRetry,
 }: InboxViewProps) {
   const [selectedId, setSelectedId] = useState(runs[0]?.id);
+  const [preview, setPreview] = useState<"text" | "screenshot">("text");
+  const [screenshotUrl, setScreenshotUrl] = useState<string>();
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
   useEffect(() => {
     if (!runs.some((run) => run.id === selectedId)) {
       setSelectedId(runs[0]?.id);
     }
   }, [runs, selectedId]);
   const selected = runs.find((run) => run.id === selectedId) ?? runs[0];
+  useEffect(() => {
+    setPreview("text");
+    setScreenshotUrl(undefined);
+  }, [selected?.id]);
+  useEffect(() => {
+    if (!selected || preview !== "screenshot" || screenshotUrl) return;
+    let active = true;
+    setScreenshotLoading(true);
+    void onLoadScreenshot(selected.id)
+      .then((url) => {
+        if (active) setScreenshotUrl(url);
+      })
+      .finally(() => {
+        if (active) setScreenshotLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [onLoadScreenshot, preview, screenshotUrl, selected]);
   const recipeName = (recipeId: string) =>
     recipes.find((recipe) => recipe.id === recipeId)?.name ?? "Quick capture";
+  const readableText = selected?.records
+    .map((record) => {
+      if (record.text?.trim()) return record.text.trim();
+      const values = Object.entries(record)
+        .filter(
+          ([key, value]) =>
+            value?.trim() &&
+            !["source_url", "links", "images", "element"].includes(key),
+        )
+        .map(([key, value]) => `${key.replaceAll("_", " ")}: ${value}`);
+      return values.join("\n");
+    })
+    .filter(Boolean)
+    .join("\n\n");
+  const warnings = selected?.warnings ?? [];
   return (
     <section className="popup-view" aria-label="Inbox">
       <div className="view-heading">
@@ -37,7 +78,28 @@ export function InboxView({
           <span className="eyebrow">Local storage</span>
           <h2>Capture Inbox</h2>
         </div>
-        <span className="count-badge">{runs.length}</span>
+        <div className="inbox-heading-actions">
+          <span className="count-badge">{runs.length}</span>
+          {runs.some((run) => !run.pinned) ? (
+            <button
+              aria-label="Clear inbox"
+              className="small-button danger-link"
+              disabled={disabled}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Delete every unpinned capture from the inbox? This cannot be undone.",
+                  )
+                ) {
+                  void onClear();
+                }
+              }}
+              type="button"
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
       </div>
       {runs.length === 0 ? (
         <div className="popup-empty">
@@ -69,11 +131,70 @@ export function InboxView({
                 <span>{selected.trigger}</span>
                 <span>{selected.exportState}</span>
               </div>
-              {selected.errors[0] ? (
-                <div className="popup-warning">{selected.errors[0].message}</div>
+              {warnings.length > 0 ? (
+                <details className="run-warning-details" open>
+                  <summary>
+                    {warnings.length} warning{warnings.length === 1 ? "" : "s"}
+                  </summary>
+                  <ul>
+                    {warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                </details>
+              ) : selected.status === "warning" ? (
+                <div className="popup-warning">
+                  Warning details were not saved by this older capture.
+                </div>
               ) : null}
-              <h3>Data preview</h3>
-              <pre>{JSON.stringify(selected.records.slice(0, 3), null, 2)}</pre>
+              {selected.errors.length > 0 ? (
+                <div className="popup-warning">
+                  {selected.errors.map((error) => (
+                    <div key={`${error.code}-${error.message}`}>
+                      <strong>{error.code}</strong>
+                      <span>{error.message}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="preview-heading">
+                <h3>Preview</h3>
+                <div className="preview-tabs" role="group" aria-label="Preview type">
+                  <button
+                    aria-pressed={preview === "text"}
+                    onClick={() => setPreview("text")}
+                    type="button"
+                  >
+                    Text
+                  </button>
+                  <button
+                    aria-pressed={preview === "screenshot"}
+                    onClick={() => setPreview("screenshot")}
+                    type="button"
+                  >
+                    Screenshot
+                  </button>
+                </div>
+              </div>
+              {preview === "text" ? (
+                readableText ? (
+                  <div className="readable-preview">{readableText}</div>
+                ) : (
+                  <div className="preview-empty">No readable text was extracted.</div>
+                )
+              ) : screenshotLoading ? (
+                <div className="preview-empty">Loading screenshot…</div>
+              ) : screenshotUrl ? (
+                <img
+                  alt="Captured screenshot"
+                  className="screenshot-preview"
+                  src={screenshotUrl}
+                />
+              ) : (
+                <div className="preview-empty">
+                  No screenshot was captured for this run.
+                </div>
+              )}
               <div className="detail-actions">
                 <button aria-label="Export run" disabled={disabled} onClick={() => void onExport(selected.id)} type="button">Export</button>
                 <button disabled={disabled} onClick={() => void onRetry(selected.recipeId)} type="button">Retry</button>

@@ -108,6 +108,7 @@ export class RunService {
       completedAt: this.#dependencies.now().toISOString(),
       recordCount: traversal.records.length,
       records: traversal.records,
+      warnings,
       errors,
       pinned: false,
       exportState: "none",

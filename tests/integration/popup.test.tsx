@@ -54,6 +54,7 @@ const data: PopupWorkspaceData = {
       completedAt: "2026-08-06T12:05:01.000Z",
       recordCount: 1,
       records: [{ title: "Alpha" }],
+      warnings: ["One reference image could not be downloaded."],
       errors: [],
       pinned: false,
       exportState: "none",
@@ -79,6 +80,10 @@ function services(
     saveProject: vi.fn(),
     exportRun: vi.fn(),
     deleteRun: vi.fn(),
+    clearInbox: vi.fn(),
+    loadRunScreenshot: vi
+      .fn()
+      .mockResolvedValue("data:image/png;base64,c2NyZWVuc2hvdA=="),
     pinRun: vi.fn(),
     requestOriginAccess: vi.fn(),
     revokeOriginAccess: vi.fn(),
@@ -119,8 +124,20 @@ describe("PopupApp", () => {
     expect(api.runRecipe).toHaveBeenCalledWith("recipe-1");
 
     await user.click(screen.getByRole("tab", { name: "Inbox" }));
-    expect(screen.getByText("Data preview")).toBeVisible();
-    expect(screen.getByText(/\"Alpha\"/)).toBeVisible();
+    expect(screen.getByText("Preview")).toBeVisible();
+    expect(screen.getByText(/title: Alpha/)).toBeVisible();
+    expect(
+      screen.getByText("One reference image could not be downloaded."),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Screenshot" }));
+    expect(
+      await screen.findByRole("img", { name: "Captured screenshot" }),
+    ).toHaveAttribute(
+      "src",
+      "data:image/png;base64,c2NyZWVuc2hvdA==",
+    );
+
     await user.click(screen.getByRole("button", { name: "Export run" }));
     expect(api.exportRun).toHaveBeenCalledWith("run-1");
 
@@ -129,6 +146,22 @@ describe("PopupApp", () => {
     expect(screen.getByText("Keep the latest 20 runs")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Allow access" }));
     expect(api.requestOriginAccess).toHaveBeenCalledWith("https://example.test");
+  });
+
+  it("clears unpinned inbox runs after confirmation", async () => {
+    const user = userEvent.setup();
+    const api = services();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<PopupApp services={api} />);
+    await screen.findByText("Current site");
+
+    await user.click(screen.getByRole("tab", { name: "Inbox" }));
+    await user.click(screen.getByRole("button", { name: "Clear inbox" }));
+
+    expect(confirm).toHaveBeenCalledWith(
+      "Delete every unpinned capture from the inbox? This cannot be undone.",
+    );
+    expect(api.clearInbox).toHaveBeenCalledOnce();
   });
 
   it("defaults to dark mode and persists appearance and download choices", async () => {
