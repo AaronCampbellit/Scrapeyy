@@ -1,8 +1,11 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PickerCapture } from "../../src/features/picker/PickerApp";
+import type {
+  PickerCapture,
+  QuickCaptureRequest,
+} from "../../src/features/picker/PickerApp";
 import { PickerApp } from "../../src/features/picker/PickerApp";
 
 describe("PickerApp", () => {
@@ -20,52 +23,81 @@ describe("PickerApp", () => {
       </main>`;
   });
 
-  it("selects a repeated container and previews named fields", async () => {
+  it("uses a direct click followed by a compact capture choice", async () => {
     const user = userEvent.setup();
+    const onQuickCapture = vi.fn().mockResolvedValue(undefined);
     render(
       <PickerApp
         ownerDocument={document}
+        variant="quick"
         projectId="project-1"
         projectName="Acme research"
+        onQuickCapture={onQuickCapture}
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Repeated list" }));
-    fireEvent.mouseOver(document.querySelector(".product-card")!);
-    await user.click(screen.getByRole("button", { name: "Select element" }));
+    expect(
+      screen.getByText("Click content to select · Esc to cancel"),
+    ).toBeVisible();
+    expect(screen.queryByText("Fields")).toBeNull();
+    expect(screen.queryByText("Pagination")).toBeNull();
+    expect(screen.queryByText("Safety limits")).toBeNull();
 
-    expect(screen.getByText("2 matches")).toBeVisible();
-    const preview = within(screen.getByRole("table"));
-    expect(preview.getByText("Alpha")).toBeVisible();
-    expect(preview.getByText("Beta")).toBeVisible();
+    const target = document.querySelector(".product-card")!;
+    fireEvent.pointerMove(target);
+    fireEvent.click(target);
+
+    expect(screen.getByRole("group", { name: "Capture type" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Data" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Design" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Both" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Reselect" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Both" }));
+    await user.click(screen.getByRole("button", { name: "Capture" }));
+
+    await waitFor(() =>
+      expect(onQuickCapture).toHaveBeenCalledWith({
+        projectId: "project-1",
+        mode: "both",
+        containerSelector: "article.product-card",
+      } satisfies QuickCaptureRequest),
+    );
+    expect(screen.getByText("Capture saved to the inbox.")).toBeVisible();
   });
 
-  it("emits the selected mode, selector, fields, and traversal limits", async () => {
+  it("keeps advanced options inside Create Recipe", async () => {
     const user = userEvent.setup();
-    let capture: PickerCapture | undefined;
+    let recipe: PickerCapture | undefined;
     render(
       <PickerApp
         ownerDocument={document}
+        variant="recipe"
         projectId="project-1"
         projectName="Acme research"
-        onCapture={(value) => {
-          capture = value;
+        onSaveRecipe={(value) => {
+          recipe = value;
         }}
       />,
     );
 
-    fireEvent.mouseOver(document.querySelector(".product-card")!);
-    await user.click(screen.getByRole("button", { name: "Select element" }));
-    await user.click(screen.getByRole("button", { name: "Both" }));
-    await user.click(screen.getByRole("button", { name: "Capture now" }));
+    expect(screen.queryByText("Fields")).toBeNull();
+    const target = document.querySelector(".product-card")!;
+    fireEvent.pointerMove(target);
+    fireEvent.click(target);
 
-    expect(capture).toMatchObject({
+    expect(screen.getByText("Fields")).toBeVisible();
+    expect(screen.getByText("Pagination")).toBeVisible();
+    expect(screen.getByText("Safety limits")).toBeVisible();
+    expect(screen.getByText("2 matches")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Save recipe" }));
+    expect(recipe).toMatchObject({
       mode: "both",
       containerSelector: "article.product-card",
-      fields: [
-        { id: "title", kind: "text", selector: "h2" },
-        { id: "url", kind: "link", selector: "a" },
-      ],
       traversal: {
         kind: "next",
         nextSelector: "button.next",
