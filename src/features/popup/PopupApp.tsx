@@ -1,156 +1,199 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
+import type {
+  CaptureRun,
+  Project,
+  Recipe,
+} from "../../contracts/models";
 import "../shared/theme.css";
 import "./popup.css";
-
-export interface PopupRecipe {
-  id: string;
-  name: string;
-}
+import { CaptureView } from "./CaptureView";
+import { InboxView } from "./InboxView";
+import { RecipesView } from "./RecipesView";
+import { SettingsView } from "./SettingsView";
 
 export interface PopupSite {
   origin: string;
   access: "one-time" | "persistent" | "unavailable";
 }
 
-export interface PopupAppProps {
+export interface PopupWorkspaceData {
   site?: PopupSite;
-  recipes?: PopupRecipe[];
-  onQuickCapture?: () => void | Promise<void>;
-  onRunRecipe?: (recipeId: string) => void | Promise<void>;
-  onOpenDashboard?: () => void | Promise<void>;
-  onTogglePersistentAccess?: (
-    origin: string,
-    enable: boolean,
-  ) => void | Promise<void>;
+  projects: Project[];
+  recipes: Recipe[];
+  runs: CaptureRun[];
+  permissions: Record<string, boolean>;
+  retentionLimit: number;
 }
 
-export function PopupApp({
-  site,
-  recipes = [],
-  onQuickCapture,
-  onRunRecipe,
-  onOpenDashboard,
-  onTogglePersistentAccess,
-}: PopupAppProps) {
-  const [recipeId, setRecipeId] = useState(recipes[0]?.id ?? "");
-  const [busy, setBusy] = useState<string>();
-  const accessLabel = useMemo(() => {
-    if (!site || site.access === "unavailable") return "Unavailable on this page";
-    return site.access === "persistent"
-      ? "Always allowed"
-      : "Allowed for this visit";
-  }, [site]);
+export interface PopupServices {
+  load(): Promise<PopupWorkspaceData>;
+  startQuickCapture(): Promise<void>;
+  startRecipeCapture(recipeId?: string): Promise<void>;
+  runRecipe(recipeId: string): Promise<CaptureRun>;
+  saveProject(project: Project): Promise<void>;
+  exportRun(runId: string): Promise<void>;
+  deleteRun(runId: string): Promise<void>;
+  pinRun(runId: string, pinned: boolean): Promise<void>;
+  requestOriginAccess(origin: string): Promise<boolean>;
+  revokeOriginAccess(origin: string): Promise<boolean>;
+  exportConfiguration(): Promise<void>;
+  importConfiguration(input: unknown): Promise<void>;
+}
 
-  const perform = async (name: string, action?: () => void | Promise<void>) => {
-    if (!action) return;
-    setBusy(name);
+type PopupView = "capture" | "recipes" | "inbox" | "settings";
+
+const emptyData: PopupWorkspaceData = {
+  projects: [],
+  recipes: [],
+  runs: [],
+  permissions: {},
+  retentionLimit: 20,
+};
+
+export function PopupApp({ services }: { services: PopupServices }) {
+  const [view, setView] = useState<PopupView>("capture");
+  const [data, setData] = useState<PopupWorkspaceData>(emptyData);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string>();
+
+  const refresh = async () => {
+    setData(await services.load());
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const perform = async (
+    action: () => void | Promise<void>,
+    success?: string,
+  ) => {
+    setBusy(true);
+    setNotice(undefined);
     try {
       await action();
+      if (success) setNotice(success);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Action failed.");
     } finally {
-      setBusy(undefined);
+      setBusy(false);
     }
   };
 
+  const performAndRefresh = async (
+    action: () => void | Promise<void>,
+    success?: string,
+  ) => perform(async () => {
+    await action();
+    await refresh();
+  }, success);
+
   return (
-    <main className="popup-shell">
+    <main className="popup-shell" aria-busy={loading}>
       <header className="popup-header">
-        <div className="brand-mark" aria-hidden="true">
-          S
-        </div>
+        <div className="brand-mark" aria-hidden="true">S</div>
         <div>
           <h1>Scrapeyy</h1>
-          <p>Capture data and design references</p>
+          <p>Local capture studio</p>
         </div>
+        <span className="local-badge">Local-only</span>
       </header>
 
-      <section className="site-card" aria-label="Current site access">
-        <div>
-          <span className="eyebrow">Current site</span>
-          <strong className="site-origin">{site?.origin ?? "Open a website"}</strong>
-        </div>
-        <span className={`status-dot status-${site?.access ?? "unavailable"}`}>
-          {accessLabel}
-        </span>
-        {site && site.access !== "unavailable" ? (
-          <label className="toggle-row">
-            <span>Allow scheduled captures</span>
-            <input
-              type="checkbox"
-              checked={site.access === "persistent"}
-              onChange={(event) =>
-                void perform("permission", () =>
-                  onTogglePersistentAccess?.(site.origin, event.target.checked),
-                )
-              }
-            />
-          </label>
+      <nav className="popup-tabs" role="tablist" aria-label="Scrapeyy sections">
+        {(["capture", "recipes", "inbox", "settings"] as const).map((item) => (
+          <button
+            aria-label={item[0]!.toUpperCase() + item.slice(1)}
+            aria-selected={view === item}
+            key={item}
+            onClick={() => setView(item)}
+            role="tab"
+            type="button"
+          >
+            {item[0]!.toUpperCase() + item.slice(1)}
+            {item === "inbox" && data.runs.length > 0 ? (
+              <small>{data.runs.length}</small>
+            ) : null}
+          </button>
+        ))}
+      </nav>
+
+      {notice ? <div className="popup-notice" role="status">{notice}</div> : null}
+
+      <div className="popup-content">
+        {view === "capture" ? (
+          <CaptureView
+            disabled={busy}
+            site={data.site}
+            onQuickCapture={() => perform(services.startQuickCapture)}
+            onCreateRecipe={() => perform(() => services.startRecipeCapture())}
+          />
         ) : null}
-      </section>
-
-      <button
-        className="popup-action popup-action-primary"
-        type="button"
-        aria-label="Quick Capture"
-        disabled={!site || site.access === "unavailable" || Boolean(busy)}
-        onClick={() => void perform("capture", onQuickCapture)}
-      >
-        <span className="action-icon" aria-hidden="true">
-          +
-        </span>
-        <span>
-          <strong>Quick Capture</strong>
-          <small>Pick content from this page</small>
-        </span>
-      </button>
-
-      <section className="saved-run">
-        <label htmlFor="popup-recipe">Saved recipe</label>
-        <select
-          id="popup-recipe"
-          value={recipeId}
-          onChange={(event) => setRecipeId(event.target.value)}
-          disabled={recipes.length === 0}
-        >
-          {recipes.length === 0 ? (
-            <option value="">No recipe for this site</option>
-          ) : (
-            recipes.map((recipe) => (
-              <option key={recipe.id} value={recipe.id}>
-                {recipe.name}
-              </option>
-            ))
-          )}
-        </select>
-        <button
-          className="popup-action"
-          type="button"
-          aria-label="Run Saved Recipe"
-          disabled={!recipeId || Boolean(busy)}
-          onClick={() =>
-            void perform("recipe", () => onRunRecipe?.(recipeId))
-          }
-        >
-          <span className="action-icon action-icon-play" aria-hidden="true">
-            ▶
-          </span>
-          <span>
-            <strong>Run Saved Recipe</strong>
-            <small>Capture using the selected setup</small>
-          </span>
-        </button>
-      </section>
-
-      <button
-        className="dashboard-link"
-        type="button"
-        disabled={Boolean(busy)}
-        onClick={() => void perform("dashboard", onOpenDashboard)}
-      >
-        Open Dashboard <span aria-hidden="true">→</span>
-      </button>
-
-      <p className="privacy-note">Captured content stays in this browser.</p>
+        {view === "recipes" ? (
+          <RecipesView
+            disabled={busy}
+            projects={data.projects}
+            recipes={data.recipes}
+            onCreateProject={() => {
+              const now = new Date().toISOString();
+              return performAndRefresh(
+                () =>
+                  services.saveProject({
+                    id: crypto.randomUUID(),
+                    name: `Project ${data.projects.length + 1}`,
+                    createdAt: now,
+                    updatedAt: now,
+                  }),
+                "Project created.",
+              );
+            }}
+            onEdit={(recipeId) => perform(() => services.startRecipeCapture(recipeId))}
+            onRun={(recipeId) =>
+              performAndRefresh(
+                () => services.runRecipe(recipeId).then(() => undefined),
+                "Capture saved to the inbox.",
+              )
+            }
+          />
+        ) : null}
+        {view === "inbox" ? (
+          <InboxView
+            disabled={busy}
+            recipes={data.recipes}
+            runs={data.runs}
+            onDelete={(runId) =>
+              performAndRefresh(() => services.deleteRun(runId), "Run deleted.")
+            }
+            onExport={(runId) => perform(() => services.exportRun(runId), "Export started.")}
+            onPin={(runId, pinned) =>
+              performAndRefresh(() => services.pinRun(runId, pinned))
+            }
+            onRetry={(recipeId) =>
+              performAndRefresh(() => services.runRecipe(recipeId).then(() => undefined))
+            }
+          />
+        ) : null}
+        {view === "settings" ? (
+          <SettingsView
+            disabled={busy}
+            permissions={data.permissions}
+            recipes={data.recipes}
+            retentionLimit={data.retentionLimit}
+            onExportConfiguration={() => perform(services.exportConfiguration)}
+            onImportConfiguration={(input) =>
+              performAndRefresh(() => services.importConfiguration(input))
+            }
+            onRequestAccess={(origin) =>
+              performAndRefresh(() => services.requestOriginAccess(origin).then(() => undefined))
+            }
+            onRevokeAccess={(origin) =>
+              performAndRefresh(() => services.revokeOriginAccess(origin).then(() => undefined))
+            }
+          />
+        ) : null}
+      </div>
     </main>
   );
 }
