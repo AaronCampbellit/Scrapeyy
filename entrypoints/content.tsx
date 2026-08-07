@@ -16,6 +16,9 @@ import {
   type PickerCapture,
 } from "../src/features/picker/PickerApp";
 import "../src/features/picker/picker.css";
+import { createCaptureUiVisibility } from "../src/platform/capture-ui";
+import { createFullPageCaptureController } from "../src/platform/full-page-controller";
+import type { FullPageCaptureController } from "../src/platform/screenshots";
 import type { QuickPageExecutionResult } from "../src/run/quick-run";
 import { advanceInfiniteScroll } from "../src/traversal/infinite-scroll";
 import { advanceNextControl } from "../src/traversal/next";
@@ -92,7 +95,10 @@ async function executeRecipe(recipe: Recipe) {
 async function executeQuickCapture(
   request: QuickCaptureRequest,
 ): Promise<QuickPageExecutionResult> {
-  const selected = document.querySelector(request.containerSelector);
+  const selected =
+    request.scope === "full-page"
+      ? document.documentElement
+      : document.querySelector(request.containerSelector);
   if (!selected) {
     return {
       strategy: "generic",
@@ -124,7 +130,7 @@ async function executeQuickCapture(
     warnings: [],
     errors: [],
     ...(design ? { design } : {}),
-    ...(design
+    ...(design && request.scope === "element"
       ? {
           designBounds: {
             left: bounds.left,
@@ -146,19 +152,20 @@ export default defineContentScript({
     let ui:
       | Awaited<ReturnType<typeof createShadowRootUi<Root>>>
       | undefined;
+    let fullPageCaptureController: FullPageCaptureController | undefined;
 
-    const setCaptureUiHidden = async (hidden: boolean) => {
-      const shadowHost = ui?.shadowHost;
-      if (!shadowHost) return;
-      shadowHost.style.visibility = hidden ? "hidden" : "";
-      if (hidden) {
-        await new Promise<void>((resolve) => {
-          window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(() => resolve());
-          });
+    const waitForPaint = () =>
+      new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => resolve());
         });
-      }
-    };
+      });
+    const captureUiVisibility = createCaptureUiVisibility(
+      () => ui?.shadowHost,
+      waitForPaint,
+    );
+    const setCaptureUiHidden = (hidden: boolean) =>
+      hidden ? captureUiVisibility.hide() : captureUiVisibility.show();
 
     const mountPicker = async (
       variant: "quick" | "recipe",
@@ -225,6 +232,42 @@ export default defineContentScript({
         typeof value.hidden === "boolean"
       ) {
         return setCaptureUiHidden(value.hidden).then(() => ({ ok: true }));
+      }
+      if (value.type === "SCRAPEYY_PREPARE_FULL_PAGE_CAPTURE") {
+        const prepare = async () => {
+          if (fullPageCaptureController) {
+            await fullPageCaptureController.restore();
+          }
+          fullPageCaptureController = createFullPageCaptureController(
+            window,
+            document,
+            setCaptureUiHidden,
+          );
+          return fullPageCaptureController.prepare();
+        };
+        return prepare();
+      }
+      if (
+        value.type === "SCRAPEYY_SCROLL_FULL_PAGE_CAPTURE" &&
+        typeof value.x === "number" &&
+        typeof value.y === "number" &&
+        typeof value.tileIndex === "number"
+      ) {
+        if (!fullPageCaptureController) {
+          return Promise.reject(
+            new Error("Full-page capture was not prepared"),
+          );
+        }
+        return fullPageCaptureController.scrollTo(
+          value.x,
+          value.y,
+          value.tileIndex,
+        );
+      }
+      if (value.type === "SCRAPEYY_RESTORE_FULL_PAGE_CAPTURE") {
+        const restore = fullPageCaptureController?.restore();
+        fullPageCaptureController = undefined;
+        return (restore ?? Promise.resolve()).then(() => ({ ok: true }));
       }
       if (
         value.type === "SCRAPEYY_START_QUICK_PICKER" ||

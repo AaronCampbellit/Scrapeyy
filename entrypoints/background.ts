@@ -5,14 +5,22 @@ import type {
   Recipe,
 } from "../src/contracts/models";
 import type { DesignSnapshot } from "../src/design/snapshot";
-import { buildRunBundle } from "../src/export/bundle";
+import {
+  buildRunBundle,
+  type DownloadedAsset,
+} from "../src/export/bundle";
 import { buildDownloadPath } from "../src/export/filename";
 import type { PickerCapture } from "../src/features/picker/PickerApp";
 import { extensionBrowser } from "../src/platform/browser-api";
 import { ensureContentScript } from "../src/platform/content-injection";
 import { downloadBundle } from "../src/platform/downloads";
 import { hasOriginAccess } from "../src/platform/permissions";
-import { captureElementScreenshot } from "../src/platform/screenshots";
+import { downloadReferencedAssetsFromPage } from "../src/platform/page-asset-download";
+import {
+  captureElementScreenshot,
+  captureFullPageScreenshot,
+} from "../src/platform/screenshots";
+import { createTabFullPageCaptureController } from "../src/platform/tab-full-page-controller";
 import { acquireRecipeTab, releaseRecipeTab } from "../src/platform/tabs";
 import {
   createQuickCaptureResult,
@@ -29,6 +37,10 @@ import {
   shouldCatchUp,
 } from "../src/scheduling/schedule";
 import { CaptureDatabase } from "../src/storage/capture-database";
+import {
+  loadReferenceAssets,
+  storeReferenceAssets,
+} from "../src/storage/reference-assets";
 import { applyRetention } from "../src/storage/retention";
 import {
   createSettingsRepository,
@@ -75,6 +87,7 @@ export default defineBackground(() => {
   const recipes = createSettingsRepository<Recipe>(storage, "recipes");
   const captures = new CaptureDatabase();
   const executionResults = new Map<string, PageExecutionResult>();
+  const executionAssets = new Map<string, DownloadedAsset[]>();
 
   const readScheduleState = async (): Promise<Record<string, ScheduleState>> => {
     const result = await storage.get(SCHEDULE_STATE_KEY);
@@ -104,6 +117,14 @@ export default defineBackground(() => {
       type: "SCRAPEYY_RUN_RECIPE",
       recipe,
     })) as PageExecutionResult;
+    if (result.design) {
+      const downloaded = await downloadReferencedAssetsFromPage(
+        tabId,
+        result.design.assets,
+      );
+      result.warnings.push(...downloaded.warnings);
+      executionAssets.set(recipe.id, downloaded.assets);
+    }
     executionResults.set(recipe.id, result);
     return result;
   };
@@ -122,6 +143,7 @@ export default defineBackground(() => {
     recipe: Recipe,
     result: Pick<PageExecutionResult, "design">,
     storeRecipeSnapshot = false,
+    downloadedAssets: DownloadedAsset[] = [],
   ) => {
     if (storeRecipeSnapshot) {
       await captures.putArtifact({
@@ -149,6 +171,7 @@ export default defineBackground(() => {
           blob: screenshot,
         });
       }
+      await storeReferenceAssets(run.id, downloadedAssets, captures);
     }
   };
 
@@ -180,11 +203,13 @@ export default defineBackground(() => {
       (await projects.get(run.projectId)) ?? (await ensureDefaultProject());
     try {
       const design = await designForRun(run.id);
+      const assets = await loadReferenceAssets(run.id, captures);
       const bundle = await buildRunBundle({
         project,
         recipe,
         run,
         ...(design ? { design } : {}),
+        ...(assets.length > 0 ? { assets } : {}),
       });
       const downloadId = await downloadBundle(
         bundle,
@@ -209,10 +234,12 @@ export default defineBackground(() => {
       await captures.putRun(run);
       const recipe = await recipes.get(run.recipeId);
       const result = executionResults.get(run.recipeId);
+      const downloadedAssets = executionAssets.get(run.recipeId) ?? [];
       if (recipe && result) {
-        await storeRunArtifacts(run, recipe, result);
+        await storeRunArtifacts(run, recipe, result, false, downloadedAssets);
       }
       executionResults.delete(run.recipeId);
+      executionAssets.delete(run.recipeId);
       const expired = applyRetention(await captures.listRuns(), 20);
       await Promise.all(expired.map((id) => captures.deleteRun(id)));
     },
@@ -301,34 +328,47 @@ export default defineBackground(() => {
       type: "SCRAPEYY_EXECUTE_QUICK_CAPTURE",
       request,
     })) as QuickPageExecutionResult;
-    if (
-      execution.design &&
-      execution.designBounds
-    ) {
-      const screenshot = await captureElementScreenshot(
-        tabId,
-        execution.designBounds,
-        undefined,
-        undefined,
-        {
-          hide: () =>
-            extensionBrowser.tabs
-              .sendMessage(tabId, {
-                type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN",
-                hidden: true,
-              })
-              .then(() => undefined),
-          show: () =>
-            extensionBrowser.tabs
-              .sendMessage(tabId, {
-                type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN",
-                hidden: false,
-              })
-              .then(() => undefined),
-        },
-      );
+    if (execution.design) {
+      const screenshot =
+        request.scope === "full-page"
+          ? await captureFullPageScreenshot(
+              tabId,
+              createTabFullPageCaptureController(
+                tabId,
+                (targetTabId, message) =>
+                  extensionBrowser.tabs.sendMessage(targetTabId, message),
+              ),
+            )
+          : execution.designBounds
+            ? await captureElementScreenshot(
+                tabId,
+                execution.designBounds,
+                undefined,
+                undefined,
+                {
+                  hide: () =>
+                    extensionBrowser.tabs
+                      .sendMessage(tabId, {
+                        type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN",
+                        hidden: true,
+                      })
+                      .then(() => undefined),
+                  show: () =>
+                    extensionBrowser.tabs
+                      .sendMessage(tabId, {
+                        type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN",
+                        hidden: false,
+                      })
+                      .then(() => undefined),
+                },
+              )
+            : undefined;
       if (screenshot) execution.design.screenshot = screenshot;
     }
+    const downloadedAssets = execution.design
+      ? await downloadReferencedAssetsFromPage(tabId, execution.design.assets)
+      : { assets: [], warnings: [] };
+    execution.warnings.push(...downloadedAssets.warnings);
     const now = new Date().toISOString();
     const { recipe, run } = createQuickCaptureResult({
       request,
@@ -340,7 +380,13 @@ export default defineBackground(() => {
       now,
     });
     await captures.putRun(run);
-    await storeRunArtifacts(run, recipe, execution, true);
+    await storeRunArtifacts(
+      run,
+      recipe,
+      execution,
+      true,
+      downloadedAssets.assets,
+    );
     const expired = applyRetention(await captures.listRuns(), 20);
     await Promise.all(expired.map((id) => captures.deleteRun(id)));
     return run;

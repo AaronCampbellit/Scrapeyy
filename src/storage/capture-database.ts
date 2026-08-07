@@ -5,6 +5,7 @@ export interface CaptureArtifact {
   runId: string;
   name: string;
   blob: Blob;
+  sourceUrl?: string;
 }
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -135,6 +136,19 @@ export class CaptureDatabase {
       transaction.objectStore("artifacts").get(id) as IDBRequest<
         CaptureArtifact | undefined
       >,
+    );
+    await transactionComplete(transaction);
+    return result;
+  }
+
+  async listArtifacts(runId: string): Promise<CaptureArtifact[]> {
+    const transaction = (await this.#open()).transaction(
+      "artifacts",
+      "readonly",
+    );
+    const result = await requestResult(
+      transaction.objectStore("artifacts").index("runId").getAll(runId) as
+        IDBRequest<CaptureArtifact[]>,
     );
     await transactionComplete(transaction);
     return result;

@@ -44,6 +44,14 @@ select:focus-visible {
   z-index: 2147483644;
 }
 
+.selection-marquee {
+  background: rgb(13 91 215 / 12%);
+  border: 2px dashed var(--scrapeyy-accent);
+  pointer-events: none;
+  position: fixed;
+  z-index: 2147483645;
+}
+
 .picker-instruction,
 .picker-notice {
   align-items: center;
@@ -65,6 +73,17 @@ select:focus-visible {
 .picker-instruction span {
   color: #d8dde6;
   font-size: 12px;
+}
+
+.instruction-button {
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 7px;
+  color: #171b24;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 9px;
 }
 
 .picker-notice {

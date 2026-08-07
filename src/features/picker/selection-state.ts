@@ -1,4 +1,4 @@
-export type SelectionPhase = "hovering" | "selected";
+export type SelectionPhase = "selecting" | "selected";
 
 export function shouldIgnorePickerTarget(
   target: EventTarget | null,

@@ -10,6 +10,10 @@ import type {
   Recipe,
 } from "../../src/contracts/models";
 import { CaptureDatabase } from "../../src/storage/capture-database";
+import {
+  captureReferenceAssets,
+  loadReferenceAssets,
+} from "../../src/storage/reference-assets";
 import { migrateConfiguration } from "../../src/storage/migrations";
 import { applyRetention } from "../../src/storage/retention";
 import {
@@ -89,12 +93,49 @@ describe("local repositories", () => {
       runId: "run-1",
       name: "snapshot.html",
       blob: artifact,
+      sourceUrl: "https://example.test/snapshot",
+    });
+    await database.putArtifact({
+      id: "run-2:snapshot",
+      runId: "run-2",
+      name: "snapshot.html",
+      blob: new Blob(["other"]),
     });
 
     expect(await database.getRun("run-1")).toEqual(captureRun);
     expect(await (await database.getArtifact("run-1:snapshot"))?.blob.text()).toBe(
       "snapshot",
     );
+    const artifacts = await database.listArtifacts("run-1");
+    expect(artifacts).toHaveLength(1);
+    expect(artifacts[0]?.sourceUrl).toBe("https://example.test/snapshot");
+  });
+
+  it("downloads reference images at capture time and reloads them for export", async () => {
+    const database = new CaptureDatabase(`scrapeyy-test-${crypto.randomUUID()}`);
+    databases.push(database);
+
+    const warnings = await captureReferenceAssets(
+      "run-assets",
+      [
+        { kind: "image", url: "https://example.test/hero.png" },
+        { kind: "image", url: "https://example.test/missing.png" },
+      ],
+      database,
+      async (url) =>
+        String(url).includes("missing")
+          ? new Response("missing", { status: 404 })
+          : new Response("image-bytes", {
+              headers: { "content-type": "image/png" },
+            }),
+    );
+    const assets = await loadReferenceAssets("run-assets", database);
+
+    expect(warnings).toHaveLength(1);
+    expect(assets).toHaveLength(1);
+    expect(assets[0]?.filename).toBe("001-hero.png");
+    expect(assets[0]?.url).toBe("https://example.test/hero.png");
+    expect(await assets[0]?.blob.text()).toBe("image-bytes");
   });
 
   it("retains the twenty newest unpinned runs plus protected runs", () => {

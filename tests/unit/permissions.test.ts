@@ -8,9 +8,13 @@ import {
 } from "../../src/platform/permissions";
 import {
   captureElementScreenshot,
+  captureFullPageScreenshot,
+  type FullPageCaptureController,
+  type FullPageImageStitcher,
   type ImageCropper,
   type ScreenshotApi,
 } from "../../src/platform/screenshots";
+import { createTabFullPageCaptureController } from "../../src/platform/tab-full-page-controller";
 
 class MemoryPermissionApi implements PermissionApi {
   readonly origins = new Set<string>();
@@ -135,5 +139,143 @@ describe("origin permissions", () => {
 
     expect(events).toEqual(["hide", "capture:true", "crop:true", "show"]);
     expect(uiHidden).toBe(false);
+  });
+
+  it("captures every viewport tile and stitches the full scrollable document", async () => {
+    const events: string[] = [];
+    const api: ScreenshotApi = {
+      getTab: async () => ({ windowId: 7 }),
+      captureVisibleTab: async () => {
+        events.push("capture");
+        return `tile-${events.filter((event) => event === "capture").length}`;
+      },
+    };
+    const controller: FullPageCaptureController = {
+      prepare: async () => {
+        events.push("prepare");
+        return {
+          documentWidth: 100,
+          documentHeight: 250,
+          viewportWidth: 100,
+          viewportHeight: 100,
+        };
+      },
+      scrollTo: async (x, y, tileIndex) => {
+        const actualY = y === 200 ? 150 : y;
+        events.push(`scroll:${x},${actualY}:${tileIndex}`);
+        return { x, y: actualY };
+      },
+      restore: async () => {
+        events.push("restore");
+      },
+    };
+    const stitcher: FullPageImageStitcher = {
+      stitch: async (metrics, tiles) => {
+        expect(metrics).toEqual({
+          documentWidth: 100,
+          documentHeight: 250,
+          viewportWidth: 100,
+          viewportHeight: 100,
+        });
+        expect(tiles).toEqual([
+          { dataUrl: "tile-1", x: 0, y: 0 },
+          { dataUrl: "tile-2", x: 0, y: 100 },
+          { dataUrl: "tile-3", x: 0, y: 150 },
+        ]);
+        events.push("stitch");
+        return new Blob(["full-page"], { type: "image/png" });
+      },
+    };
+
+    const screenshot = await captureFullPageScreenshot(42, controller, {
+      api,
+      stitcher,
+      wait: async () => undefined,
+    });
+
+    expect(await screenshot.text()).toBe("full-page");
+    expect(events).toEqual([
+      "prepare",
+      "scroll:0,0:0",
+      "capture",
+      "scroll:0,100:1",
+      "capture",
+      "scroll:0,150:2",
+      "capture",
+      "stitch",
+      "restore",
+    ]);
+  });
+
+  it("restores the page when a full-page capture fails", async () => {
+    let restored = false;
+    const controller: FullPageCaptureController = {
+      prepare: async () => ({
+        documentWidth: 100,
+        documentHeight: 200,
+        viewportWidth: 100,
+        viewportHeight: 100,
+      }),
+      scrollTo: async (x, y) => ({ x, y }),
+      restore: async () => {
+        restored = true;
+      },
+    };
+
+    await expect(
+      captureFullPageScreenshot(42, controller, {
+        api: {
+          getTab: async () => ({ windowId: 7 }),
+          captureVisibleTab: async () => {
+            throw new Error("capture unavailable");
+          },
+        },
+        wait: async () => undefined,
+      }),
+    ).rejects.toThrow("capture unavailable");
+    expect(restored).toBe(true);
+  });
+
+  it("coordinates full-page capture state with the content script", async () => {
+    const messages: unknown[] = [];
+    const controller = createTabFullPageCaptureController(42, async (tabId, message) => {
+      expect(tabId).toBe(42);
+      messages.push(message);
+      if (
+        typeof message === "object" &&
+        message !== null &&
+        (message as { type?: string }).type === "SCRAPEYY_PREPARE_FULL_PAGE_CAPTURE"
+      ) {
+        return {
+          documentWidth: 900,
+          documentHeight: 1_800,
+          viewportWidth: 900,
+          viewportHeight: 600,
+        };
+      }
+      if (
+        typeof message === "object" &&
+        message !== null &&
+        (message as { type?: string }).type === "SCRAPEYY_SCROLL_FULL_PAGE_CAPTURE"
+      ) {
+        return { x: 0, y: 600 };
+      }
+      return { ok: true };
+    });
+
+    await controller.prepare();
+    await controller.scrollTo(0, 600, 1);
+    await controller.restore();
+
+    expect(messages).toEqual([
+      { type: "SCRAPEYY_PREPARE_FULL_PAGE_CAPTURE" },
+      {
+        type: "SCRAPEYY_SCROLL_FULL_PAGE_CAPTURE",
+        x: 0,
+        y: 600,
+        tileIndex: 1,
+      },
+      { type: "SCRAPEYY_RESTORE_FULL_PAGE_CAPTURE" },
+    ]);
   });
 });

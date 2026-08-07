@@ -17,6 +17,7 @@ describe("createQuickCaptureResult", () => {
         projectId: project.id,
         mode: "data",
         containerSelector: "#prices",
+        scope: "element",
       },
       project,
       startUrl: "https://example.test/prices",

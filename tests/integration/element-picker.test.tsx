@@ -26,9 +26,10 @@ function Harness({ onCancel = () => undefined }: { onCancel?: () => void }) {
 describe("useElementPicker", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    Reflect.deleteProperty(document, "elementsFromPoint");
   });
 
-  it("selects a clicked page element and blocks its page action", () => {
+  it("selects a short-clicked page element and blocks its page action", () => {
     const pageAction = vi.fn();
     const target = document.createElement("a");
     target.href = "https://example.test/next";
@@ -45,6 +46,58 @@ describe("useElementPicker", () => {
     expect(screen.getByLabelText("selected")).toHaveTextContent("target");
   });
 
+  it("selects the smallest shared container enclosing a dragged area", () => {
+    const container = document.createElement("section");
+    container.dataset.name = "container";
+    const first = document.createElement("span");
+    first.dataset.name = "first";
+    const second = document.createElement("span");
+    second.dataset.name = "second";
+    container.append(first, second);
+    document.body.append(container);
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 220,
+      bottom: 120,
+      width: 220,
+      height: 120,
+      toJSON: () => ({}),
+    });
+    Object.defineProperty(document, "elementsFromPoint", {
+      configurable: true,
+      value: (x: number) =>
+        x < 100
+          ? [first, container, document.body, document.documentElement]
+          : [second, container, document.body, document.documentElement],
+    });
+    render(<Harness />);
+
+    fireEvent.pointerDown(first, {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(second, {
+      buttons: 1,
+      clientX: 190,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(second, {
+      button: 0,
+      clientX: 190,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    expect(screen.getByLabelText("phase")).toHaveTextContent("selected");
+    expect(screen.getByLabelText("selected")).toHaveTextContent("container");
+  });
+
   it("ignores extension UI and supports reselect and Escape", () => {
     const onCancel = vi.fn();
     const target = document.createElement("article");
@@ -58,7 +111,7 @@ describe("useElementPicker", () => {
     fireEvent.pointerMove(target);
     fireEvent.click(target);
     fireEvent.click(screen.getByRole("button", { name: "Reselect" }));
-    expect(screen.getByLabelText("phase")).toHaveTextContent("hovering");
+    expect(screen.getByLabelText("phase")).toHaveTextContent("selecting");
     expect(screen.getByLabelText("selected")).toHaveTextContent("none");
 
     fireEvent.keyDown(document, { key: "Escape" });

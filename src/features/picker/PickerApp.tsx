@@ -118,7 +118,7 @@ export function PickerApp({
   const picker = useElementPicker(ownerDocument, onClose, initialElement);
   useEffect(() => {
     ownerDocument.documentElement.style.cursor =
-      picker.phase === "hovering" ? "crosshair" : originalCursor.current;
+      picker.phase === "selecting" ? "crosshair" : originalCursor.current;
     return () => {
       ownerDocument.documentElement.style.cursor = originalCursor.current;
     };
@@ -204,8 +204,8 @@ export function PickerApp({
     schedule,
     updatedAt: new Date().toISOString(),
   };
-  const target = picker.phase === "selected" ? picker.selected : picker.hovered;
-  const targetBounds = target?.getBoundingClientRect();
+  const targetBounds =
+    picker.scope === "element" ? picker.selected?.getBoundingClientRect() : undefined;
 
   const runQuickCapture = async (captureMode: CaptureMode) => {
     if (!selector || !onQuickCapture) return;
@@ -214,8 +214,9 @@ export function PickerApp({
     try {
       await onQuickCapture({
         projectId,
-                  mode: captureMode,
+        mode: captureMode,
         containerSelector: selector,
+        scope: picker.scope,
       });
       setNotice("Capture saved to the inbox.");
     } catch (error) {
@@ -242,10 +243,33 @@ export function PickerApp({
         />
       ) : null}
 
-      {picker.phase === "hovering" ? (
+      {picker.dragRect ? (
+        <div
+          className="selection-marquee"
+          aria-hidden="true"
+          style={{
+            left: picker.dragRect.left,
+            top: picker.dragRect.top,
+            width: picker.dragRect.width,
+            height: picker.dragRect.height,
+          }}
+        />
+      ) : null}
+
+      {picker.phase === "selecting" ? (
         <div className="picker-instruction" role="status">
           <strong>{variant === "quick" ? "Quick Capture" : "Create Recipe"}</strong>
-          <span>Click content to select · Esc to cancel</span>
+          <span>Drag to select · Click one element · Esc to cancel</span>
+          {variant === "quick" ? (
+            <button
+              aria-label="Capture Full Page"
+              className="instruction-button"
+              onClick={picker.selectFullPage}
+              type="button"
+            >
+              Full Page
+            </button>
+          ) : null}
           <button className="text-button" onClick={onClose} type="button">Cancel</button>
         </div>
       ) : null}
@@ -259,7 +283,11 @@ export function PickerApp({
       {variant === "quick" && picker.selected ? (
         <QuickCaptureCard
           busy={busy}
-          description={describeElement(picker.selected)}
+          description={
+            picker.scope === "full-page"
+              ? "Entire scrollable page"
+              : describeElement(picker.selected)
+          }
           onCancel={() => onClose?.()}
           onCapture={runQuickCapture}
           onReselect={picker.reselect}

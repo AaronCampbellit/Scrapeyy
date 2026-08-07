@@ -37,8 +37,10 @@ describe("PickerApp", () => {
     );
 
     expect(
-      screen.getByText("Click content to select · Esc to cancel"),
+      screen.getByText("Drag to select · Click one element · Esc to cancel"),
     ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Capture Full Page" })).toBeVisible();
+    expect(document.querySelector(".selection-highlight")).toBeNull();
     expect(document.documentElement.style.cursor).toBe("crosshair");
     expect(screen.queryByText("Fields")).toBeNull();
     expect(screen.queryByText("Pagination")).toBeNull();
@@ -66,9 +68,40 @@ describe("PickerApp", () => {
         projectId: "project-1",
         mode: "both",
         containerSelector: "article.product-card",
+        scope: "element",
       } satisfies QuickCaptureRequest),
     );
     expect(screen.getByText("Capture saved to the inbox.")).toBeVisible();
+  });
+
+  it("opens the same capture choice for the entire scrollable page", async () => {
+    const user = userEvent.setup();
+    const onQuickCapture = vi.fn().mockResolvedValue(undefined);
+    render(
+      <PickerApp
+        ownerDocument={document}
+        variant="quick"
+        projectId="project-1"
+        projectName="Acme research"
+        onQuickCapture={onQuickCapture}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Capture Full Page" }));
+
+    expect(screen.getByText("Entire scrollable page")).toBeVisible();
+    expect(screen.getByRole("group", { name: "Capture type" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Both" }));
+    await user.click(screen.getByRole("button", { name: "Capture" }));
+
+    await waitFor(() =>
+      expect(onQuickCapture).toHaveBeenCalledWith({
+        projectId: "project-1",
+        mode: "both",
+        containerSelector: "html",
+        scope: "full-page",
+      } satisfies QuickCaptureRequest),
+    );
   });
 
   it("keeps advanced options inside Create Recipe", async () => {

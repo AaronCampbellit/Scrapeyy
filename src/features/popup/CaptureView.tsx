@@ -39,7 +39,7 @@ export function CaptureView({
         <span className="capture-icon" aria-hidden="true">+</span>
         <span>
           <strong>Quick Capture</strong>
-          <small>Click a region, choose Data, Design, or Both</small>
+          <small>Drag a region or capture the full page, then choose a type</small>
         </span>
       </button>
       <button

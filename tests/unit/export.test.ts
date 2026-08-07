@@ -90,11 +90,24 @@ describe("capture exports", () => {
   });
 
   it("includes structured and design artifacts for Both mode", async () => {
-    const bundle = await buildRunBundle({ project, recipe, run, design });
+    const bundle = await buildRunBundle({
+      project,
+      recipe,
+      run,
+      design,
+      assets: [
+        {
+          url: "https://example.test/reference-image.svg",
+          filename: "001-reference-image.svg",
+          blob: new Blob(["<svg></svg>"], { type: "image/svg+xml" }),
+        },
+      ],
+    });
     const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
 
     expect(Object.keys(zip.files).sort()).toEqual([
       "assets.json",
+      "assets/001-reference-image.svg",
       "data.csv",
       "data.json",
       "manifest.json",
@@ -105,6 +118,9 @@ describe("capture exports", () => {
     expect(await zip.file("data.csv")?.async("string")).toBe(
       'Title,URL\r\n"A, ""B""",\r\n',
     );
+    expect(
+      await zip.file("assets/001-reference-image.svg")?.async("string"),
+    ).toBe("<svg></svg>");
   });
 
   it("produces byte-identical bundles for the same run", async () => {

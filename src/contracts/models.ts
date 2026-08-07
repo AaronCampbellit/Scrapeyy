@@ -67,6 +67,7 @@ export interface QuickCaptureRequest {
   projectId: string;
   mode: CaptureMode;
   containerSelector: string;
+  scope: "element" | "full-page";
 }
 
 export interface Recipe {

@@ -90,6 +90,9 @@ describe("PopupApp", () => {
 
     expect(await screen.findByText("Current site")).toBeVisible();
     expect(screen.queryByText(/Open Dashboard/i)).toBeNull();
+    expect(
+      screen.getByText("Drag a region or capture the full page, then choose a type"),
+    ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Quick Capture" }));
     expect(api.startQuickCapture).toHaveBeenCalledOnce();
 
