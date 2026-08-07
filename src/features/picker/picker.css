@@ -7,6 +7,10 @@
   --scrapeyy-border-strong: #b9c1ce;
   --scrapeyy-accent: #0d5bd7;
   --scrapeyy-accent-soft: #eaf2ff;
+  --scrapeyy-accent-text: #064dbb;
+  --scrapeyy-surface-muted: #edf0f4;
+  --scrapeyy-hover: #f5f7fa;
+  --scrapeyy-border-subtle: #edf0f4;
   color: var(--scrapeyy-text);
   font-family:
     Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -33,6 +37,22 @@ select:focus-visible {
 .picker-root {
   color: var(--scrapeyy-text);
   font-size: 14px;
+}
+
+.picker-root[data-theme="dark"] {
+  color-scheme: dark;
+  --scrapeyy-bg: #0e1623;
+  --scrapeyy-surface: #182334;
+  --scrapeyy-text: #edf3ff;
+  --scrapeyy-muted: #94a3b8;
+  --scrapeyy-border: #344258;
+  --scrapeyy-border-strong: #4a5b73;
+  --scrapeyy-accent: #5795f5;
+  --scrapeyy-accent-soft: #193458;
+  --scrapeyy-accent-text: #8ab5fa;
+  --scrapeyy-surface-muted: #26354a;
+  --scrapeyy-hover: #202d40;
+  --scrapeyy-border-subtle: #26354a;
 }
 
 .element-highlight,
@@ -76,10 +96,10 @@ select:focus-visible {
 }
 
 .instruction-button {
-  background: #fff;
-  border: 1px solid #fff;
+  background: var(--scrapeyy-surface);
+  border: 1px solid var(--scrapeyy-border-strong);
   border-radius: 7px;
-  color: #171b24;
+  color: var(--scrapeyy-text);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
@@ -140,7 +160,7 @@ select:focus-visible {
 .selection-summary {
   align-items: center;
   background: var(--scrapeyy-accent-soft);
-  border: 1px solid #c8dcfb;
+  border: 1px solid var(--scrapeyy-border-strong);
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
@@ -187,7 +207,7 @@ select:focus-visible {
 }
 
 .recipe-steps li span {
-  background: #edf0f4;
+  background: var(--scrapeyy-surface-muted);
   border-radius: 50%;
   display: grid;
   height: 23px;
@@ -246,7 +266,7 @@ select:focus-visible {
 
 .review-step dl div {
   align-items: center;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--scrapeyy-border-subtle);
   display: flex;
   justify-content: space-between;
   padding: 9px 10px;
@@ -269,7 +289,7 @@ select:focus-visible {
 }
 
 .recipe-navigation {
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--scrapeyy-border-subtle);
   bottom: -18px;
   margin: 18px -18px -18px;
   padding: 14px 18px 18px;
@@ -312,14 +332,14 @@ select:focus-visible {
 }
 
 .picker-section {
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--scrapeyy-border-subtle);
   margin-top: 16px;
   padding-top: 16px;
 }
 
 .picker-section h2,
 .form-field > span {
-  color: #2d3440;
+  color: var(--scrapeyy-text);
   display: block;
   font-size: 12px;
   font-weight: 650;
@@ -333,7 +353,7 @@ select:focus-visible {
 
 input,
 select {
-  background: #fff;
+  background: var(--scrapeyy-surface);
   border: 1px solid var(--scrapeyy-border-strong);
   border-radius: 6px;
   color: var(--scrapeyy-text);
@@ -361,9 +381,9 @@ td {
 }
 
 .segmented button {
-  background: #fff;
+  background: var(--scrapeyy-surface);
   border: 1px solid var(--scrapeyy-border);
-  color: #4b5565;
+  color: var(--scrapeyy-muted);
   font-size: 13px;
   height: 34px;
   margin-left: -1px;
@@ -382,7 +402,7 @@ td {
 .segmented button[aria-pressed="true"] {
   background: var(--scrapeyy-accent-soft);
   border-color: var(--scrapeyy-accent);
-  color: #064dbb;
+  color: var(--scrapeyy-accent-text);
   font-weight: 650;
   position: relative;
   z-index: 1;
@@ -438,7 +458,7 @@ td {
 
 .button,
 .icon-button {
-  background: #fff;
+  background: var(--scrapeyy-surface);
   border: 1px solid var(--scrapeyy-border-strong);
   border-radius: 6px;
   color: var(--scrapeyy-text);
@@ -449,7 +469,7 @@ td {
 
 .button:hover:not(:disabled),
 .icon-button:hover:not(:disabled) {
-  background: #f5f7fa;
+  background: var(--scrapeyy-hover);
 }
 
 .button:disabled,
@@ -514,7 +534,7 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--scrapeyy-border-subtle);
   font-size: 11px;
   overflow: hidden;
   padding: 7px 8px;

@@ -9,7 +9,7 @@ import {
   buildRunBundle,
   type DownloadedAsset,
 } from "../src/export/bundle";
-import { buildDownloadPath } from "../src/export/filename";
+import { resolveRunDownload } from "../src/export/run-download";
 import type { PickerCapture } from "../src/features/picker/PickerApp";
 import { extensionBrowser } from "../src/platform/browser-api";
 import { ensureContentScript } from "../src/platform/content-injection";
@@ -42,6 +42,7 @@ import {
   storeReferenceAssets,
 } from "../src/storage/reference-assets";
 import { applyRetention } from "../src/storage/retention";
+import { createAppSettingsStore } from "../src/storage/app-settings";
 import {
   createSettingsRepository,
   type StorageArea,
@@ -86,6 +87,7 @@ export default defineBackground(() => {
   const projects = createSettingsRepository<Project>(storage, "projects");
   const recipes = createSettingsRepository<Recipe>(storage, "recipes");
   const captures = new CaptureDatabase();
+  const appSettings = createAppSettingsStore(storage);
   const executionResults = new Map<string, PageExecutionResult>();
   const executionAssets = new Map<string, DownloadedAsset[]>();
 
@@ -194,7 +196,7 @@ export default defineBackground(() => {
       : undefined;
   };
 
-  const exportRun = async (runId: string, saveAs = false): Promise<number> => {
+  const exportRun = async (runId: string): Promise<number> => {
     const run = await captures.getRun(runId);
     if (!run) throw new Error("Capture run not found");
     const recipe = await recipeForRun(run);
@@ -211,10 +213,16 @@ export default defineBackground(() => {
         ...(design ? { design } : {}),
         ...(assets.length > 0 ? { assets } : {}),
       });
+      const download = resolveRunDownload(
+        await appSettings.get(),
+        project,
+        recipe,
+        run,
+      );
       const downloadId = await downloadBundle(
         bundle,
-        buildDownloadPath(project, recipe, run),
-        saveAs,
+        download.path,
+        download.saveAs,
       );
       await captures.putRun({ ...run, exportState: "complete" });
       return downloadId;
@@ -422,6 +430,7 @@ export default defineBackground(() => {
           .then(() =>
             extensionBrowser.tabs.sendMessage(value.tabId as number, {
               type: "SCRAPEYY_START_QUICK_PICKER",
+              theme: value.theme === "light" ? "light" : "dark",
             }),
           )
           .then(() => ({ ok: true }));
@@ -450,6 +459,7 @@ export default defineBackground(() => {
             type: "SCRAPEYY_START_RECIPE_PICKER",
             ...(recipe ? { recipe } : {}),
             projects: savedProjects,
+            theme: value.theme === "light" ? "light" : "dark",
           });
           return { ok: true };
         });
@@ -490,7 +500,7 @@ export default defineBackground(() => {
         value.type === "SCRAPEYY_EXPORT_RUN" &&
         typeof value.runId === "string"
       ) {
-        return exportRun(value.runId, true).then((downloadId) => ({
+        return exportRun(value.runId).then((downloadId) => ({
           ok: true,
           downloadId,
         }));

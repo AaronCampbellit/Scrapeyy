@@ -12,6 +12,7 @@
   --border-soft: #e7ebf1;
   --surface: #fff;
   --surface-raised: #f8fafc;
+  --page-bg: #f6f8fb;
   --blue: #0d5bd7;
   --blue-dark: #0847ac;
   --blue-soft: #edf4ff;
@@ -76,8 +77,30 @@ select,
 textarea {
   min-height: 36px;
   padding: 7px 9px;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
+}
+
+.popup-shell[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #edf3ff;
+  --ink-soft: #c8d4e7;
+  --muted: #94a3b8;
+  --border: #344258;
+  --border-soft: #26354a;
+  --surface: #182334;
+  --surface-raised: #202d40;
+  --page-bg: #0e1623;
+  --blue: #5795f5;
+  --blue-dark: #3d7fdc;
+  --blue-soft: #193458;
+  --green: #63d2a3;
+  --green-soft: #173a31;
+  --amber: #f1b45d;
+  --amber-soft: #3a2d19;
+  --red: #ff8d96;
+  --red-soft: #43242a;
+  --slate: #8f9db2;
 }
 
 .mono {

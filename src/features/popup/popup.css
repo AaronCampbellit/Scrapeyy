@@ -1,5 +1,5 @@
 .popup-shell {
-  background: #f6f8fb;
+  background: var(--page-bg);
   color: var(--ink);
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -99,6 +99,10 @@
   color: #805009;
   font-size: 11px;
   padding: 7px 12px;
+}
+
+.popup-shell[data-theme="dark"] .popup-notice {
+  border-bottom-color: #59451f;
 }
 
 .popup-content {
@@ -294,6 +298,54 @@
   gap: 5px;
 }
 
+.setting-toggle {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.setting-toggle > span {
+  display: grid;
+  font-size: 11px;
+  gap: 2px;
+}
+
+.setting-toggle input {
+  accent-color: var(--blue);
+  flex: 0 0 auto;
+  min-height: 18px;
+  width: 18px;
+}
+
+.settings-field {
+  display: grid;
+  gap: 5px;
+}
+
+.settings-field > span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.settings-field input,
+.settings-field select {
+  font-size: 11px;
+  min-height: 32px;
+}
+
+.settings-save {
+  background: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  justify-self: start;
+  min-height: 29px;
+  padding: 5px 8px;
+}
+
 .run-list {
   max-height: 150px;
   overflow: auto;
@@ -311,7 +363,7 @@
 
 .run-list > button.is-selected {
   background: var(--blue-soft);
-  border-color: #a8c7f5;
+  border-color: var(--blue);
 }
 
 .run-list > button > span:first-child {

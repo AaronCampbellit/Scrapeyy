@@ -5,6 +5,11 @@ import type {
   Project,
   Recipe,
 } from "../../contracts/models";
+import {
+  DEFAULT_APP_SETTINGS,
+  normalizeAppSettings,
+  type AppSettings,
+} from "../../storage/app-settings";
 import "../shared/theme.css";
 import "./popup.css";
 import { CaptureView } from "./CaptureView";
@@ -24,6 +29,7 @@ export interface PopupWorkspaceData {
   runs: CaptureRun[];
   permissions: Record<string, boolean>;
   retentionLimit: number;
+  settings: AppSettings;
 }
 
 export interface PopupServices {
@@ -39,6 +45,7 @@ export interface PopupServices {
   revokeOriginAccess(origin: string): Promise<boolean>;
   exportConfiguration(): Promise<void>;
   importConfiguration(input: unknown): Promise<void>;
+  saveSettings(settings: AppSettings): Promise<AppSettings>;
 }
 
 type PopupView = "capture" | "recipes" | "inbox" | "settings";
@@ -49,6 +56,7 @@ const emptyData: PopupWorkspaceData = {
   runs: [],
   permissions: {},
   retentionLimit: 20,
+  settings: DEFAULT_APP_SETTINGS,
 };
 
 export function PopupApp({ services }: { services: PopupServices }) {
@@ -91,8 +99,18 @@ export function PopupApp({ services }: { services: PopupServices }) {
     await refresh();
   }, success);
 
+  const updateSettings = (settings: AppSettings) =>
+    perform(async () => {
+      const saved = await services.saveSettings(normalizeAppSettings(settings));
+      setData((current) => ({ ...current, settings: saved }));
+    });
+
   return (
-    <main className="popup-shell" aria-busy={loading}>
+    <main
+      className="popup-shell"
+      aria-busy={loading}
+      data-theme={data.settings.theme}
+    >
       <header className="popup-header">
         <div className="brand-mark" aria-hidden="true">S</div>
         <div>
@@ -181,6 +199,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
             permissions={data.permissions}
             recipes={data.recipes}
             retentionLimit={data.retentionLimit}
+            settings={data.settings}
             onExportConfiguration={() => perform(services.exportConfiguration)}
             onImportConfiguration={(input) =>
               performAndRefresh(() => services.importConfiguration(input))
@@ -191,6 +210,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
             onRevokeAccess={(origin) =>
               performAndRefresh(() => services.revokeOriginAccess(origin).then(() => undefined))
             }
+            onUpdateSettings={updateSettings}
           />
         ) : null}
       </div>

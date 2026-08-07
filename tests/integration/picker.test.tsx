@@ -26,7 +26,7 @@ describe("PickerApp", () => {
   it("uses a direct click followed by a compact capture choice", async () => {
     const user = userEvent.setup();
     const onQuickCapture = vi.fn().mockResolvedValue(undefined);
-    render(
+    const { container } = render(
       <PickerApp
         ownerDocument={document}
         variant="quick"
@@ -36,6 +36,10 @@ describe("PickerApp", () => {
       />,
     );
 
+    expect(container.querySelector(".picker-root")).toHaveAttribute(
+      "data-theme",
+      "dark",
+    );
     expect(
       screen.getByText("Drag to select · Click one element · Esc to cancel"),
     ).toBeVisible();

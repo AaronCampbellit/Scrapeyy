@@ -7,6 +7,7 @@ import type {
   PopupWorkspaceData,
 } from "../../src/features/popup/PopupApp";
 import { PopupApp } from "../../src/features/popup/PopupApp";
+import type { AppSettings } from "../../src/storage/app-settings";
 
 const data: PopupWorkspaceData = {
   site: { origin: "https://example.test", access: "one-time" },
@@ -60,6 +61,11 @@ const data: PopupWorkspaceData = {
   ],
   permissions: { "https://example.test": false },
   retentionLimit: 20,
+  settings: {
+    theme: "dark",
+    downloadBehavior: "ask",
+    downloadSubfolder: "Scrapeyy",
+  },
 };
 
 function services(
@@ -78,6 +84,7 @@ function services(
     revokeOriginAccess: vi.fn(),
     exportConfiguration: vi.fn(),
     importConfiguration: vi.fn(),
+    saveSettings: vi.fn().mockImplementation(async (settings: AppSettings) => settings),
     ...overrides,
   };
 }
@@ -122,6 +129,51 @@ describe("PopupApp", () => {
     expect(screen.getByText("Keep the latest 20 runs")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Allow access" }));
     expect(api.requestOriginAccess).toHaveBeenCalledWith("https://example.test");
+  });
+
+  it("defaults to dark mode and persists appearance and download choices", async () => {
+    const user = userEvent.setup();
+    const api = services();
+    const { container } = render(<PopupApp services={api} />);
+
+    await screen.findByText("Current site");
+    expect(container.querySelector(".popup-shell")).toHaveAttribute(
+      "data-theme",
+      "dark",
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    await user.click(screen.getByRole("switch", { name: "Dark mode" }));
+    await waitFor(() =>
+      expect(api.saveSettings).toHaveBeenCalledWith({
+        theme: "light",
+        downloadBehavior: "ask",
+        downloadSubfolder: "Scrapeyy",
+      }),
+    );
+    expect(container.querySelector(".popup-shell")).toHaveAttribute(
+      "data-theme",
+      "light",
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Download behavior" }),
+      "automatic",
+    );
+    await user.clear(screen.getByRole("textbox", { name: "Download subfolder" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Download subfolder" }),
+      "Client Reports",
+    );
+    await user.click(screen.getByRole("button", { name: "Save download location" }));
+
+    await waitFor(() =>
+      expect(api.saveSettings).toHaveBeenLastCalledWith({
+        theme: "light",
+        downloadBehavior: "automatic",
+        downloadSubfolder: "Client Reports",
+      }),
+    );
   });
 
   it("keeps the popup open and explains picker-start failures", async () => {

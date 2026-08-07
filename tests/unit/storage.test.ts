@@ -17,6 +17,10 @@ import {
 import { migrateConfiguration } from "../../src/storage/migrations";
 import { applyRetention } from "../../src/storage/retention";
 import {
+  createAppSettingsStore,
+  DEFAULT_APP_SETTINGS,
+} from "../../src/storage/app-settings";
+import {
   createSettingsRepository,
   type StorageArea,
 } from "../../src/storage/settings-repository";
@@ -79,6 +83,35 @@ describe("local repositories", () => {
     expect(await repository.list()).toEqual([project]);
     await repository.remove(project.id);
     expect(await repository.get(project.id)).toBeUndefined();
+  });
+
+  it("defaults app settings to dark mode and always asks where to save", async () => {
+    const store = createAppSettingsStore(new MemoryStorageArea());
+
+    expect(await store.get()).toEqual({
+      theme: "dark",
+      downloadBehavior: "ask",
+      downloadSubfolder: "Scrapeyy",
+    });
+  });
+
+  it("persists app settings and normalizes an automatic download subfolder", async () => {
+    const area = new MemoryStorageArea();
+    const store = createAppSettingsStore(area);
+
+    const saved = await store.set({
+      ...DEFAULT_APP_SETTINGS,
+      theme: "light",
+      downloadBehavior: "automatic",
+      downloadSubfolder: "  Client Reports / August:2026  ",
+    });
+
+    expect(saved).toEqual({
+      theme: "light",
+      downloadBehavior: "automatic",
+      downloadSubfolder: "Client Reports/August-2026",
+    });
+    expect(await store.get()).toEqual(saved);
   });
 
   it("round-trips capture runs and binary artifacts through IndexedDB", async () => {

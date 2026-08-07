@@ -26,9 +26,10 @@ export function buildDownloadPath(
   project: Project,
   recipe: Recipe,
   run: CaptureRun,
+  root = "Scrapeyy",
 ): string {
   return [
-    "Scrapeyy",
+    ...root.split("/").map(safePathSegment),
     safePathSegment(project.name),
     safePathSegment(recipe.name),
     runTimestamp(run),

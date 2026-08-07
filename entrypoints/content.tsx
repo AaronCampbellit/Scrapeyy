@@ -19,6 +19,7 @@ import "../src/features/picker/picker.css";
 import { createCaptureUiVisibility } from "../src/platform/capture-ui";
 import { createFullPageCaptureController } from "../src/platform/full-page-controller";
 import type { FullPageCaptureController } from "../src/platform/screenshots";
+import type { AppTheme } from "../src/storage/app-settings";
 import type { QuickPageExecutionResult } from "../src/run/quick-run";
 import { advanceInfiniteScroll } from "../src/traversal/infinite-scroll";
 import { advanceNextControl } from "../src/traversal/next";
@@ -171,6 +172,7 @@ export default defineContentScript({
       variant: "quick" | "recipe",
       initialRecipe?: Recipe,
       availableProjects: Project[] = [],
+      theme: AppTheme = "dark",
     ) => {
       if (ui) {
         ui.remove();
@@ -198,6 +200,7 @@ export default defineContentScript({
               projectId="default-project"
               projectName="Local captures"
               projects={availableProjects}
+              theme={theme}
               {...(initialRecipe ? { initialRecipe } : {})}
               onQuickCapture={(capture) =>
                 browser.runtime
@@ -273,7 +276,12 @@ export default defineContentScript({
         value.type === "SCRAPEYY_START_QUICK_PICKER" ||
         value.type === "SCRAPEYY_START_PICKER"
       ) {
-        return mountPicker("quick").then(() => ({ ok: true }));
+        return mountPicker(
+          "quick",
+          undefined,
+          [],
+          value.theme === "light" ? "light" : "dark",
+        ).then(() => ({ ok: true }));
       }
       if (value.type === "SCRAPEYY_START_RECIPE_PICKER") {
         return mountPicker(
@@ -282,6 +290,7 @@ export default defineContentScript({
           Array.isArray(value.projects)
             ? (value.projects as Project[])
             : [],
+          value.theme === "light" ? "light" : "dark",
         ).then(() => ({ ok: true }));
       }
       if (

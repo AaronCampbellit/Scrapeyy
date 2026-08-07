@@ -13,6 +13,8 @@ import type { DesignSnapshot } from "../../src/design/snapshot";
 import { buildRunBundle } from "../../src/export/bundle";
 import { serializeCsv } from "../../src/export/csv";
 import { buildDownloadPath } from "../../src/export/filename";
+import { resolveRunDownload } from "../../src/export/run-download";
+import { DEFAULT_APP_SETTINGS } from "../../src/storage/app-settings";
 
 const fields: FieldDefinition[] = [
   { id: "title", name: "Title", kind: "text", selector: "h2" },
@@ -87,6 +89,35 @@ describe("capture exports", () => {
     expect(buildDownloadPath(project, recipe, run)).toBe(
       "Scrapeyy/Acme/Products-2026/2026-08-06T12-00-00Z/scrapeyy-run.zip",
     );
+  });
+
+  it("uses the browser save dialog by default", () => {
+    expect(
+      resolveRunDownload(DEFAULT_APP_SETTINGS, project, recipe, run),
+    ).toEqual({
+      path:
+        "Scrapeyy/Acme/Products-2026/2026-08-06T12-00-00Z/scrapeyy-run.zip",
+      saveAs: true,
+    });
+  });
+
+  it("automatically saves under the configured Downloads subfolder", () => {
+    expect(
+      resolveRunDownload(
+        {
+          theme: "dark",
+          downloadBehavior: "automatic",
+          downloadSubfolder: "Client Reports",
+        },
+        project,
+        recipe,
+        run,
+      ),
+    ).toEqual({
+      path:
+        "Client Reports/Acme/Products-2026/2026-08-06T12-00-00Z/scrapeyy-run.zip",
+      saveAs: false,
+    });
   });
 
   it("includes structured and design artifacts for Both mode", async () => {

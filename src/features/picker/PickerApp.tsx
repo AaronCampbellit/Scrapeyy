@@ -13,6 +13,7 @@ import type {
 } from "../../contracts/models";
 import { extractRecords } from "../../extraction/extract";
 import { rankSelectorCandidates } from "../../extraction/selectors";
+import type { AppTheme } from "../../storage/app-settings";
 import { FieldEditor } from "./FieldEditor";
 import { QuickCaptureCard } from "./QuickCaptureCard";
 import { useElementPicker } from "./useElementPicker";
@@ -27,6 +28,7 @@ export interface PickerAppProps {
   projectName: string;
   projects?: Project[];
   initialRecipe?: Recipe | undefined;
+  theme?: AppTheme;
   onQuickCapture?(capture: QuickCaptureRequest): void | Promise<void>;
   onSaveRecipe?(recipe: Recipe): void | Promise<void>;
   onClose?(): void;
@@ -106,6 +108,7 @@ export function PickerApp({
   projectName,
   projects = [],
   initialRecipe,
+  theme = "dark",
   onQuickCapture,
   onSaveRecipe,
   onClose,
@@ -229,7 +232,11 @@ export function PickerApp({
   };
 
   return (
-    <div className={`picker-root picker-${picker.phase}`} data-scrapeyy-ui>
+    <div
+      className={`picker-root picker-${picker.phase}`}
+      data-scrapeyy-ui
+      data-theme={theme}
+    >
       {targetBounds && targetBounds.width > 0 ? (
         <div
           className="selection-highlight"
