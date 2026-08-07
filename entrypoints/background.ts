@@ -372,7 +372,8 @@ export default defineBackground(() => {
             ? recipes.get(value.recipeId)
             : Promise.resolve(undefined),
           extensionBrowser.tabs.get(value.tabId),
-        ]).then(async ([, recipe, tab]) => {
+          ensureDefaultProject().then(() => projects.list()),
+        ]).then(async ([, recipe, tab, savedProjects]) => {
           if (
             recipe &&
             (!tab.url || new URL(tab.url).origin !== recipe.origin)
@@ -384,6 +385,7 @@ export default defineBackground(() => {
           await extensionBrowser.tabs.sendMessage(value.tabId as number, {
             type: "SCRAPEYY_START_RECIPE_PICKER",
             ...(recipe ? { recipe } : {}),
+            projects: savedProjects,
           });
           return { ok: true };
         });

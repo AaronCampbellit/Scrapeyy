@@ -3,6 +3,7 @@ import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root";
 
 import type {
   QuickCaptureRequest,
+  Project,
   Recipe,
   RunError,
 } from "../src/contracts/models";
@@ -149,6 +150,7 @@ export default defineContentScript({
     const mountPicker = async (
       variant: "quick" | "recipe",
       initialRecipe?: Recipe,
+      availableProjects: Project[] = [],
     ) => {
       if (ui) {
         ui.remove();
@@ -175,6 +177,7 @@ export default defineContentScript({
               variant={variant}
               projectId="default-project"
               projectName="Local captures"
+              projects={availableProjects}
               {...(initialRecipe ? { initialRecipe } : {})}
               onQuickCapture={(capture) =>
                 browser.runtime
@@ -214,6 +217,9 @@ export default defineContentScript({
         return mountPicker(
           "recipe",
           value.recipe as Recipe | undefined,
+          Array.isArray(value.projects)
+            ? (value.projects as Project[])
+            : [],
         ).then(() => ({ ok: true }));
       }
       if (

@@ -98,6 +98,7 @@ describe("PickerApp", () => {
     expect(screen.getByRole("heading", { name: "Pagination" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByLabelText("Recipe name")).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Project" })).toBeEnabled();
     expect(screen.getByText("Safety limits")).toBeVisible();
     expect(screen.getByText("Schedule")).toBeVisible();
     expect(screen.getByLabelText("Download after each run")).toBeVisible();

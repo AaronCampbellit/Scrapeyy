@@ -5,6 +5,7 @@ import type {
   CaptureRecord,
   CaptureDestinations,
   FieldDefinition,
+  Project,
   QuickCaptureRequest,
   Recipe,
   Schedule,
@@ -24,6 +25,7 @@ export interface PickerAppProps {
   variant?: "quick" | "recipe";
   projectId: string;
   projectName: string;
+  projects?: Project[];
   initialRecipe?: Recipe | undefined;
   onQuickCapture?(capture: QuickCaptureRequest): void | Promise<void>;
   onSaveRecipe?(recipe: Recipe): void | Promise<void>;
@@ -102,6 +104,7 @@ export function PickerApp({
   variant = "recipe",
   projectId,
   projectName,
+  projects = [],
   initialRecipe,
   onQuickCapture,
   onSaveRecipe,
@@ -126,6 +129,9 @@ export function PickerApp({
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<CaptureMode>(draftBase.mode);
   const [name, setName] = useState(draftBase.name);
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    effectiveProjectId,
+  );
   const [fields, setFields] = useState<FieldDefinition[]>(draftBase.fields);
   const [pagination, setPagination] = useState(traversalKind(draftBase.traversal));
   const [nextSelector, setNextSelector] = useState(
@@ -188,7 +194,7 @@ export function PickerApp({
           };
   const recipe: Recipe = {
     ...draftBase,
-    projectId: effectiveProjectId,
+    projectId: selectedProjectId,
     name,
     mode,
     containerSelector: selector,
@@ -380,8 +386,16 @@ export function PickerApp({
               </label>
               <label className="form-field">
                 <span>Project</span>
-                <select value={effectiveProjectId} disabled>
-                  <option value={effectiveProjectId}>{projectName}</option>
+                <select
+                  value={selectedProjectId}
+                  onChange={(event) => setSelectedProjectId(event.currentTarget.value)}
+                >
+                  {(projects.length > 0
+                    ? projects
+                    : [{ id: effectiveProjectId, name: projectName }]
+                  ).map((project) => (
+                    <option value={project.id} key={project.id}>{project.name}</option>
+                  ))}
                 </select>
               </label>
               <div className="segmented" role="group" aria-label="Recipe capture type">
