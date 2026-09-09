@@ -20,7 +20,11 @@ export type StopReason =
 export interface TraversalEnvironment {
   cancelled(): boolean;
   wait(delayMs: number): Promise<void>;
-  advanceNext(selector: string, timeoutMs: number): Promise<AdvanceResult>;
+  advanceNext(
+    selector: string,
+    matchIndex: number | undefined,
+    timeoutMs: number,
+  ): Promise<AdvanceResult>;
   advanceScroll(stepPx: number, timeoutMs: number): Promise<AdvanceResult>;
 }
 

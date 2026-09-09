@@ -20,7 +20,10 @@ export interface RunRecipeDependencies {
   createId(): string;
   getRecipe(id: string): Promise<Recipe | undefined>;
   hasOriginAccess(origin: string): Promise<boolean>;
-  executeInTab(recipe: Recipe): Promise<PageExecutionResult>;
+  executeInTab(
+    recipe: Recipe,
+    trigger: CaptureRun["trigger"],
+  ): Promise<PageExecutionResult>;
   saveRun(run: CaptureRun): Promise<void>;
 }
 
@@ -50,8 +53,10 @@ export async function runRecipe(
     pinned: false,
     exportState: "none" as const,
   };
+  const needsPersistentAccess =
+    trigger !== "manual" || recipe.manualRunInWorkerTab === true;
   if (
-    trigger !== "manual" &&
+    needsPersistentAccess &&
     !(await dependencies.hasOriginAccess(recipe.origin))
   ) {
     const missed: CaptureRun = {
@@ -64,7 +69,9 @@ export async function runRecipe(
       errors: [
         {
           code: "ORIGIN_PERMISSION_REQUIRED",
-          message: `Grant persistent access to ${recipe.origin} to run this schedule.`,
+          message: recipe.manualRunInWorkerTab && trigger === "manual"
+            ? `Grant persistent access to ${recipe.origin} to use a background worker tab.`
+            : `Grant persistent access to ${recipe.origin} to run this schedule.`,
           recoverable: true,
           pageUrl: recipe.startUrl,
         },
@@ -74,7 +81,7 @@ export async function runRecipe(
     return missed;
   }
   try {
-    const result = await dependencies.executeInTab(recipe);
+    const result = await dependencies.executeInTab(recipe, trigger);
     const run: CaptureRun = {
       ...base,
       status: statusFor(result),

@@ -7,6 +7,7 @@ interface RecipesViewProps {
   onCreateProject(): void | Promise<void>;
   onEdit(recipeId: string): void | Promise<void>;
   onRun(recipeId: string): void | Promise<void>;
+  onDelete(recipeId: string): void | Promise<void>;
 }
 
 export function RecipesView({
@@ -16,6 +17,7 @@ export function RecipesView({
   onCreateProject,
   onEdit,
   onRun,
+  onDelete,
 }: RecipesViewProps) {
   return (
     <section className="popup-view" aria-label="Recipes">
@@ -62,6 +64,23 @@ export function RecipesView({
                   type="button"
                 >
                   Edit
+                </button>
+                <button
+                  aria-label={`Delete ${recipe.name}`}
+                  className="danger-link"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Delete “${recipe.name}”? Scheduled runs for this recipe will also stop. This cannot be undone.`,
+                      )
+                    ) {
+                      void onDelete(recipe.id);
+                    }
+                  }}
+                  type="button"
+                >
+                  Delete
                 </button>
               </div>
             </article>

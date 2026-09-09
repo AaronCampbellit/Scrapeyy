@@ -11,6 +11,8 @@ import { createDesignSnapshot } from "../src/design/snapshot";
 import { extractRecords } from "../src/extraction/extract";
 import { fingerprintRecord } from "../src/extraction/fingerprint";
 import { extractQuickData } from "../src/extraction/quick-extract";
+import { sanitizeCapturedUrl } from "../src/extraction/normalize";
+import { extractSmartRecords } from "../src/extraction/smart-extract";
 import {
   PickerApp,
   type PickerCapture,
@@ -24,28 +26,75 @@ import { createFullPageCaptureController } from "../src/platform/full-page-contr
 import type { FullPageCaptureController } from "../src/platform/screenshots";
 import type { AppTheme } from "../src/storage/app-settings";
 import type { QuickPageExecutionResult } from "../src/run/quick-run";
+import { scrapeSharePointMetadata } from "../src/sharepoint/scrape";
 import { advanceInfiniteScroll } from "../src/traversal/infinite-scroll";
 import { advanceNextControl } from "../src/traversal/next";
 import { runTraversal } from "../src/traversal/run-traversal";
+import { traversalForExecution } from "../src/traversal/settings";
+import type { AdvanceResult } from "../src/traversal/types";
 
 async function executeRecipe(recipe: Recipe) {
   const errors: RunError[] = [];
   let matchedAPage = false;
+  const readCurrentPage = (): {
+    container?: Element;
+    datasetMatched: boolean;
+    records: Record<string, string | null>[];
+  } => {
+    const container = document.querySelector(recipe.containerSelector) ?? undefined;
+    if (!container) return { datasetMatched: false, records: [] };
+    if (recipe.extraction?.kind === "smart") {
+      const extraction = extractSmartRecords(
+        document,
+        recipe.containerSelector,
+        recipe.extraction.datasetKey,
+        recipe.fields,
+        window.location.href,
+      );
+      return {
+        container,
+        datasetMatched: Boolean(extraction.dataset),
+        records: extraction.records,
+      };
+    }
+    return {
+      container,
+      datasetMatched: true,
+      records: extractRecords(document, recipe.containerSelector, recipe.fields),
+    };
+  };
   const result = await runTraversal(
-    recipe.traversal,
+    traversalForExecution(recipe.traversal),
     {
       cancelled: () => false,
       wait: (delayMs) =>
         new Promise((resolve) => window.setTimeout(resolve, delayMs)),
-      advanceNext: (selector, timeoutMs) =>
-        advanceNextControl(document, selector, timeoutMs),
+      advanceNext: (selector, matchIndex, timeoutMs) => {
+        const beforeKeys = new Set(
+          readCurrentPage().records.map((record) =>
+            fingerprintRecord(record, recipe.fields),
+          ),
+        );
+        return advanceNextControl(document, selector, timeoutMs, {
+          ...(matchIndex === undefined ? {} : { matchIndex }),
+          readySignature: () => {
+            const keys = readCurrentPage().records.map((record) =>
+              fingerprintRecord(record, recipe.fields),
+            );
+            return keys.some((key) => !beforeKeys.has(key))
+              ? JSON.stringify(keys)
+              : undefined;
+          },
+          settleMs: 500,
+        });
+      },
       advanceScroll: (stepPx, timeoutMs) =>
         advanceInfiniteScroll(window, stepPx, timeoutMs),
     },
     async () => {
-      const selectorMatched =
-        document.querySelector(recipe.containerSelector) !== null;
-      if (!selectorMatched) {
+      const page = readCurrentPage();
+      const container = page.container;
+      if (!container) {
         const authenticationVisible =
           document.querySelector('input[type="password"]') !== null;
         errors.push({
@@ -56,17 +105,25 @@ async function executeRecipe(recipe: Recipe) {
               ? "The item selector stopped matching on a later page."
               : "The configured item selector no longer matches this page.",
           recoverable: true,
-          pageUrl: window.location.href,
+          pageUrl: sanitizeCapturedUrl(window.location.href),
           selector: recipe.containerSelector,
         });
         return [];
       }
       matchedAPage = true;
-      return extractRecords(
-        document,
-        recipe.containerSelector,
-        recipe.fields,
-      );
+      if (recipe.extraction?.kind === "smart") {
+        if (!page.datasetMatched) {
+          errors.push({
+            code: "DATASET_CHANGED",
+            message: "The saved dataset was not detected on this page.",
+            recoverable: true,
+            pageUrl: sanitizeCapturedUrl(window.location.href),
+            selector: recipe.containerSelector,
+          });
+        }
+        return page.records;
+      }
+      return page.records;
     },
     (record) => fingerprintRecord(record, recipe.fields),
   );
@@ -96,9 +153,76 @@ async function executeRecipe(recipe: Recipe) {
   };
 }
 
+function recordsForRecipe(recipe: Recipe) {
+  if (!document.querySelector(recipe.containerSelector)) return [];
+  if (recipe.extraction?.kind === "smart") {
+    return extractSmartRecords(
+      document,
+      recipe.containerSelector,
+      recipe.extraction.datasetKey,
+      recipe.fields,
+      window.location.href,
+    ).records;
+  }
+  return extractRecords(document, recipe.containerSelector, recipe.fields);
+}
+
+async function advanceRecipeOnce(recipe: Recipe) {
+  if (recipe.traversal.kind !== "next") return "missing" as const;
+  const beforeKeys = new Set(
+    recordsForRecipe(recipe).map((record) =>
+      fingerprintRecord(record, recipe.fields),
+    ),
+  );
+  return advanceNextControl(
+    document,
+    recipe.traversal.nextSelector,
+    recipe.traversal.timeoutMs,
+    {
+      ...(recipe.traversal.nextMatchIndex === undefined
+        ? {}
+        : { matchIndex: recipe.traversal.nextMatchIndex }),
+      readySignature: () => {
+        const keys = recordsForRecipe(recipe).map((record) =>
+          fingerprintRecord(record, recipe.fields),
+        );
+        return keys.some((key) => !beforeKeys.has(key))
+          ? JSON.stringify(keys)
+          : undefined;
+      },
+      settleMs: 500,
+    },
+  );
+}
+
 async function executeQuickCapture(
   request: QuickCaptureRequest,
 ): Promise<QuickPageExecutionResult> {
+  await new Promise<void>((resolve) => {
+    let finished = false;
+    let quietTimer: number;
+    let maximumTimer: number;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(quietTimer);
+      window.clearTimeout(maximumTimer);
+      observer.disconnect();
+      resolve();
+    };
+    const scheduleQuietFinish = () => {
+      window.clearTimeout(quietTimer);
+      quietTimer = window.setTimeout(finish, 350);
+    };
+    const observer = new MutationObserver(scheduleQuietFinish);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    scheduleQuietFinish();
+    maximumTimer = window.setTimeout(finish, 2_000);
+  });
   const selected =
     request.scope === "full-page"
       ? document.documentElement
@@ -114,7 +238,7 @@ async function executeQuickCapture(
           code: "SELECTOR_CHANGED",
           message: "The selected content is no longer available. Reselect it.",
           recoverable: true,
-          pageUrl: window.location.href,
+          pageUrl: sanitizeCapturedUrl(window.location.href),
           selector: request.containerSelector,
         },
       ],
@@ -156,6 +280,8 @@ export default defineContentScript({
     let ui:
       | Awaited<ReturnType<typeof createShadowRootUi<Root>>>
       | undefined;
+    let activePickerVariant: "quick" | "recipe" | undefined;
+    let pickerMinimized = false;
     let fullPageCaptureController: FullPageCaptureController | undefined;
 
     const waitForPaint = () =>
@@ -176,11 +302,19 @@ export default defineContentScript({
       initialRecipe?: Recipe,
       availableProjects: Project[] = [],
       theme: AppTheme = "dark",
+      resume?: {
+        step?: number;
+        nextVerified?: boolean;
+        notice?: string;
+        draft?: boolean;
+      },
     ) => {
       if (ui) {
         ui.remove();
         ui = undefined;
       }
+      activePickerVariant = variant;
+      pickerMinimized = false;
       ui = await createShadowRootUi(ctx, {
         name: "scrapeyy-picker",
         position: "overlay",
@@ -188,7 +322,17 @@ export default defineContentScript({
         isolateEvents: true,
         onMount(container) {
           const root = createRoot(container);
-          const close = () => ui?.remove();
+          const close = () => {
+            ui?.remove();
+            ui = undefined;
+            activePickerVariant = undefined;
+            pickerMinimized = false;
+          };
+          const minimize = () => {
+            const host = findCaptureUiHost(document);
+            if (host) host.style.setProperty("display", "none", "important");
+            pickerMinimized = true;
+          };
           const saveRecipe = async (capture: PickerCapture) => {
             await browser.runtime.sendMessage({
               type: "SCRAPEYY_SAVE_PICKER_RECIPE",
@@ -205,6 +349,12 @@ export default defineContentScript({
               projects={availableProjects}
               theme={theme}
               {...(initialRecipe ? { initialRecipe } : {})}
+              {...(resume?.step === undefined ? {} : { initialStep: resume.step })}
+              {...(resume?.nextVerified === undefined
+                ? {}
+                : { initialNextVerified: resume.nextVerified })}
+              {...(resume?.notice ? { initialNotice: resume.notice } : {})}
+              {...(resume?.draft ? { resumedDraft: true } : {})}
               onQuickCapture={(capture) =>
                 browser.runtime
                   .sendMessage({ type: "SCRAPEYY_QUICK_CAPTURE", capture })
@@ -213,7 +363,17 @@ export default defineContentScript({
                   })
               }
               onClose={close}
+              onMinimize={minimize}
               onSaveRecipe={saveRecipe}
+              onTestNext={(capture) =>
+                browser.runtime
+                  .sendMessage({
+                    type: "SCRAPEYY_TEST_RECIPE_NEXT",
+                    capture,
+                    theme,
+                  })
+                  .then((response: { result: AdvanceResult }) => response.result)
+              }
             />,
           );
           return root;
@@ -232,6 +392,25 @@ export default defineContentScript({
       const value = message as Record<string, unknown>;
       if (value.type === "SCRAPEYY_PING") {
         return Promise.resolve({ ok: true });
+      }
+      if (value.type === "SCRAPEYY_PICKER_STATUS") {
+        return Promise.resolve({
+          active: Boolean(ui && activePickerVariant),
+          minimized: pickerMinimized,
+          variant: activePickerVariant,
+        });
+      }
+      if (value.type === "SCRAPEYY_RESTORE_PICKER") {
+        const host = findCaptureUiHost(document);
+        if (!ui || !activePickerVariant || !pickerMinimized || !host) {
+          return Promise.resolve({ restored: false });
+        }
+        host.style.removeProperty("display");
+        pickerMinimized = false;
+        return Promise.resolve({ restored: true, variant: activePickerVariant });
+      }
+      if (value.type === "SCRAPEYY_SCRAPE_SHAREPOINT") {
+        return scrapeSharePointMetadata(window.location, window.fetch.bind(window));
       }
       if (
         value.type === "SCRAPEYY_SET_CAPTURE_UI_HIDDEN" &&
@@ -294,6 +473,18 @@ export default defineContentScript({
             ? (value.projects as Project[])
             : [],
           value.theme === "light" ? "light" : "dark",
+          {
+            ...(typeof value.resumeStep === "number"
+              ? { step: value.resumeStep }
+              : {}),
+            ...(typeof value.nextVerified === "boolean"
+              ? { nextVerified: value.nextVerified }
+              : {}),
+            ...(typeof value.notice === "string"
+              ? { notice: value.notice }
+              : {}),
+            ...(value.resumedDraft === true ? { draft: true } : {}),
+          },
         ).then(() => ({ ok: true }));
       }
       if (
@@ -304,6 +495,9 @@ export default defineContentScript({
       }
       if (value.type === "SCRAPEYY_RUN_RECIPE" && value.recipe) {
         return executeRecipe(value.recipe as Recipe);
+      }
+      if (value.type === "SCRAPEYY_ADVANCE_RECIPE_PAGE" && value.recipe) {
+        return advanceRecipeOnce(value.recipe as Recipe);
       }
       return undefined;
     };

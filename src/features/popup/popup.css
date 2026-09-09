@@ -65,8 +65,8 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding: 0 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 0 5px;
 }
 
 .popup-tabs button {
@@ -77,7 +77,7 @@
   border-radius: 0;
   color: var(--muted);
   display: flex;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   gap: 5px;
   justify-content: center;
@@ -185,6 +185,62 @@
   min-height: 72px;
   padding: 12px 13px;
   text-align: left;
+}
+
+.sharepoint-results {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+}
+
+.sharepoint-field-list {
+  display: grid;
+  gap: 6px;
+}
+
+.sharepoint-field {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  display: grid;
+  gap: 5px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  padding: 6px 7px;
+}
+
+.sharepoint-field > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.sharepoint-field code {
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sharepoint-field button,
+.sharepoint-results > button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 700;
+  min-height: 27px;
+  padding: 4px 7px;
+}
+
+.sharepoint-empty {
+  padding-block: 22px;
 }
 
 .capture-primary {
@@ -357,34 +413,99 @@
   padding: 5px 8px;
 }
 
-.run-list {
-  max-height: 150px;
-  overflow: auto;
+.inbox-view {
+  align-content: start;
 }
 
-.run-list > button {
+.selected-capture-heading,
+.capture-shelf-heading {
   align-items: center;
-  background: var(--surface);
-  border-color: var(--border);
   display: flex;
   justify-content: space-between;
-  padding: 8px 9px;
-  text-align: left;
 }
 
-.run-list > button.is-selected {
+.selected-capture-heading h3 {
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.capture-shelf {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 7px;
+  margin-top: 2px;
+  padding-top: 10px;
+}
+
+.capture-shelf-heading small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.run-list {
+  display: grid;
+  gap: 7px;
+  grid-auto-columns: minmax(210px, 82%);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+}
+
+.run-list-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+.run-list-item.is-selected {
   background: var(--blue-soft);
   border-color: var(--blue);
 }
 
-.run-list > button > span:first-child {
-  display: grid;
-  gap: 2px;
+.run-select {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 8px 9px;
+  text-align: left;
 }
 
-.run-list small {
+.run-select > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.run-select strong,
+.run-select small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-select small {
   color: var(--muted);
   font-size: 9px;
+}
+
+.run-clear {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 0 8px;
 }
 
 .run-status {

@@ -22,6 +22,25 @@ function runTimestamp(run: CaptureRun): string {
     .replace(/:/g, "-");
 }
 
+export function siteShorthand(startUrl: string): string {
+  try {
+    const labels = new URL(startUrl).hostname
+      .toLowerCase()
+      .split(".")
+      .filter(Boolean);
+    const withoutSuffix = labels.length > 1 ? labels.slice(0, -1) : labels;
+    while (
+      withoutSuffix.length > 1 &&
+      ["www", "app"].includes(withoutSuffix[0] ?? "")
+    ) {
+      withoutSuffix.shift();
+    }
+    return safePathSegment(withoutSuffix.join("-")).toLowerCase();
+  } catch {
+    return "site-capture";
+  }
+}
+
 export function buildDownloadPath(
   project: Project,
   recipe: Recipe,
@@ -33,6 +52,6 @@ export function buildDownloadPath(
     safePathSegment(project.name),
     safePathSegment(recipe.name),
     runTimestamp(run),
-    "scrapeyy-run.zip",
+    `${siteShorthand(recipe.startUrl)}.zip`,
   ].join("/");
 }

@@ -9,6 +9,7 @@ import type {
 } from "../contracts/models";
 import type { DesignSnapshot } from "../design/snapshot";
 import type { QuickExtractionResult } from "../extraction/quick-extract";
+import { sanitizeCapturedUrl } from "../extraction/normalize";
 
 export interface QuickPageExecutionResult {
   strategy: QuickExtractionResult["strategy"];
@@ -49,14 +50,15 @@ export function createQuickCaptureResult({
   recipe: Recipe;
   run: CaptureRun;
 } {
-  const url = new URL(startUrl);
+  const safeStartUrl = sanitizeCapturedUrl(startUrl);
+  const url = new URL(safeStartUrl);
   const recipe: Recipe = {
     version: 1,
     id: recipeId,
     projectId: request.projectId || project.id,
     name: `Quick capture · ${url.hostname}`,
     origin: url.origin,
-    startUrl,
+    startUrl: safeStartUrl,
     mode: request.mode,
     containerSelector: request.containerSelector,
     fields: execution.fields,

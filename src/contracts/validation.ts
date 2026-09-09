@@ -82,6 +82,9 @@ function validateField(input: unknown, index: number): FieldDefinition {
     name: string(value.name, `fields[${index}].name`),
     kind: kind as FieldKind,
     selector: string(value.selector, `fields[${index}].selector`),
+    ...(typeof value.sourceId === "string" && value.sourceId.trim() !== ""
+      ? { sourceId: value.sourceId.trim() }
+      : {}),
     ...(attribute === undefined ? {} : { attribute }),
     ...(typeof value.identity === "boolean" ? { identity: value.identity } : {}),
   };
@@ -103,6 +106,14 @@ function validateTraversal(input: unknown): TraversalSettings {
     return {
       kind,
       nextSelector: string(value.nextSelector, "traversal.nextSelector"),
+      ...(value.nextMatchIndex === undefined
+        ? {}
+        : {
+            nextMatchIndex: nonNegativeInteger(
+              value.nextMatchIndex,
+              "traversal.nextMatchIndex",
+            ),
+          }),
       ...limits,
     };
   }
@@ -176,6 +187,12 @@ export function validateRecipe(input: unknown): Recipe {
   ) {
     throw new Error("destinations must use boolean values");
   }
+  const extraction = value.extraction === undefined
+    ? undefined
+    : record(value.extraction, "extraction");
+  if (extraction && extraction.kind !== "smart") {
+    throw new Error("extraction.kind is unsupported");
+  }
   return {
     version: 1,
     id: string(value.id, "id"),
@@ -189,12 +206,23 @@ export function validateRecipe(input: unknown): Recipe {
     startUrl: startUrl.href,
     mode: mode as CaptureMode,
     containerSelector: string(value.containerSelector, "containerSelector"),
+    ...(extraction
+      ? {
+          extraction: {
+            kind: "smart" as const,
+            datasetKey: string(extraction.datasetKey, "extraction.datasetKey"),
+          },
+        }
+      : {}),
     fields,
     traversal: validateTraversal(value.traversal),
     destinations: {
       inbox: destinations.inbox as boolean,
       autoDownload: destinations.autoDownload as boolean,
     },
+    ...(typeof value.manualRunInWorkerTab === "boolean"
+      ? { manualRunInWorkerTab: value.manualRunInWorkerTab }
+      : {}),
     schedule: validateSchedule(value.schedule),
     createdAt: isoDate(value.createdAt, "createdAt"),
     updatedAt: isoDate(value.updatedAt, "updatedAt"),

@@ -101,6 +101,7 @@ export async function runTraversal(
       settings.kind === "next"
         ? await environment.advanceNext(
             settings.nextSelector,
+            settings.nextMatchIndex,
             settings.timeoutMs,
           )
         : await environment.advanceScroll(

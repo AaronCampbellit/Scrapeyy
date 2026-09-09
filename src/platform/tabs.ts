@@ -8,17 +8,20 @@ export interface AcquiredTab {
 export async function acquireRecipeTab(
   startUrl: string,
   origin: string,
+  options: { dedicated?: boolean } = {},
 ): Promise<AcquiredTab> {
-  const existing = await extensionBrowser.tabs.query({
-    url: `${new URL(origin).origin}/*`,
-  });
-  const reusable = existing.find((tab) => tab.id !== undefined);
-  if (reusable?.id !== undefined) {
-    if (reusable.url !== startUrl) {
-      await extensionBrowser.tabs.update(reusable.id, { url: startUrl });
+  if (!options.dedicated) {
+    const existing = await extensionBrowser.tabs.query({
+      url: `${new URL(origin).origin}/*`,
+    });
+    const reusable = existing.find((tab) => tab.id !== undefined);
+    if (reusable?.id !== undefined) {
+      if (reusable.url !== startUrl) {
+        await extensionBrowser.tabs.update(reusable.id, { url: startUrl });
+      }
+      await waitForTabComplete(reusable.id);
+      return { tabId: reusable.id, created: false };
     }
-    await waitForTabComplete(reusable.id);
-    return { tabId: reusable.id, created: false };
   }
   const created = await extensionBrowser.tabs.create({
     url: startUrl,

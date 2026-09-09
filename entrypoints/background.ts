@@ -10,6 +10,8 @@ import {
   type DownloadedAsset,
 } from "../src/export/bundle";
 import { resolveRunDownload } from "../src/export/run-download";
+import { sanitizeCapturedUrl } from "../src/extraction/normalize";
+import { fingerprintRecord } from "../src/extraction/fingerprint";
 import type { PickerCapture } from "../src/features/picker/PickerApp";
 import { extensionBrowser } from "../src/platform/browser-api";
 import { ensureContentScript } from "../src/platform/content-injection";
@@ -21,7 +23,12 @@ import {
   captureFullPageScreenshot,
 } from "../src/platform/screenshots";
 import { createTabFullPageCaptureController } from "../src/platform/tab-full-page-controller";
-import { acquireRecipeTab, releaseRecipeTab } from "../src/platform/tabs";
+import { advanceAcrossNavigation } from "../src/platform/tab-navigation";
+import {
+  acquireRecipeTab,
+  releaseRecipeTab,
+  waitForTabComplete,
+} from "../src/platform/tabs";
 import {
   createQuickCaptureResult,
   type QuickPageExecutionResult,
@@ -30,6 +37,8 @@ import {
   type PageExecutionResult,
   runRecipe,
 } from "../src/scheduling/runner";
+import { runTraversal } from "../src/traversal/run-traversal";
+import type { AdvanceResult } from "../src/traversal/types";
 import {
   alarmName,
   nextOccurrence,
@@ -50,10 +59,17 @@ import {
 
 const DEFAULT_PROJECT_ID = "default-project";
 const SCHEDULE_STATE_KEY = "scheduleState";
+const PENDING_RECIPE_DRAFTS_KEY = "pendingRecipeDrafts";
 
 interface ScheduleState {
   nextDue: string;
   lastRunAt?: string;
+}
+
+interface PendingRecipeDraft {
+  recipe: Recipe;
+  theme: "light" | "dark";
+  nextVerified: boolean;
 }
 
 function fallbackProject(now: string): Project {
@@ -71,12 +87,22 @@ function recipeFromPicker(
   startUrl: string,
 ): Recipe {
   const now = new Date().toISOString();
-  const url = new URL(startUrl);
+  const currentUrl = sanitizeCapturedUrl(startUrl);
+  let safeStartUrl = currentUrl;
+  try {
+    const draftUrl = new URL(sanitizeCapturedUrl(capture.startUrl));
+    if (draftUrl.origin === new URL(currentUrl).origin) {
+      safeStartUrl = draftUrl.href;
+    }
+  } catch {
+    // New drafts use the current tab URL if their stored URL is unavailable.
+  }
+  const url = new URL(safeStartUrl);
   return {
     ...capture,
     projectId: capture.projectId || DEFAULT_PROJECT_ID,
     origin: url.origin,
-    startUrl,
+    startUrl: safeStartUrl,
     createdAt: capture.createdAt || now,
     updatedAt: now,
   };
@@ -90,6 +116,35 @@ export default defineBackground(() => {
   const appSettings = createAppSettingsStore(storage);
   const executionResults = new Map<string, PageExecutionResult>();
   const executionAssets = new Map<string, DownloadedAsset[]>();
+
+  const readPendingRecipeDrafts = async (): Promise<
+    Record<string, PendingRecipeDraft>
+  > => {
+    const result = await storage.get(PENDING_RECIPE_DRAFTS_KEY);
+    const value = result[PENDING_RECIPE_DRAFTS_KEY];
+    return typeof value === "object" && value !== null
+      ? (value as Record<string, PendingRecipeDraft>)
+      : {};
+  };
+
+  const putPendingRecipeDraft = async (
+    tabId: number,
+    draft: PendingRecipeDraft,
+  ) => {
+    const drafts = await readPendingRecipeDrafts();
+    drafts[String(tabId)] = draft;
+    await storage.set({ [PENDING_RECIPE_DRAFTS_KEY]: drafts });
+  };
+
+  const getPendingRecipeDraft = async (tabId: number) =>
+    (await readPendingRecipeDrafts())[String(tabId)];
+
+  const removePendingRecipeDraft = async (tabId: number) => {
+    const drafts = await readPendingRecipeDrafts();
+    if (!(String(tabId) in drafts)) return;
+    delete drafts[String(tabId)];
+    await storage.set({ [PENDING_RECIPE_DRAFTS_KEY]: drafts });
+  };
 
   const readScheduleState = async (): Promise<Record<string, ScheduleState>> => {
     const result = await storage.get(SCHEDULE_STATE_KEY);
@@ -110,15 +165,173 @@ export default defineBackground(() => {
     return project;
   };
 
-  const executeOnTab = async (
+  const sendRecipeToTab = async (
     recipe: Recipe,
     tabId: number,
   ): Promise<PageExecutionResult> => {
     await ensureContentScript(tabId);
-    const result = (await extensionBrowser.tabs.sendMessage(tabId, {
+    return (await extensionBrowser.tabs.sendMessage(tabId, {
       type: "SCRAPEYY_RUN_RECIPE",
       recipe,
     })) as PageExecutionResult;
+  };
+
+  const advanceRecipeTab = async (
+    recipe: Recipe,
+    tabId: number,
+  ): Promise<AdvanceResult> => {
+    return advanceAcrossNavigation({
+      tabId,
+      timeoutMs: recipe.traversal.timeoutMs,
+      onUpdated: extensionBrowser.tabs.onUpdated,
+      sendAdvance: () =>
+        ensureContentScript(tabId)
+          .then(() => extensionBrowser.tabs.sendMessage(tabId, {
+            type: "SCRAPEYY_ADVANCE_RECIPE_PAGE",
+            recipe,
+          }))
+          .then((result) => result as AdvanceResult),
+      afterNavigation: async () => {
+        await waitForTabComplete(tabId);
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+      },
+    });
+  };
+
+  const testRecipeNext = async (
+    capture: PickerCapture,
+    tabId: number,
+    tabUrl: string,
+    theme: "light" | "dark",
+  ): Promise<{ result: AdvanceResult }> => {
+    const recipe = recipeFromPicker(capture, tabUrl);
+    await putPendingRecipeDraft(tabId, {
+      recipe,
+      theme,
+      nextVerified: false,
+    });
+    let resultSource: "page" | "navigation" | undefined;
+    const result = await advanceAcrossNavigation({
+      tabId,
+      timeoutMs: recipe.traversal.timeoutMs,
+      onUpdated: extensionBrowser.tabs.onUpdated,
+      sendAdvance: () =>
+        ensureContentScript(tabId)
+          .then(() => extensionBrowser.tabs.sendMessage(tabId, {
+            type: "SCRAPEYY_ADVANCE_RECIPE_PAGE",
+            recipe,
+          }))
+          .then((value) => value as AdvanceResult),
+      afterNavigation: async () => {
+        await putPendingRecipeDraft(tabId, {
+          recipe,
+          theme,
+          nextVerified: true,
+        });
+        await waitForTabComplete(tabId);
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        await ensureContentScript(tabId);
+        await ensureDefaultProject();
+        const savedProjects = await projects.list();
+        await extensionBrowser.tabs.sendMessage(tabId, {
+          type: "SCRAPEYY_START_RECIPE_PICKER",
+          recipe,
+          projects: savedProjects,
+          theme,
+          resumeStep: 1,
+          nextVerified: true,
+          resumedDraft: true,
+          notice: "Next button verified after navigation. Your recipe draft was restored.",
+        });
+        await removePendingRecipeDraft(tabId);
+      },
+      onResult: (source) => {
+        resultSource = source;
+      },
+    });
+    if (resultSource === "page") {
+      await removePendingRecipeDraft(tabId);
+    }
+    return { result };
+  };
+
+  const resumePendingRecipeDraft = async (tabId: number): Promise<boolean> => {
+    const pending = await getPendingRecipeDraft(tabId);
+    if (!pending) return false;
+    await ensureContentScript(tabId);
+    await ensureDefaultProject();
+    const savedProjects = await projects.list();
+    await extensionBrowser.tabs.sendMessage(tabId, {
+      type: "SCRAPEYY_START_RECIPE_PICKER",
+      recipe: pending.recipe,
+      projects: savedProjects,
+      theme: pending.theme,
+      resumeStep: 1,
+      nextVerified: pending.nextVerified,
+      resumedDraft: true,
+      notice: pending.nextVerified
+        ? "Next button verified after navigation. Your recipe draft was restored."
+        : "Your recipe draft was restored after navigation. Test the Next button again to verify it.",
+    });
+    await removePendingRecipeDraft(tabId);
+    return true;
+  };
+
+  const executeNextOnTab = async (
+    recipe: Recipe,
+    tabId: number,
+  ): Promise<PageExecutionResult> => {
+    if (recipe.traversal.kind !== "next") {
+      return sendRecipeToTab(recipe, tabId);
+    }
+    const warnings: string[] = [];
+    const errors: NonNullable<PageExecutionResult["errors"]> = [];
+    let design: PageExecutionResult["design"];
+    let designBounds: PageExecutionResult["designBounds"];
+    const singlePageRecipe: Recipe = {
+      ...recipe,
+      traversal: {
+        kind: "none",
+        maxPages: 1,
+        maxItems: recipe.traversal.maxItems,
+        delayMs: 0,
+        timeoutMs: recipe.traversal.timeoutMs,
+      },
+    };
+    const traversal = await runTraversal(
+      recipe.traversal,
+      {
+        cancelled: () => false,
+        wait: (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs)),
+        advanceNext: () => advanceRecipeTab(recipe, tabId),
+        advanceScroll: async () => "complete",
+      },
+      async () => {
+        const page = await sendRecipeToTab(singlePageRecipe, tabId);
+        warnings.push(...page.warnings);
+        errors.push(...(page.errors ?? []));
+        design = page.design ?? design;
+        designBounds = page.designBounds ?? designBounds;
+        return page.records;
+      },
+      (record) => fingerprintRecord(record, recipe.fields),
+    );
+    return {
+      records: traversal.records,
+      warnings: [...new Set([...warnings, ...traversal.warnings])],
+      errors,
+      ...(design ? { design } : {}),
+      ...(designBounds ? { designBounds } : {}),
+    };
+  };
+
+  const executeOnTab = async (
+    recipe: Recipe,
+    tabId: number,
+  ): Promise<PageExecutionResult> => {
+    const result = recipe.traversal.kind === "next"
+      ? await executeNextOnTab(recipe, tabId)
+      : await sendRecipeToTab(recipe, tabId);
     if (result.design) {
       const downloaded = await downloadReferencedAssetsFromPage(
         tabId,
@@ -131,8 +344,14 @@ export default defineBackground(() => {
     return result;
   };
 
-  const execute = async (recipe: Recipe): Promise<PageExecutionResult> => {
-    const tab = await acquireRecipeTab(recipe.startUrl, recipe.origin);
+  const execute = async (
+    recipe: Recipe,
+    trigger: CaptureRun["trigger"],
+  ): Promise<PageExecutionResult> => {
+    const tab = await acquireRecipeTab(recipe.startUrl, recipe.origin, {
+      dedicated:
+        trigger !== "manual" || recipe.manualRunInWorkerTab === true,
+    });
     try {
       return await executeOnTab(recipe, tab.tabId);
     } finally {
@@ -439,6 +658,7 @@ export default defineBackground(() => {
         value.type === "SCRAPEYY_START_RECIPE_PICKER" &&
         typeof value.tabId === "number"
       ) {
+        void removePendingRecipeDraft(value.tabId);
         return Promise.all([
           ensureContentScript(value.tabId),
           typeof value.recipeId === "string"
@@ -487,14 +707,57 @@ export default defineBackground(() => {
         );
         return ensureDefaultProject()
           .then(() => recipes.put(recipe))
+          .then(() =>
+            sender.tab?.id === undefined
+              ? undefined
+              : removePendingRecipeDraft(sender.tab.id),
+          )
           .then(syncSchedules)
           .then(() => ({ ok: true, recipeId: recipe.id }));
+      }
+      if (
+        value.type === "SCRAPEYY_TEST_RECIPE_NEXT" &&
+        value.capture &&
+        sender.tab?.id !== undefined &&
+        sender.tab.url
+      ) {
+        return testRecipeNext(
+          value.capture as PickerCapture,
+          sender.tab.id,
+          sender.tab.url,
+          value.theme === "light" ? "light" : "dark",
+        );
       }
       if (
         value.type === "SCRAPEYY_RUN_RECIPE" &&
         typeof value.recipeId === "string"
       ) {
         return runSavedRecipe(value.recipeId, "manual");
+      }
+      if (
+        value.type === "SCRAPEYY_DELETE_RECIPE" &&
+        typeof value.recipeId === "string"
+      ) {
+        return recipes
+          .remove(value.recipeId)
+          .then(syncSchedules)
+          .then(() => ({ ok: true }));
+      }
+      if (
+        value.type === "SCRAPEYY_PENDING_RECIPE_STATUS" &&
+        typeof value.tabId === "number"
+      ) {
+        return getPendingRecipeDraft(value.tabId).then((draft) => ({
+          pending: Boolean(draft),
+        }));
+      }
+      if (
+        value.type === "SCRAPEYY_RESUME_PENDING_RECIPE" &&
+        typeof value.tabId === "number"
+      ) {
+        return resumePendingRecipeDraft(value.tabId).then((restored) => ({
+          restored,
+        }));
       }
       if (
         value.type === "SCRAPEYY_EXPORT_RUN" &&

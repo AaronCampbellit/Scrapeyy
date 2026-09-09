@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { CaptureRun, Recipe } from "../../src/contracts/models";
 import { runRecipe, type RunRecipeDependencies } from "../../src/scheduling/runner";
@@ -110,7 +110,11 @@ describe("scheduling", () => {
   });
 
   it("records successful page results", async () => {
-    const fixture = dependencies();
+    const executeInTab = vi.fn().mockResolvedValue({
+      records: [{ title: "Alpha" }],
+      warnings: [],
+    });
+    const fixture = dependencies({ executeInTab });
 
     const result = await runRecipe("recipe-1", "manual", fixture.dependencies);
 
@@ -121,5 +125,25 @@ describe("scheduling", () => {
       records: [{ title: "Alpha" }],
     });
     expect(fixture.saved).toEqual([result]);
+    expect(executeInTab).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "recipe-1" }),
+      "manual",
+    );
+  });
+
+  it("requires persistent access for a manual background-tab run", async () => {
+    const workerRecipe = { ...recipe(), manualRunInWorkerTab: true };
+    const executeInTab = vi.fn();
+    const fixture = dependencies({
+      getRecipe: async () => workerRecipe,
+      hasOriginAccess: async () => false,
+      executeInTab,
+    });
+
+    const result = await runRecipe("recipe-1", "manual", fixture.dependencies);
+
+    expect(result.status).toBe("missed");
+    expect(result.errors[0]?.message).toMatch(/background worker tab/i);
+    expect(executeInTab).not.toHaveBeenCalled();
   });
 });

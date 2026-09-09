@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Scrapeyy Dynamic Pagination Fixture</title>
+  </head>
+  <body>
+    <main>
+      <span id="range">1-2 of 6 results</span>
+      <table id="assets">
+        <thead><tr><th>Name</th><th>Serial</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="pager">
+        <button class="generated-control" type="button" disabled><span>‹</span></button>
+        <button class="generated-control" type="button"><span>›</span></button>
+      </div>
+    </main>
+    <script>
+      const pages = [
+        [["Alpha", "A-1"], ["Beta", "B-2"]],
+        [["Gamma", "C-3"], ["Delta", "D-4"]],
+        [["Epsilon", "E-5"], ["Zeta", "F-6"]],
+      ];
+      let page = 0;
+      const body = document.querySelector("tbody");
+      const range = document.querySelector("#range");
+      const [previous, next] = document.querySelectorAll(".generated-control");
+      const render = () => {
+        body.innerHTML = pages[page]
+          .map(([name, serial]) => `<tr><td>${name}</td><td>${serial}</td></tr>`)
+          .join("");
+        range.textContent = `${page * 2 + 1}-${Math.min(page * 2 + 2, 6)} of 6 results`;
+        previous.disabled = page === 0;
+        next.disabled = page === pages.length - 1;
+      };
+      next.addEventListener("click", () => {
+        body.innerHTML = '<tr><td colspan="2">Loading…</td></tr>';
+        window.setTimeout(() => {
+          page = Math.min(page + 1, pages.length - 1);
+          render();
+        }, 120);
+      });
+      previous.addEventListener("click", () => {
+        page = Math.max(0, page - 1);
+        render();
+      });
+      render();
+    </script>
+  </body>
+</html>

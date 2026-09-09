@@ -11,6 +11,10 @@ the same checklist in current Chrome and Firefox against
   sanitization, traversal, storage, retention, permissions, schedules, exports,
   smart Quick Capture, direct element selection, the popup workspace, staged
   recipe creation, content injection, and the cross-module run service.
+- [x] Next-button traversal tests cover shared Previous/Next selectors,
+  JavaScript tables that update without URL navigation, intermediate loading
+  mutations, disabled-control completion, deduplication, and legacy one-page
+  recipe defaults.
 - [x] Chrome Manifest V3 production build.
 - [x] Firefox Manifest V2 production build.
 - [x] Production builds contain the popup, background, and content script with
@@ -26,18 +30,19 @@ result does not count as browser acceptance.
 
 | # | Workflow | Chrome | Firefox |
 |---:|---|---|---|
-| 1 | Popup contains Capture, Recipes, Inbox, and Settings | BLOCKED | PASS |
+| 1 | Popup contains Capture, Inbox, Recipes, SharePoint, and Settings | BLOCKED | PASS |
 | 2 | Quick Capture directly selects a page link without navigating | BLOCKED | PASS |
 | 3 | Quick Data capture saves smart inferred data to Inbox | BLOCKED | PASS |
 | 4 | Data, Design, and Both choices are available after selection | BLOCKED | PASS |
 | 5 | Inbox shows the saved run, data preview, and export/retry/pin/delete actions | BLOCKED | PASS |
-| 6 | Create Recipe opens Selection, Data, Traversal, Delivery, and Review | BLOCKED | PASS |
+| 6 | Create Recipe detects datasets and uses Data, Traversal, and Test & Save | BLOCKED | PASS |
 | 7 | Save a bounded repeated-list recipe and see it in popup Recipes | BLOCKED | PASS |
 | 8 | One-time active-tab access | BLOCKED | PASS |
 | 9 | Quick Design and Both-mode artifacts | BLOCKED | BLOCKED |
 | 10 | Grant and revoke persistent origin access | BLOCKED | BLOCKED |
 | 11 | Manual and scheduled recipe runs | BLOCKED | BLOCKED |
 | 12 | Next-button and infinite-scroll traversal | BLOCKED | BLOCKED |
+| 12a | Shared-class, in-place JavaScript pagination fixture | BLOCKED | BLOCKED |
 | 13 | Automatic/manual ZIP export and configuration import/export | BLOCKED | BLOCKED |
 | 14 | Selector-change and login-required recovery | BLOCKED | BLOCKED |
 
@@ -51,7 +56,7 @@ result does not count as browser acceptance.
   a temporary location with an isolated profile. The Firefox MV2 package was
   installed as a temporary add-on through `web-ext`.
 - Firefox passed popup rendering, direct link selection without navigation,
-  Quick Data capture, Inbox storage and preview, all five recipe stages, recipe
+  Quick Data capture, Inbox storage and preview, all three recipe stages, recipe
   save, and popup recipe visibility.
 - Persistent website access was intentionally left ungranted because expanding
   persistent browser access requires explicit confirmation at action time.

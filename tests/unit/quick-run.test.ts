@@ -85,4 +85,29 @@ describe("createQuickCaptureResult", () => {
       warnings: ["Could not download the referenced image."],
     });
   });
+
+  it("removes authentication parameters from stored quick-capture URLs", () => {
+    const result = createQuickCaptureResult({
+      request: {
+        projectId: project.id,
+        mode: "data",
+        containerSelector: "html",
+        scope: "full-page",
+      },
+      project,
+      startUrl: "https://example.test/overview?range=90d&code=secret&session_state=private#access_token",
+      execution: {
+        strategy: "generic",
+        fields: [],
+        records: [{ text: "Overview" }],
+        warnings: [],
+        errors: [],
+      },
+      id: "safe-run",
+      recipeId: "safe-recipe",
+      now: "2026-08-06T12:01:00.000Z",
+    });
+
+    expect(result.recipe.startUrl).toBe("https://example.test/overview?range=90d");
+  });
 });

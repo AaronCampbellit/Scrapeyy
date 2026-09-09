@@ -98,6 +98,46 @@ describe("useElementPicker", () => {
     expect(screen.getByLabelText("selected")).toHaveTextContent("container");
   });
 
+  it("does not promote a middle-page drag to the whole page when samples hit whitespace", () => {
+    const container = document.createElement("section");
+    container.dataset.name = "middle-content";
+    const first = document.createElement("span");
+    const second = document.createElement("span");
+    container.append(first, second);
+    document.body.append(container);
+    Object.defineProperty(document, "elementsFromPoint", {
+      configurable: true,
+      value: (x: number) =>
+        x < 50
+          ? [document.body, document.documentElement]
+          : x < 150
+            ? [first, container, document.body, document.documentElement]
+            : [second, container, document.body, document.documentElement],
+    });
+    render(<Harness />);
+
+    fireEvent.pointerDown(first, {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(second, {
+      buttons: 1,
+      clientX: 190,
+      clientY: 100,
+      pointerId: 1,
+    });
+    fireEvent.pointerUp(second, {
+      button: 0,
+      clientX: 190,
+      clientY: 100,
+      pointerId: 1,
+    });
+
+    expect(screen.getByLabelText("selected")).toHaveTextContent("middle-content");
+  });
+
   it("ignores extension UI and supports reselect and Escape", () => {
     const onCancel = vi.fn();
     const target = document.createElement("article");

@@ -12,7 +12,7 @@ import type {
 import type { DesignSnapshot } from "../../src/design/snapshot";
 import { buildRunBundle } from "../../src/export/bundle";
 import { serializeCsv } from "../../src/export/csv";
-import { buildDownloadPath } from "../../src/export/filename";
+import { buildDownloadPath, siteShorthand } from "../../src/export/filename";
 import { resolveRunDownload } from "../../src/export/run-download";
 import { DEFAULT_APP_SETTINGS } from "../../src/storage/app-settings";
 
@@ -87,7 +87,16 @@ describe("capture exports", () => {
 
   it("creates a safe relative download path", () => {
     expect(buildDownloadPath(project, recipe, run)).toBe(
-      "Scrapeyy/Acme/Products-2026/2026-08-06T12-00-00Z/scrapeyy-run.zip",
+      "Scrapeyy/Acme/Products-2026/2026-08-06T12-00-00Z/example.zip",
+    );
+  });
+
+  it("uses a concise site hostname for the ZIP name", () => {
+    expect(siteShorthand("https://app.inkyphishfence.com/overview")).toBe(
+      "inkyphishfence",
+    );
+    expect(siteShorthand("https://reports.client.example.com/dashboard")).toBe(
+      "reports-client-example",
     );
   });
 
@@ -96,7 +105,7 @@ describe("capture exports", () => {
       resolveRunDownload(DEFAULT_APP_SETTINGS, project, recipe, run),
     ).toEqual({
       path:
-        "Scrapeyy/Acme/Products-2026/2026-08-06T12-00-00Z/scrapeyy-run.zip",
+        "Scrapeyy/Acme/Products-2026/2026-08-06T12-00-00Z/example.zip",
       saveAs: true,
     });
   });
@@ -115,7 +124,7 @@ describe("capture exports", () => {
       ),
     ).toEqual({
       path:
-        "Client Reports/Acme/Products-2026/2026-08-06T12-00-00Z/scrapeyy-run.zip",
+        "Client Reports/Acme/Products-2026/2026-08-06T12-00-00Z/example.zip",
       saveAs: false,
     });
   });

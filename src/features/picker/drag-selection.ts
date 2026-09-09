@@ -34,21 +34,6 @@ function lowestSharedAncestor(elements: Element[]): Element | undefined {
   return candidate ?? undefined;
 }
 
-function enclosesRectangle(
-  element: Element,
-  rectangle: SelectionRectangle,
-): boolean {
-  const bounds = element.getBoundingClientRect();
-  return (
-    bounds.width > 0 &&
-    bounds.height > 0 &&
-    bounds.left <= rectangle.left + 1 &&
-    bounds.top <= rectangle.top + 1 &&
-    bounds.right >= rectangle.left + rectangle.width - 1 &&
-    bounds.bottom >= rectangle.top + rectangle.height - 1
-  );
-}
-
 export function findEnclosingElement(
   ownerDocument: Document,
   rectangle: SelectionRectangle,
@@ -61,20 +46,19 @@ export function findEnclosingElement(
   for (const x of sampleAxis(rectangle.left, rectangle.width)) {
     for (const y of sampleAxis(rectangle.top, rectangle.height)) {
       const hit = elementsFromPoint(x, y).find(
-        (element) => !shouldIgnorePickerTarget(element),
+        (element) =>
+          !shouldIgnorePickerTarget(element) &&
+          element !== ownerDocument.body &&
+          element !== ownerDocument.documentElement,
       );
       if (hit && !hits.includes(hit)) hits.push(hit);
     }
   }
   if (hits.length === 0) return fallback;
 
-  let candidate: Element | null = lowestSharedAncestor(hits) ?? null;
-  while (
-    candidate &&
-    candidate !== ownerDocument.documentElement &&
-    !enclosesRectangle(candidate, rectangle)
-  ) {
-    candidate = candidate.parentElement;
-  }
-  return candidate ?? fallback;
+  const candidate = lowestSharedAncestor(hits);
+  return candidate === ownerDocument.body ||
+    candidate === ownerDocument.documentElement
+    ? fallback
+    : candidate ?? fallback;
 }

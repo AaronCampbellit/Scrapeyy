@@ -12,6 +12,12 @@ import {
   type PopupSite,
 } from "../../src/features/popup/PopupApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
+import { ensureContentScript } from "../../src/platform/content-injection";
+import {
+  isSharePointMetadata,
+  isSharePointUrl,
+  type SharePointMetadata,
+} from "../../src/sharepoint/scrape";
 import {
   hasOriginAccess,
   requestOriginAccess,
@@ -30,6 +36,12 @@ const projects = createSettingsRepository<Project>(storage, "projects");
 const recipes = createSettingsRepository<Recipe>(storage, "recipes");
 const captures = new CaptureDatabase();
 const appSettings = createAppSettingsStore(storage);
+const sharePointMetadataKey = "sharepoint:last-metadata";
+
+async function loadSharePointMetadata(): Promise<SharePointMetadata | undefined> {
+  const saved = (await storage.get(sharePointMetadataKey))[sharePointMetadataKey];
+  return isSharePointMetadata(saved) ? saved : undefined;
+}
 
 async function activeTab() {
   const [tab] = await extensionBrowser.tabs.query({
@@ -63,10 +75,50 @@ async function currentSite(): Promise<PopupSite> {
   };
 }
 
+interface PickerStatus {
+  active: boolean;
+  minimized: boolean;
+  variant?: "quick" | "recipe";
+}
+
+interface PendingRecipeStatus {
+  pending: boolean;
+}
+
+async function activePickerStatus(): Promise<PickerStatus | undefined> {
+  const tab = await activeTab();
+  if (tab?.id === undefined || !httpOrigin(tab.url)) return undefined;
+  try {
+    const result = await extensionBrowser.tabs.sendMessage(tab.id, {
+      type: "SCRAPEYY_PICKER_STATUS",
+    }) as PickerStatus;
+    return result?.active && result.variant ? result : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function pendingRecipeStatus(tabId?: number): Promise<boolean> {
+  if (tabId === undefined) return false;
+  try {
+    const result = await extensionBrowser.runtime.sendMessage({
+      type: "SCRAPEYY_PENDING_RECIPE_STATUS",
+      tabId,
+    }) as PendingRecipeStatus;
+    return result?.pending === true;
+  } catch {
+    return false;
+  }
+}
+
 const services: PopupServices = {
   async load() {
+    const tab = await activeTab();
     const savedRecipes = await recipes.list();
     const origins = [...new Set(savedRecipes.map((recipe) => recipe.origin))];
+    const savedSharePointMetadata = await loadSharePointMetadata();
+    const pickerStatus = await activePickerStatus();
+    const hasPendingRecipe = await pendingRecipeStatus(tab?.id);
     return {
       site: await currentSite(),
       projects: await projects.list(),
@@ -81,6 +133,17 @@ const services: PopupServices = {
       ),
       retentionLimit: 20,
       settings: await appSettings.get(),
+      ...(savedSharePointMetadata
+        ? { sharePointMetadata: savedSharePointMetadata }
+        : {}),
+      ...(pickerStatus?.variant || hasPendingRecipe
+        ? {
+            activePicker: {
+              variant: pickerStatus?.variant ?? "recipe",
+              minimized: pickerStatus?.minimized ?? true,
+            },
+          }
+        : {}),
     };
   },
   async startQuickCapture() {
@@ -101,6 +164,15 @@ const services: PopupServices = {
     if (tab?.id === undefined || !httpOrigin(tab.url)) {
       throw new Error("Scrapeyy cannot create a recipe on this browser page.");
     }
+    const origin = httpOrigin(tab.url)!;
+    if (!(await hasOriginAccess(origin))) {
+      const granted = await requestOriginAccess(origin);
+      if (!granted) {
+        throw new Error(
+          "Website access is required so recipe tests and multi-page scrapes can survive navigation.",
+        );
+      }
+    }
     const settings = await appSettings.get();
     await extensionBrowser.runtime.sendMessage({
       type: "SCRAPEYY_START_RECIPE_PICKER",
@@ -110,11 +182,53 @@ const services: PopupServices = {
     });
     window.close();
   },
+  async resumePicker() {
+    const tab = await activeTab();
+    if (tab?.id === undefined) {
+      throw new Error("The minimized recipe tab is no longer available.");
+    }
+    const pending = await extensionBrowser.runtime.sendMessage({
+      type: "SCRAPEYY_RESUME_PENDING_RECIPE",
+      tabId: tab.id,
+    }) as { restored?: boolean };
+    if (pending?.restored) {
+      window.close();
+      return;
+    }
+    const result = await extensionBrowser.tabs.sendMessage(tab.id, {
+      type: "SCRAPEYY_RESTORE_PICKER",
+    }) as { restored?: boolean };
+    if (!result?.restored) {
+      throw new Error("The minimized recipe is no longer available.");
+    }
+    window.close();
+  },
+  async scrapeSharePoint() {
+    const tab = await activeTab();
+    if (tab?.id === undefined || !tab.url || !isSharePointUrl(tab.url)) {
+      throw new Error("Open a SharePoint list or document library first.");
+    }
+    await ensureContentScript(tab.id);
+    const result = await extensionBrowser.tabs.sendMessage(tab.id, {
+      type: "SCRAPEYY_SCRAPE_SHAREPOINT",
+    });
+    if (!isSharePointMetadata(result)) {
+      throw new Error("SharePoint returned incomplete site details.");
+    }
+    await storage.set({ [sharePointMetadataKey]: result });
+    return result;
+  },
   runRecipe: (recipeId) =>
     extensionBrowser.runtime.sendMessage({
       type: "SCRAPEYY_RUN_RECIPE",
       recipeId,
     }),
+  async deleteRecipe(recipeId) {
+    await extensionBrowser.runtime.sendMessage({
+      type: "SCRAPEYY_DELETE_RECIPE",
+      recipeId,
+    });
+  },
   saveProject: (project) => projects.put(project),
   async exportRun(runId) {
     await extensionBrowser.runtime.sendMessage({

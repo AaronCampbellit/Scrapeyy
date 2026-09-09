@@ -28,6 +28,7 @@ export function useElementPicker(
   const initialPhase: SelectionPhase = initialSelected ? "selected" : "selecting";
   const [phase, setPhase] = useState<SelectionPhase>(initialPhase);
   const [selected, setSelected] = useState<Element | undefined>(initialSelected);
+  const [hovered, setHovered] = useState<Element | undefined>();
   const [scope, setScope] = useState<"element" | "full-page">("element");
   const [dragRect, setDragRect] = useState<SelectionRectangle>();
   const phaseRef = useRef<SelectionPhase>(initialPhase);
@@ -44,6 +45,7 @@ export function useElementPicker(
       phaseRef.current = "selected";
       setPhase("selected");
       setSelected(element);
+      setHovered(undefined);
       setScope(selectionScope);
       setDragRect(undefined);
     };
@@ -63,7 +65,17 @@ export function useElementPicker(
     };
     const onPointerMove = (event: PointerEvent) => {
       const pointer = pointerRef.current;
-      if (!pointer || pointer.pointerId !== event.pointerId) return;
+      if (!pointer) {
+        if (phaseRef.current === "selecting") {
+          setHovered(
+            shouldIgnorePickerTarget(event.target)
+              ? undefined
+              : (event.target as Element),
+          );
+        }
+        return;
+      }
+      if (pointer.pointerId !== event.pointerId) return;
       blockSelectionEvent(event);
       const rectangle = rectangleFromPoints(
         pointer.startX,
@@ -141,6 +153,7 @@ export function useElementPicker(
     phaseRef.current = "selected";
     setPhase("selected");
     setSelected(ownerDocument.documentElement);
+    setHovered(undefined);
     setScope("full-page");
     setDragRect(undefined);
   }, [ownerDocument]);
@@ -149,6 +162,7 @@ export function useElementPicker(
     phaseRef.current = "selecting";
     setPhase("selecting");
     setSelected(undefined);
+    setHovered(undefined);
     setScope("element");
     setDragRect(undefined);
     pointerRef.current = undefined;
@@ -157,6 +171,7 @@ export function useElementPicker(
   return {
     phase,
     selected,
+    hovered,
     scope,
     dragRect,
     reselect,

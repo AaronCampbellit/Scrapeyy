@@ -21,8 +21,14 @@ export interface FieldDefinition {
   name: string;
   kind: FieldKind;
   selector: string;
+  sourceId?: string;
   attribute?: string;
   identity?: boolean;
+}
+
+export interface SmartExtractionSettings {
+  kind: "smart";
+  datasetKey: string;
 }
 
 export interface TraversalLimits {
@@ -39,6 +45,8 @@ export interface NoTraversalSettings extends TraversalLimits {
 export interface NextTraversalSettings extends TraversalLimits {
   kind: "next";
   nextSelector: string;
+  /** Zero-based position when a selector intentionally matches several controls. */
+  nextMatchIndex?: number;
 }
 
 export interface InfiniteTraversalSettings extends TraversalLimits {
@@ -80,9 +88,12 @@ export interface Recipe {
   startUrl: string;
   mode: CaptureMode;
   containerSelector: string;
+  extraction?: SmartExtractionSettings;
   fields: FieldDefinition[];
   traversal: TraversalSettings;
   destinations: CaptureDestinations;
+  /** Run manual captures in a temporary inactive tab that is closed afterward. */
+  manualRunInWorkerTab?: boolean;
   schedule: Schedule | null;
   createdAt: string;
   updatedAt: string;

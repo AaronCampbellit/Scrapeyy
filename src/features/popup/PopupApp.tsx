@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type {
   CaptureRun,
@@ -16,6 +16,8 @@ import { CaptureView } from "./CaptureView";
 import { InboxView } from "./InboxView";
 import { RecipesView } from "./RecipesView";
 import { SettingsView } from "./SettingsView";
+import { SharePointView } from "./SharePointView";
+import type { SharePointMetadata } from "../../sharepoint/scrape";
 
 export interface PopupSite {
   origin: string;
@@ -30,13 +32,21 @@ export interface PopupWorkspaceData {
   permissions: Record<string, boolean>;
   retentionLimit: number;
   settings: AppSettings;
+  sharePointMetadata?: SharePointMetadata;
+  activePicker?: {
+    variant: "quick" | "recipe";
+    minimized: boolean;
+  };
 }
 
 export interface PopupServices {
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
   startRecipeCapture(recipeId?: string): Promise<void>;
+  resumePicker(): Promise<void>;
+  scrapeSharePoint(): Promise<SharePointMetadata>;
   runRecipe(recipeId: string): Promise<CaptureRun>;
+  deleteRecipe(recipeId: string): Promise<void>;
   saveProject(project: Project): Promise<void>;
   exportRun(runId: string): Promise<void>;
   deleteRun(runId: string): Promise<void>;
@@ -50,7 +60,15 @@ export interface PopupServices {
   saveSettings(settings: AppSettings): Promise<AppSettings>;
 }
 
-type PopupView = "capture" | "recipes" | "inbox" | "settings";
+type PopupView = "capture" | "inbox" | "recipes" | "sharepoint" | "settings";
+
+const popupTabs: Array<{ id: PopupView; label: string }> = [
+  { id: "capture", label: "Capture" },
+  { id: "inbox", label: "Inbox" },
+  { id: "recipes", label: "Recipes" },
+  { id: "sharepoint", label: "SharePoint" },
+  { id: "settings", label: "Settings" },
+];
 
 const emptyData: PopupWorkspaceData = {
   projects: [],
@@ -67,15 +85,36 @@ export function PopupApp({ services }: { services: PopupServices }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
+  const [sharePointMetadata, setSharePointMetadata] =
+    useState<SharePointMetadata>();
+  const resumeAttempted = useRef(false);
 
   const refresh = async () => {
-    setData(await services.load());
+    const loaded = await services.load();
+    setData(loaded);
+    setSharePointMetadata(loaded.sharePointMetadata);
     setLoading(false);
   };
 
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (
+      loading ||
+      !data.activePicker?.minimized ||
+      resumeAttempted.current
+    ) return;
+    resumeAttempted.current = true;
+    void services.resumePicker().catch((error: unknown) => {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "The minimized recipe could not be restored.",
+      );
+    });
+  }, [data.activePicker?.minimized, loading, services]);
 
   const perform = async (
     action: () => void | Promise<void>,
@@ -107,6 +146,19 @@ export function PopupApp({ services }: { services: PopupServices }) {
       setData((current) => ({ ...current, settings: saved }));
     });
 
+  const requireRecipeAccess = async (origin: string) => {
+    const alreadyGranted =
+      data.permissions[origin] === true ||
+      (data.site?.origin === origin && data.site.access === "persistent");
+    if (alreadyGranted) return;
+    const granted = await services.requestOriginAccess(origin);
+    if (!granted) {
+      throw new Error(
+        "Website access is required so recipe tests and multi-page scrapes can survive navigation.",
+      );
+    }
+  };
+
   return (
     <main
       className="popup-shell"
@@ -125,17 +177,17 @@ export function PopupApp({ services }: { services: PopupServices }) {
       </header>
 
       <nav className="popup-tabs" role="tablist" aria-label="Scrapeyy sections">
-        {(["capture", "recipes", "inbox", "settings"] as const).map((item) => (
+        {popupTabs.map(({ id, label }) => (
           <button
-            aria-label={item[0]!.toUpperCase() + item.slice(1)}
-            aria-selected={view === item}
-            key={item}
-            onClick={() => setView(item)}
+            aria-label={label}
+            aria-selected={view === id}
+            key={id}
+            onClick={() => setView(id)}
             role="tab"
             type="button"
           >
-            {item[0]!.toUpperCase() + item.slice(1)}
-            {item === "inbox" && data.runs.length > 0 ? (
+            {label}
+            {id === "inbox" && data.runs.length > 0 ? (
               <small>{data.runs.length}</small>
             ) : null}
           </button>
@@ -150,7 +202,15 @@ export function PopupApp({ services }: { services: PopupServices }) {
             disabled={busy}
             site={data.site}
             onQuickCapture={() => perform(services.startQuickCapture)}
-            onCreateRecipe={() => perform(() => services.startRecipeCapture())}
+            onCreateRecipe={() =>
+              perform(async () => {
+                if (!data.site || data.site.access === "unavailable") {
+                  throw new Error("Open a website before creating a recipe.");
+                }
+                await requireRecipeAccess(data.site.origin);
+                await services.startRecipeCapture();
+              })
+            }
           />
         ) : null}
         {view === "recipes" ? (
@@ -171,10 +231,37 @@ export function PopupApp({ services }: { services: PopupServices }) {
                 "Project created.",
               );
             }}
-            onEdit={(recipeId) => perform(() => services.startRecipeCapture(recipeId))}
+            onEdit={(recipeId) =>
+              perform(async () => {
+                const recipe = data.recipes.find((item) => item.id === recipeId);
+                if (!recipe) throw new Error("That recipe no longer exists.");
+                await requireRecipeAccess(recipe.origin);
+                await services.startRecipeCapture(recipeId);
+              })
+            }
+            onDelete={(recipeId) =>
+              performAndRefresh(
+                () => services.deleteRecipe(recipeId),
+                "Recipe deleted.",
+              )
+            }
             onRun={(recipeId) =>
               performAndRefresh(
-                () => services.runRecipe(recipeId).then(() => undefined),
+                async () => {
+                  const recipe = data.recipes.find((item) => item.id === recipeId);
+                  if (
+                    recipe?.manualRunInWorkerTab &&
+                    !data.permissions[recipe.origin]
+                  ) {
+                    const granted = await services.requestOriginAccess(recipe.origin);
+                    if (!granted) {
+                      throw new Error(
+                        "Website access is required to run this recipe in a background tab.",
+                      );
+                    }
+                  }
+                  await services.runRecipe(recipeId);
+                },
                 "Capture saved to the inbox.",
               )
             }
@@ -201,6 +288,18 @@ export function PopupApp({ services }: { services: PopupServices }) {
             }
             onRetry={(recipeId) =>
               performAndRefresh(() => services.runRecipe(recipeId).then(() => undefined))
+            }
+          />
+        ) : null}
+        {view === "sharepoint" ? (
+          <SharePointView
+            disabled={busy}
+            metadata={sharePointMetadata}
+            site={data.site}
+            onScrape={() =>
+              perform(async () => {
+                setSharePointMetadata(await services.scrapeSharePoint());
+              }, "SharePoint details found.")
             }
           />
         ) : null}
