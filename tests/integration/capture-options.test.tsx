@@ -6,6 +6,7 @@ import type { CaptureMode } from "../../src/contracts/models";
 import { CaptureOptions } from "../../src/features/shared/CaptureOptions";
 import { CaptureView } from "../../src/features/popup/CaptureView";
 import { selectionBounds } from "../../src/features/picker/ScreenshotSelection";
+import { DEFAULT_APP_SETTINGS } from "../../src/storage/app-settings";
 
 describe("capture tools", () => {
   it("allows either capture purpose or both and always keeps one selected", async () => {
@@ -30,7 +31,7 @@ describe("capture tools", () => {
 
   it("routes all three screenshot actions independently of capture", async () => {
     const screenshot = vi.fn();
-    render(<CaptureView disabled={false} site={{ origin: "https://example.test", access: "one-time" }}
+    render(<CaptureView settings={DEFAULT_APP_SETTINGS} onScreenshotDestinationChange={vi.fn()} disabled={false} site={{ origin: "https://example.test", access: "one-time" }}
       onScreenshot={screenshot} onCreateRecipe={vi.fn()} onQuickCapture={vi.fn()}
       onInspectVideos={vi.fn()} onDownloadVideo={vi.fn()} onExportVideoDetails={vi.fn()} />);
     const user = userEvent.setup();
@@ -39,7 +40,7 @@ describe("capture tools", () => {
   });
 
   it("only offers downloads for exposed direct video files", () => {
-    render(<CaptureView disabled={false} site={{ origin: "https://example.test", access: "one-time" }}
+    render(<CaptureView settings={DEFAULT_APP_SETTINGS} onScreenshotDestinationChange={vi.fn()} disabled={false} site={{ origin: "https://example.test", access: "one-time" }}
       onScreenshot={vi.fn()} onCreateRecipe={vi.fn()} onQuickCapture={vi.fn()}
       onInspectVideos={vi.fn()} onDownloadVideo={vi.fn()} onExportVideoDetails={vi.fn()}
       videos={{ pageUrl: "https://example.test", notes: [], videos: [{

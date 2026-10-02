@@ -7,7 +7,8 @@ import type {
   PopupWorkspaceData,
 } from "../../src/features/popup/PopupApp";
 import { PopupApp } from "../../src/features/popup/PopupApp";
-import type { AppSettings } from "../../src/storage/app-settings";
+import { DEFAULT_APP_SETTINGS, type AppSettings } from "../../src/storage/app-settings";
+import { CAPTURE_VERSION, type ScreenshotResult } from "../../src/platform/screenshot-messages";
 
 const data: PopupWorkspaceData = {
   site: { origin: "https://example.test", access: "one-time" },
@@ -63,6 +64,7 @@ const data: PopupWorkspaceData = {
   permissions: { "https://example.test": false },
   retentionLimit: 20,
   settings: {
+    ...DEFAULT_APP_SETTINGS,
     theme: "dark",
     downloadBehavior: "ask",
     downloadSubfolder: "Scrapeyy",
@@ -109,16 +111,48 @@ function services(
 }
 
 describe("PopupApp", () => {
+  it("persists screenshot destinations separately and previews an inbox PNG without recipe retry", async () => {
+    const user = userEvent.setup();
+    const run = { ...data.runs[0]!, id: "png", recordCount: 0, records: [], screenshot: {
+      kind: "visible" as const, title: "Example page", filename: "example.png", sourceUrl: "https://example.test/",
+    } };
+    const api = services({ load: vi.fn().mockResolvedValue({ ...data, runs: [run] }) });
+    render(<PopupApp services={api} />);
+    await screen.findByText("Current site");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Save screenshots to" }), "inbox");
+    expect(api.saveSettings).toHaveBeenCalledWith({ ...data.settings, screenshotDestination: "inbox" });
+    await user.click(screen.getByRole("tab", { name: "Inbox" }));
+    expect(await screen.findByAltText("Captured screenshot")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save screenshot PNG" }));
+    expect(api.exportRun).toHaveBeenCalledWith("png");
+  });
+
+  it("lets automatic screenshots use a separate folder and rejects absolute paths", async () => {
+    const user = userEvent.setup();
+    const api = services();
+    render(<PopupApp services={api} />);
+    await screen.findByText("Current site");
+    await user.click(screen.getByRole("tab", { name: "Settings" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Save screenshots to" }), "automatic");
+    const folder = screen.getByRole("textbox", { name: "Screenshot subfolder" });
+    await user.clear(folder); await user.type(folder, "C:/Pictures");
+    expect(screen.getByRole("button", { name: "Save screenshot location" })).toBeDisabled();
+    await user.clear(folder); await user.type(folder, "Screenshots/Research");
+    await user.click(screen.getByRole("button", { name: "Save screenshot location" }));
+    expect(api.saveSettings).toHaveBeenLastCalledWith({ ...data.settings, screenshotDestination: "automatic", screenshotSubfolder: "Screenshots/Research" });
+  });
+
   it("shows the real screenshot path only after saving completes", async () => {
     const user = userEvent.setup();
-    let finish!: (path: string) => void;
-    const api = services({ takeScreenshot: () => new Promise<string>((resolve) => { finish = resolve; }) });
+    let finish!: (result: ScreenshotResult) => void;
+    const api = services({ takeScreenshot: () => new Promise<ScreenshotResult>((resolve) => { finish = resolve; }) });
     render(<PopupApp services={api} />);
     await screen.findByText("Current site");
     await user.click(screen.getByRole("button", { name: "Visible page" }));
     expect(screen.getByText("Saving screenshot…")).toBeVisible();
     expect(screen.queryByText(/Screenshot saved:/)).not.toBeInTheDocument();
-    finish("C:/Downloads/Scrapeyy/Screenshots/test.png");
+    finish({ status: "saved", version: CAPTURE_VERSION, downloadId: 1, filename: "C:/Downloads/Scrapeyy/Screenshots/test.png" });
     expect(await screen.findByText("Screenshot saved: C:/Downloads/Scrapeyy/Screenshots/test.png")).toBeVisible();
   });
 
@@ -347,6 +381,7 @@ describe("PopupApp", () => {
     await user.click(screen.getByRole("switch", { name: "Dark mode" }));
     await waitFor(() =>
       expect(api.saveSettings).toHaveBeenCalledWith({
+        ...DEFAULT_APP_SETTINGS,
         theme: "light",
         downloadBehavior: "ask",
         downloadSubfolder: "Scrapeyy",
@@ -370,6 +405,7 @@ describe("PopupApp", () => {
 
     await waitFor(() =>
       expect(api.saveSettings).toHaveBeenLastCalledWith({
+        ...DEFAULT_APP_SETTINGS,
         theme: "light",
         downloadBehavior: "automatic",
         downloadSubfolder: "Client Reports",

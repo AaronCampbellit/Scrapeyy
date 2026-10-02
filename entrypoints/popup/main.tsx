@@ -125,7 +125,7 @@ const services: PopupServices = {
       window.close();
       return;
     }
-    return screenshotSaved(response).filename;
+    return screenshotSaved(response);
   },
   async inspectVideos() {
     const tab = await activeTab();

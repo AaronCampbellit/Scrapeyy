@@ -39,9 +39,10 @@ export function InboxView({
   const selected = runs.find((run) => run.id === selectedId) ?? runs[0];
   const recipeName = (recipeId: string) =>
     recipes.find((recipe) => recipe.id === recipeId)?.name ?? "Quick capture";
+  const captureName = (run: CaptureRun) => run.screenshot ? `Screenshot · ${run.screenshot.title}` : recipeName(run.recipeId);
 
   useEffect(() => {
-    setPreview("text");
+    setPreview(selected?.screenshot ? "screenshot" : "text");
     setScreenshotUrl(undefined);
   }, [selected?.id]);
 
@@ -52,7 +53,9 @@ export function InboxView({
     void onLoadScreenshot(selected.id)
       .then((url) => {
         if (active) setScreenshotUrl(url);
+        else if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
       })
+      .catch(() => { if (active) setScreenshotUrl(undefined); })
       .finally(() => {
         if (active) setScreenshotLoading(false);
       });
@@ -61,10 +64,12 @@ export function InboxView({
     };
   }, [onLoadScreenshot, preview, screenshotUrl, selected]);
 
+  useEffect(() => () => { if (screenshotUrl?.startsWith("blob:")) URL.revokeObjectURL(screenshotUrl); }, [screenshotUrl]);
+
   const clearCapture = (run: CaptureRun) => {
     if (
       window.confirm(
-        `Clear “${recipeName(run.recipeId)}” from the inbox? This cannot be undone.`,
+        `Clear “${captureName(run)}” from the inbox? This cannot be undone.`,
       )
     ) {
       void onDelete(run.id);
@@ -130,14 +135,14 @@ export function InboxView({
               <div className="selected-capture-heading">
                 <div>
                   <span className="eyebrow">Selected capture</span>
-                  <h3>{recipeName(selected.recipeId)}</h3>
+                  <h3>{captureName(selected)}</h3>
                 </div>
                 <span className={`run-status status-${selected.status}`}>
                   {selected.status}
                 </span>
               </div>
               <div className="run-metrics">
-                <span><strong>{selected.recordCount}</strong> records</span>
+                <span>{selected.screenshot ? "PNG · " + selected.screenshot.kind : <><strong>{selected.recordCount}</strong> records</>}</span>
                 <span>{selected.trigger}</span>
                 <span>{selected.exportState}</span>
               </div>
@@ -202,8 +207,8 @@ export function InboxView({
                 <div className="preview-empty">No screenshot was captured for this run.</div>
               )}
               <div className="detail-actions">
-                <button aria-label="Export run" disabled={disabled} onClick={() => void onExport(selected.id)} type="button">Export</button>
-                <button disabled={disabled} onClick={() => void onRetry(selected.recipeId)} type="button">Retry</button>
+                <button aria-label={selected.screenshot ? "Save screenshot PNG" : "Export run"} disabled={disabled} onClick={() => void onExport(selected.id)} type="button">{selected.screenshot ? "Save PNG…" : "Export"}</button>
+                {!selected.screenshot ? <button disabled={disabled} onClick={() => void onRetry(selected.recipeId)} type="button">Retry</button> : null}
                 <button disabled={disabled} onClick={() => void onPin(selected.id, !selected.pinned)} type="button">{selected.pinned ? "Unpin" : "Pin"}</button>
                 <button className="danger-link" disabled={disabled} onClick={() => clearCapture(selected)} type="button">Clear capture</button>
               </div>
@@ -219,19 +224,19 @@ export function InboxView({
               {runs.map((run) => (
                 <div className={`run-list-item${run.id === selected?.id ? " is-selected" : ""}`} key={run.id}>
                   <button
-                    aria-label={`View ${recipeName(run.recipeId)}`}
+                    aria-label={`View ${captureName(run)}`}
                     className="run-select"
                     onClick={() => setSelectedId(run.id)}
                     type="button"
                   >
                     <span>
-                      <strong>{recipeName(run.recipeId)}</strong>
+                      <strong>{captureName(run)}</strong>
                       <small>{new Date(run.completedAt ?? run.startedAt).toLocaleString()}</small>
                     </span>
                     <span className={`run-status status-${run.status}`}>{run.status}</span>
                   </button>
                   <button
-                    aria-label={`Clear capture ${recipeName(run.recipeId)}`}
+                    aria-label={`Clear capture ${captureName(run)}`}
                     className="run-clear danger-link"
                     disabled={disabled}
                     onClick={() => clearCapture(run)}

@@ -1,7 +1,10 @@
 import type { PopupSite } from "./PopupApp";
 import type { VideoInventory } from "../../media/videos";
+import type { AppSettings, ScreenshotDestination } from "../../storage/app-settings";
 
 interface CaptureViewProps {
+  settings: AppSettings;
+  onScreenshotDestinationChange(destination: ScreenshotDestination): void | Promise<void>;
   site?: PopupSite | undefined;
   disabled: boolean;
   onCreateRecipe(): void | Promise<void>;
@@ -14,6 +17,8 @@ interface CaptureViewProps {
 }
 
 export function CaptureView({
+  settings,
+  onScreenshotDestinationChange,
   site,
   disabled,
   onCreateRecipe,
@@ -54,7 +59,17 @@ export function CaptureView({
         </span>
       </button>
       <section className="quick-tools" aria-label="Screenshots">
-        <div><strong>Screenshot</strong><small>Save a PNG without creating a capture</small></div>
+        <div><strong>Screenshot</strong><small>Capture a PNG of this page</small></div>
+        <label className="settings-field">
+          <span>Save screenshots to</span>
+          <select aria-label="Save screenshots to" value={settings.screenshotDestination} disabled={disabled}
+            onChange={(event) => void onScreenshotDestinationChange(event.currentTarget.value as ScreenshotDestination)}>
+            <option value="ask">Save As dialog</option>
+            <option value="automatic">Automatically save to device</option>
+            <option value="inbox">Scrapeyy Inbox</option>
+          </select>
+        </label>
+        {settings.screenshotDestination === "automatic" ? <small>Download folder / {settings.screenshotSubfolder} · Change location in Settings.</small> : null}
         <div className="screenshot-actions">
           <button type="button" disabled={!available || disabled} onClick={() => void onScreenshot("visible")}>Visible page</button>
           <button type="button" disabled={!available || disabled} onClick={() => void onScreenshot("full-page")}>Full page</button>
@@ -74,6 +89,7 @@ export function CaptureView({
               <small>{source.kind === "file" ? "Direct file" : source.kind === "stream" ? "Streaming playlist" :
                 source.kind === "blob" ? "Browser stream" : source.kind === "embed" ? "Embedded player" : "Media link"}</small>
               <span title={source.url}>{source.url}</span>
+              {source.note ? <small>{source.note}</small> : null}
               {source.kind === "file" ? <button type="button" disabled={disabled}
                 onClick={() => void onDownloadVideo(source.url)}>Download video</button> : null}
             </div>)}
@@ -81,7 +97,7 @@ export function CaptureView({
             <small>{video.captions.length} caption track{video.captions.length === 1 ? "" : "s"}
               {video.duration === null ? "" : " · " + Math.round(video.duration) + " seconds"}</small>
           </article>)}
-          <p>Direct files can be downloaded. Streams and embedded players need further support. Captions include only exposed tracks and loaded text.</p>
+          {videos.notes.map((note) => <p key={note}>{note}</p>)}
           <button type="button" disabled={disabled} onClick={() => void onExportVideoDetails()}>Export video details</button>
         </div> : null}
       </section>

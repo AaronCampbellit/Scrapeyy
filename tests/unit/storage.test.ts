@@ -19,7 +19,10 @@ import { applyRetention } from "../../src/storage/retention";
 import {
   createAppSettingsStore,
   DEFAULT_APP_SETTINGS,
+  normalizeAppSettings,
+  validScreenshotSubfolder,
 } from "../../src/storage/app-settings";
+import { saveScreenshotToInbox } from "../../src/storage/screenshot-inbox";
 import {
   createSettingsRepository,
   type StorageArea,
@@ -89,6 +92,7 @@ describe("local repositories", () => {
     const store = createAppSettingsStore(new MemoryStorageArea());
 
     expect(await store.get()).toEqual({
+      ...DEFAULT_APP_SETTINGS,
       theme: "dark",
       downloadBehavior: "ask",
       downloadSubfolder: "Scrapeyy",
@@ -107,6 +111,7 @@ describe("local repositories", () => {
     });
 
     expect(saved).toEqual({
+      ...DEFAULT_APP_SETTINGS,
       theme: "light",
       downloadBehavior: "automatic",
       downloadSubfolder: "Client Reports/August-2026",
@@ -142,6 +147,46 @@ describe("local repositories", () => {
     const artifacts = await database.listArtifacts("run-1");
     expect(artifacts).toHaveLength(1);
     expect(artifacts[0]?.sourceUrl).toBe("https://example.test/snapshot");
+  });
+
+  it("migrates screenshot settings from existing download preferences without changing other exports", () => {
+    expect(normalizeAppSettings({ downloadBehavior: "automatic", downloadSubfolder: "Reports" })).toMatchObject({
+      screenshotDestination: "automatic", screenshotSubfolder: "Reports/Screenshots",
+    });
+    expect(normalizeAppSettings({ ...DEFAULT_APP_SETTINGS, screenshotDestination: "inbox" })).toMatchObject({
+      screenshotDestination: "inbox", downloadBehavior: "ask",
+    });
+    expect(validScreenshotSubfolder("Pictures/Screenshots")).toBe(true);
+    for (const invalid of ["C:/Pictures", "../Pictures", "/Pictures", "Photos/../Pictures", ""]) {
+      expect(validScreenshotSubfolder(invalid)).toBe(false);
+    }
+  });
+
+  it("stores screenshot metadata and PNG together and clears both with the inbox item", async () => {
+    const database = new CaptureDatabase(`scrapeyy-screenshot-${crypto.randomUUID()}`);
+    databases.push(database);
+    const saved = await saveScreenshotToInbox(new Blob(["png bytes"], { type: "image/png" }), {
+      kind: "selection", title: "Example", filename: "example.png", sourceUrl: "https://example.test/?token=secret",
+    }, database);
+    expect(saved.destination).toBe("inbox");
+    const run = await database.getRun(saved.runId);
+    expect(run?.screenshot).toMatchObject({ filename: "example.png", sourceUrl: "https://example.test/" });
+    const image = await database.getArtifact(`${saved.runId}:screenshot`);
+    expect(image?.blob.type).toBe("image/png");
+    expect(await image?.blob.text()).toBe("png bytes");
+    await database.deleteRun(saved.runId);
+    expect(await database.getArtifact(`${saved.runId}:screenshot`)).toBeUndefined();
+  });
+
+  it("rolls back the inbox record if its screenshot cannot be stored", async () => {
+    const database = new CaptureDatabase(`scrapeyy-atomic-${crypto.randomUUID()}`);
+    databases.push(database);
+    const captureRun = run("atomic", "2026-10-02T00:00:00Z");
+    await expect(database.putRunWithArtifacts(captureRun, [{
+      id: "atomic:screenshot", runId: "atomic", name: "broken.png",
+      blob: (() => {}) as unknown as Blob,
+    }])).rejects.toThrow();
+    expect(await database.getRun("atomic")).toBeUndefined();
   });
 
   it("clears unpinned inbox runs and preserves pinned captures", async () => {

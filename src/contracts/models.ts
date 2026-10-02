@@ -132,6 +132,12 @@ export interface CaptureRun {
   errors: RunError[];
   pinned: boolean;
   exportState: "none" | "queued" | "complete" | "failed";
+  screenshot?: {
+    kind: "visible" | "full-page" | "selection";
+    title: string;
+    filename: string;
+    sourceUrl: string;
+  };
 }
 
 export interface Repository<T extends { id: string }> {

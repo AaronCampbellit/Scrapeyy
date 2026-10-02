@@ -85,8 +85,18 @@ the same image support plus sanitized HTML, computed CSS (including font,
 color, spacing, and layout values), and a screenshot. Existing saved recipes
 retain their capture settings; the internal mode IDs remain compatible.
 
-The main popup's **Screenshot** section saves PNGs directly using the configured
-download folder and save-dialog preference:
+The main popup's **Screenshot** section has its own **Save screenshots to** setting:
+
+- **Save As dialog** chooses a filename and any device location for each PNG.
+- **Automatically save to device** uses the screenshot subfolder configured in
+  Settings, inside the browser's download directory. Change the base directory
+  in Zen / Firefox Settings → Downloads; extensions cannot silently write to an
+  arbitrary absolute path.
+- **Scrapeyy Inbox** stores the PNG locally with a preview. Use **Save PNG…** to
+  export it later, or pin it to preserve it beyond normal inbox retention.
+
+These choices persist and do not change the destination of other exports.
+All three capture tools use the selected screenshot destination:
 
 - **Visible page** captures the current viewport.
 - **Full page** scrolls and stitches the page, then restores the original position.
@@ -97,15 +107,20 @@ download folder and save-dialog preference:
   redraw, or press Escape to cancel.
 
 Screenshot success is shown only after the browser confirms the file finished
-saving, with the actual saved path. Cancelled or interrupted saves report an
+saving (with the actual saved path), or the PNG is stored in the inbox.
+Cancelled or interrupted saves report an
 error. After replacing the build files, open
 `about:debugging#/runtime/this-firefox` in Firefox or Zen and click **Reload**
 for Scrapeyy. The popup header shows the loaded version. Older page scripts are
 refreshed automatically; an unrecognized background command reports a reload
 instruction instead of claiming it saved a file.
 
-**Video tools → Scan videos** lists exposed video elements, direct video links,
-and recognized embedded players. **Download video** is offered for direct file
+**Video tools → Scan videos** checks loaded page content, nested open shadow
+roots, accessible frames, Reddit player attributes and packaged media metadata,
+and recognized video links. Duplicate references to a Reddit video are combined.
+Scroll an unloaded video into view or start playback, then scan again if needed.
+Closed players and cross-origin frames can expose fewer details; detected player
+links are shown even when no direct file is available. **Download video** is offered for direct file
 sources; websites can still reject a download. Streaming playlists, blob-backed
 players, and cross-origin embeds are identified but not downloaded. **Export
 video details** saves JSON with source links, available metadata, caption-track

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { Recipe } from "../../contracts/models";
-import type { AppSettings } from "../../storage/app-settings";
+import { validScreenshotSubfolder, type AppSettings, type ScreenshotDestination } from "../../storage/app-settings";
 
 interface SettingsViewProps {
   recipes: Recipe[];
@@ -32,6 +32,8 @@ export function SettingsView({
   const [downloadSubfolder, setDownloadSubfolder] = useState(
     settings.downloadSubfolder,
   );
+  const [screenshotSubfolder, setScreenshotSubfolder] = useState(settings.screenshotSubfolder);
+  useEffect(() => { setScreenshotSubfolder(settings.screenshotSubfolder); }, [settings.screenshotSubfolder]);
   useEffect(() => {
     setDownloadSubfolder(settings.downloadSubfolder);
   }, [settings.downloadSubfolder]);
@@ -66,7 +68,7 @@ export function SettingsView({
         </label>
       </div>
       <div className="settings-block">
-        <strong>Downloads</strong>
+        <strong>Other exports</strong>
         <label className="settings-field">
           <span>Download behavior</span>
           <select
@@ -119,8 +121,34 @@ export function SettingsView({
             </button>
           </>
         ) : (
-          <small>The browser will show its Save As dialog for every export.</small>
+          <small>The browser will show its Save As dialog for capture and video exports.</small>
         )}
+      </div>
+      <div className="settings-block">
+        <strong>Screenshots</strong>
+        <label className="settings-field">
+          <span>Save screenshots to</span>
+          <select aria-label="Save screenshots to" disabled={disabled} value={settings.screenshotDestination}
+            onChange={(event) => void onUpdateSettings({ ...settings, screenshotDestination: event.currentTarget.value as ScreenshotDestination })}>
+            <option value="ask">Save As dialog</option>
+            <option value="automatic">Automatically save to device</option>
+            <option value="inbox">Scrapeyy Inbox</option>
+          </select>
+        </label>
+        {settings.screenshotDestination === "automatic" ? <>
+          <label className="settings-field">
+            <span>Screenshot subfolder</span>
+            <input aria-label="Screenshot subfolder" value={screenshotSubfolder} disabled={disabled}
+              onChange={(event) => setScreenshotSubfolder(event.currentTarget.value)} />
+          </label>
+          <small>Inside your browser’s download folder: {screenshotSubfolder || "Scrapeyy/Screenshots"}.</small>
+          <small>To use a different base location on this device, change the download folder in Zen / Firefox Settings → Downloads.</small>
+          {!validScreenshotSubfolder(screenshotSubfolder) ? <small role="alert">Enter a relative subfolder, such as Scrapeyy/Screenshots, without a drive letter or ..</small> : null}
+          <button className="settings-save" type="button" disabled={disabled || !validScreenshotSubfolder(screenshotSubfolder)}
+            onClick={() => void onUpdateSettings({ ...settings, screenshotSubfolder })}>Save screenshot location</button>
+        </> : <small>{settings.screenshotDestination === "inbox"
+          ? "Keep PNGs in this browser’s Inbox. Preview, pin, or save them to your device later. Unpinned items follow inbox retention."
+          : "Choose the filename and any location on this device each time."}</small>}
       </div>
       <div className="settings-block">
         <strong>Website access</strong>

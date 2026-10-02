@@ -19,7 +19,7 @@ import { SettingsView } from "./SettingsView";
 import { SharePointView } from "./SharePointView";
 import type { SharePointMetadata } from "../../sharepoint/scrape";
 import type { VideoInventory } from "../../media/videos";
-import { CAPTURE_VERSION } from "../../platform/screenshot-messages";
+import { CAPTURE_VERSION, type ScreenshotResult } from "../../platform/screenshot-messages";
 
 export interface PopupSite {
   origin: string;
@@ -44,7 +44,7 @@ export interface PopupWorkspaceData {
 export interface PopupServices {
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
-  takeScreenshot(kind: "visible" | "full-page" | "selection"): Promise<string | void>;
+  takeScreenshot(kind: "visible" | "full-page" | "selection"): Promise<ScreenshotResult | void>;
   inspectVideos(): Promise<VideoInventory>;
   downloadVideo(url: string): Promise<void>;
   exportVideoDetails(): Promise<void>;
@@ -206,13 +206,18 @@ export function PopupApp({ services }: { services: PopupServices }) {
       <div className="popup-content">
         {view === "capture" ? (
           <CaptureView
+            settings={data.settings}
+            onScreenshotDestinationChange={(screenshotDestination) => updateSettings({ ...data.settings, screenshotDestination })}
             disabled={busy}
             site={data.site}
             onQuickCapture={() => perform(services.startQuickCapture)}
             onScreenshot={(kind) => perform(async () => {
               setNotice(kind === "selection" ? "Opening selection tool…" : "Saving screenshot…");
-              const filename = await services.takeScreenshot(kind);
-              setNotice(filename ? `Screenshot saved: ${filename}` : undefined);
+              const result = await services.takeScreenshot(kind);
+              if (result && "destination" in result && result.destination === "inbox") {
+                await refresh();
+                setNotice("Screenshot saved to Inbox.");
+              } else setNotice(result ? `Screenshot saved: ${result.filename}` : undefined);
             })}
             onInspectVideos={() => perform(async () => { setVideos(await services.inspectVideos()); })}
             onDownloadVideo={(url) => perform(() => services.downloadVideo(url), "Video download requested.")}
@@ -297,7 +302,8 @@ export function PopupApp({ services }: { services: PopupServices }) {
                 "Unpinned captures cleared.",
               )
             }
-            onExport={(runId) => perform(() => services.exportRun(runId), "Export started.")}
+            onExport={(runId) => perform(() => services.exportRun(runId),
+              data.runs.find((run) => run.id === runId)?.screenshot ? "Screenshot saved to device." : "Export started.")}
             onLoadScreenshot={services.loadRunScreenshot}
             onPin={(runId, pinned) =>
               performAndRefresh(() => services.pinRun(runId, pinned))

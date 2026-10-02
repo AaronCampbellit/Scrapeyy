@@ -14,4 +14,9 @@ describe("screenshot acknowledgements", () => {
     const saved = { status: "saved", version: CAPTURE_VERSION, downloadId: 2, filename: "C:/Downloads/test.png" };
     expect(screenshotSaved(saved)).toEqual(saved);
   });
+  it("accepts inbox receipts only with a stored run ID", () => {
+    const saved = { status: "saved", version: CAPTURE_VERSION, destination: "inbox", runId: "png-1", filename: "test.png" };
+    expect(screenshotSaved(saved)).toEqual(saved);
+    expect(() => screenshotSaved({ ...saved, runId: undefined })).toThrow();
+  });
 });

@@ -134,6 +134,7 @@ describe("capture exports", () => {
     expect(
       resolveRunDownload(
         {
+          ...DEFAULT_APP_SETTINGS,
           theme: "dark",
           downloadBehavior: "automatic",
           downloadSubfolder: "Client Reports",

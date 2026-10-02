@@ -20,6 +20,7 @@ import { extensionBrowser } from "../src/platform/browser-api";
 import { ensureContentScript } from "../src/platform/content-injection";
 import { downloadBundle } from "../src/platform/downloads";
 import { downloadScreenshot } from "../src/platform/screenshot-download";
+import { saveScreenshotToInbox } from "../src/storage/screenshot-inbox";
 import { assertSelectionReady } from "../src/platform/screenshot-messages";
 import { hasOriginAccess } from "../src/platform/permissions";
 import { downloadReferencedAssetsFromPage } from "../src/platform/page-asset-download";
@@ -440,6 +441,19 @@ export default defineBackground(() => {
   const exportRun = async (runId: string): Promise<number> => {
     const run = await captures.getRun(runId);
     if (!run) throw new Error("Capture run not found");
+    if (run.screenshot) {
+      try {
+        const artifact = await captures.getArtifact(`${run.id}:screenshot`);
+        if (!artifact) throw new Error("Screenshot file not found in the inbox");
+        const settings = await appSettings.get();
+        const saved = await downloadScreenshot(artifact.blob, `${settings.screenshotSubfolder}/${run.screenshot.filename}`, true);
+        await captures.putRun({ ...run, exportState: "complete" });
+        return saved.downloadId;
+      } catch (error) {
+        await captures.putRun({ ...run, exportState: "failed" });
+        throw error;
+      }
+    }
     const recipe = await recipeForRun(run);
     if (!recipe) throw new Error("Recipe snapshot not found");
     const project =
@@ -671,8 +685,13 @@ export default defineBackground(() => {
       const settings = await appSettings.get();
       const filename = safePathSegment(new URL(tab.url).hostname) + "-" + kind + "-" +
         new Date().toISOString().replace(/[:.]/g, "-") + ".png";
-      return await downloadScreenshot(image, settings.downloadSubfolder + "/Screenshots/" + filename,
-        settings.downloadBehavior === "ask");
+      if (settings.screenshotDestination === "inbox") {
+        return await saveScreenshotToInbox(image, {
+          kind, filename, sourceUrl: tab.url, title: tab.title || new URL(tab.url).hostname,
+        }, captures);
+      }
+      return await downloadScreenshot(image, `${settings.screenshotSubfolder}/${filename}`,
+        settings.screenshotDestination === "ask");
     } finally { screenshotTabs.delete(tabId); }
   };
   extensionBrowser.runtime.onStartup.addListener(() => {

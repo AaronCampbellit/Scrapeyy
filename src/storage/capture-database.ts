@@ -78,6 +78,21 @@ export class CaptureDatabase {
     await transactionComplete(transaction);
   }
 
+  async putRunWithArtifacts(run: CaptureRun, artifacts: CaptureArtifact[]): Promise<void> {
+    if (artifacts.some((artifact) => artifact.runId !== run.id)) throw new Error("Capture artifact does not belong to this run");
+    const transaction = (await this.#open()).transaction(["runs", "artifacts"], "readwrite");
+    const complete = transactionComplete(transaction);
+    try {
+      transaction.objectStore("runs").put(run);
+      for (const artifact of artifacts) transaction.objectStore("artifacts").put(artifact);
+    } catch (error) {
+      transaction.abort();
+      await complete.catch(() => undefined);
+      throw error;
+    }
+    await complete;
+  }
+
   async getRun(id: string): Promise<CaptureRun | undefined> {
     const transaction = (await this.#open()).transaction("runs", "readonly");
     const result = await requestResult(

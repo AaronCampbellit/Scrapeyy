@@ -2,6 +2,47 @@ import { describe, expect, it } from "vitest";
 import { classifyVideoSource, collectVideos, videoMetadataForExport } from "../../src/media/videos";
 
 describe("video discovery", () => {
+  it("finds nested shadow videos and combines Reddit player metadata without duplicate entries", () => {
+    document.body.innerHTML = '<shreddit-post content-type="video" content-href="https://v.redd.it/abc" post-title="A Reddit clip"><shreddit-player-2 src="https://v.redd.it/abc/DASHPlaylist.mpd"></shreddit-player-2></shreddit-post>';
+    const player = document.querySelector("shreddit-player-2")!;
+    player.setAttribute("packaged-media-json", JSON.stringify({ playbackMedia: { fallback_url: "https://v.redd.it/abc/DASH_720.mp4", audio: { url: "https://v.redd.it/abc/DASH_AUDIO_128.mp4" } } }));
+    const shadow = player.attachShadow({ mode: "open" });
+    shadow.innerHTML = '<video src="blob:https://reddit.com/test"><track src="https://v.redd.it/abc/captions.vtt" kind="captions"></video>';
+    const result = collectVideos(document.body);
+    expect(result.videos).toHaveLength(1);
+    expect(result.videos[0]?.title).toBe("A Reddit clip");
+    expect(result.videos[0]?.sources.map((source) => source.kind)).toEqual(["embed", "stream", "file", "blob"]);
+    expect(result.videos[0]?.sources.find((source) => source.kind === "file")?.note).toContain("audio may be separate");
+    expect(result.videos[0]?.captions[0]?.url).toBe("https://v.redd.it/abc/captions.vtt");
+    expect(shadow.querySelector("video")?.paused).toBe(true);
+  });
+
+  it("detects a player with closed or unhydrated content through exposed attributes", () => {
+    document.body.innerHTML = '<shreddit-player src="https://v.redd.it/closed/HLSPlaylist.m3u8" caption-url="https://v.redd.it/closed/en.vtt"></shreddit-player>';
+    const player = document.querySelector("shreddit-player")!;
+    player.attachShadow({ mode: "closed" }).innerHTML = '<video src="blob:https://reddit.com/closed"></video>';
+    player.setAttribute("packaged-media-json", "malformed");
+    const result = collectVideos(document.body);
+    expect(result.videos).toHaveLength(1);
+    expect(result.videos[0]?.sources[0]?.kind).toBe("stream");
+    expect(result.videos[0]?.captions[0]?.url).toContain("en.vtt");
+  });
+
+  it("walks nested generic shadow roots and same-origin frame documents", () => {
+    document.body.innerHTML = '<custom-card></custom-card><iframe></iframe>';
+    const shadow = document.querySelector("custom-card")!.attachShadow({ mode: "open" });
+    shadow.innerHTML = '<custom-player></custom-player>';
+    shadow.querySelector("custom-player")!.attachShadow({ mode: "open" }).innerHTML = '<video src="https://cdn.test/shadow.mp4"></video>';
+    document.querySelector("iframe")!.contentDocument!.body.innerHTML = '<video src="https://cdn.test/frame.webm"></video>';
+    const urls = collectVideos(document.body).videos.flatMap((video) => video.sources.map((source) => source.url));
+    expect(urls).toEqual(["https://cdn.test/shadow.mp4", "https://cdn.test/frame.webm"]);
+  });
+
+  it("finds extensionless Reddit and external-player links plus streaming links", () => {
+    document.body.innerHTML = '<a href="https://v.redd.it/linked">Reddit clip</a><a href="https://youtu.be/abc">YouTube clip</a><a href="https://cdn.test/master.m3u8">Stream</a><a href="https://youtube.com/">Not a video</a>';
+    expect(collectVideos(document.body).videos.map((video) => video.sources[0]?.kind)).toEqual(["embed", "embed", "stream"]);
+  });
+
   it("redacts authentication URL parameters in exports while retaining live download URLs", () => {
     const url = "https://cdn.test/movie.mp4?token=temporary&quality=hd";
     const live = { pageUrl: "https://site.test/?access_token=secret", notes: [], videos: [

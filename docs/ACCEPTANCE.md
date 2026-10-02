@@ -1,5 +1,27 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.4 destinations and video discovery
+
+- Screenshot destination is separate from other exports: automatic device save,
+  Save As, or Inbox. Existing download settings migrate to equivalent screenshot
+  settings. Automatic saving accepts a relative subfolder of the browser's
+  configured download directory; no arbitrary absolute-path access is claimed.
+- All nine screenshot-type/destination combinations have background integration
+  tests. Inbox PNGs and metadata are committed in one IndexedDB transaction,
+  preview as images, support pin/clear/retention, and export directly as PNG.
+- Video tests cover nested shadow roots, same-origin frames, extensionless Reddit
+  and external video links, exposed Reddit playback JSON, closed-player attribute
+  fallback, captions, de-duplication, malformed metadata, and audio-only filtering.
+- Codex browser UI checks passed for persisted preferences, separate folders,
+  real IndexedDB inbox preview, three fixture video results, and 420px popup width.
+  Device capture/download APIs were simulated in those UI checks; the routing and
+  completion behavior are covered by code tests.
+- Live Reddit opened a verification challenge in Codex browser. It was not solved
+  or bypassed. The exact reported Reddit page was not supplied during this run;
+  live Reddit and installed Zen acceptance remain pending.
+- No desktop/computer-use automation was used; browser UI checks used only the
+  Codex in-app browser.
+
 ## Version 0.1.3 screenshot fixes
 
 - Versioned page bridges replace stale injected scripts. Empty or outdated
