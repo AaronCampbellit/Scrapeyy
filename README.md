@@ -93,7 +93,16 @@ download folder and save-dialog preference:
   Keep the tab selected until it finishes. Extremely large pages exceed canvas
   limits; endless feeds and late-loading content may need smaller captures.
 - **Draw selection** lets you drag an exact rectangle in the visible page.
-  Release to save, or press Escape to cancel.
+  Release to preview the crop, then click **Capture** to save. Drag again to
+  redraw, or press Escape to cancel.
+
+Screenshot success is shown only after the browser confirms the file finished
+saving, with the actual saved path. Cancelled or interrupted saves report an
+error. After replacing the build files, open
+`about:debugging#/runtime/this-firefox` in Firefox or Zen and click **Reload**
+for Scrapeyy. The popup header shows the loaded version. Older page scripts are
+refreshed automatically; an unrecognized background command reports a reload
+instruction instead of claiming it saved a file.
 
 **Video tools → Scan videos** lists exposed video elements, direct video links,
 and recognized embedded players. **Download video** is offered for direct file

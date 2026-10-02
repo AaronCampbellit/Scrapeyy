@@ -13,6 +13,7 @@ import {
 } from "../../src/features/popup/PopupApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
 import { ensureContentScript } from "../../src/platform/content-injection";
+import { assertSelectionReady, screenshotSaved } from "../../src/platform/screenshot-messages";
 import {
   isSharePointMetadata,
   isSharePointUrl,
@@ -115,11 +116,16 @@ const services: PopupServices = {
   async takeScreenshot(kind) {
     const tab = await activeTab();
     if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
-    await extensionBrowser.runtime.sendMessage({
+    const response = await extensionBrowser.runtime.sendMessage({
       type: kind === "selection" ? "SCRAPEYY_START_SCREENSHOT_SELECTION" : "SCRAPEYY_SCREENSHOT",
       tabId: tab.id, kind,
     });
-    if (kind === "selection") window.close();
+    if (kind === "selection") {
+      assertSelectionReady(response);
+      window.close();
+      return;
+    }
+    return screenshotSaved(response).filename;
   },
   async inspectVideos() {
     const tab = await activeTab();

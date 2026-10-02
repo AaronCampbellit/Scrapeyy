@@ -1,5 +1,31 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.3 screenshot fixes
+
+- Versioned page bridges replace stale injected scripts. Empty or outdated
+  screenshot responses are errors, never download success.
+- Screenshot saves wait for download completion and retain the image URL until
+  then. Popup success includes the browser-reported filename.
+- The crop overlay mounts at the document root to avoid transformed body
+  clipping. A mounted viewport-sized overlay is required before popup dismissal.
+- Drawing keeps a visible crop rectangle until Capture; redraw and Escape work.
+- Regression tests cover outdated bridges, invalid receipts, download completion
+  races, cancellation, missing files, and popup progress/errors.
+- `tests/browser/screenshot-smoke.mjs` runs the compiled Firefox background and
+  content scripts together in headless Chromium. It verifies the real shadow
+  overlay on a transformed-body fixture, reverse dragging, explicit Capture,
+  Escape, three PNGs with correct dimensions, and restored scroll position.
+  WebExtension APIs are simulated; this is not installed Zen acceptance.
+  Run after a Firefox build with `node tests/browser/screenshot-smoke.mjs
+  <build-directory>`. Playwright must be resolvable, or set `PLAYWRIGHT_MODULE`
+  to its module path.
+- [ ] Reload 0.1.3 in installed Zen, verify header version, then check all three
+  modes and the real Save As / Downloads behavior on a normal website.
+
+The download lifecycle follows Mozilla's
+[download API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/downloads/download)
+and [completion events](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/downloads/onChanged).
+
 ## Version 0.1.2 changes
 
 The historical browser results below describe the earlier release. The new

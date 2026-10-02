@@ -39,6 +39,20 @@ export function ScreenshotSelection({ onCapture, onClose }: {
     };
   }, [onClose, busy]);
   const point = (event: React.PointerEvent) => ({ x: event.clientX, y: event.clientY });
+  const capture = async () => {
+    if (!bounds || busy) return;
+    setBusy(true);
+    if (layer.current) layer.current.style.visibility = "hidden";
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    try {
+      await onCapture(bounds);
+      onClose();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Screenshot failed. Try again.");
+      if (layer.current) layer.current.style.visibility = "visible";
+      setBusy(false);
+    }
+  };
   return (
     <div ref={layer} data-scrapeyy-ui className="screenshot-selection"
       onPointerDown={(event) => {
@@ -52,26 +66,19 @@ export function ScreenshotSelection({ onCapture, onClose }: {
         if (start.current && !busy) setBounds(selectionBounds(start.current, point(event), innerWidth, innerHeight));
       }}
       onPointerCancel={() => { start.current = undefined; setBounds(undefined); }}
-      onPointerUp={async (event) => {
+      onPointerUp={(event) => {
         if (!start.current || busy) return;
         const area = selectionBounds(start.current, point(event), innerWidth, innerHeight);
         start.current = undefined;
         if (area.width < 3 || area.height < 3) { setNotice("Draw a larger area to capture."); return; }
-        setBusy(true);
-        if (layer.current) layer.current.style.visibility = "hidden";
-        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-        try {
-          await onCapture(area);
-          onClose();
-        } catch (error) {
-          setNotice(error instanceof Error ? error.message : "Screenshot failed. Try again.");
-          if (layer.current) layer.current.style.visibility = "visible";
-          setBounds(undefined);
-          setBusy(false);
-        }
+        setBounds(area);
+        setNotice(`${Math.round(area.width)} × ${Math.round(area.height)} px. Capture or drag again to redraw.`);
       }}>
       <div className="screenshot-instructions" role="status">
-        <span>{notice}</span><button type="button" disabled={busy} onClick={onClose}>Cancel</button>
+        <span>{notice}</span>
+        {bounds && bounds.width >= 3 && bounds.height >= 3 ?
+          <button type="button" disabled={busy} onClick={() => { void capture(); }}>Capture</button> : null}
+        <button type="button" disabled={busy} onClick={onClose}>Cancel</button>
       </div>
       {bounds ? <div className="screenshot-area" style={{
         left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height,

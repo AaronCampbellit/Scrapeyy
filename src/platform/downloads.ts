@@ -37,7 +37,7 @@ export async function downloadBundle(
   }
 }
 
-async function blobDataUrl(blob: Blob): Promise<string> {
+export async function blobDataUrl(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   let binary = "";
   const chunkSize = 0x8000;

@@ -19,6 +19,8 @@ import type { PickerCapture } from "../src/features/picker/PickerApp";
 import { extensionBrowser } from "../src/platform/browser-api";
 import { ensureContentScript } from "../src/platform/content-injection";
 import { downloadBundle } from "../src/platform/downloads";
+import { downloadScreenshot } from "../src/platform/screenshot-download";
+import { assertSelectionReady } from "../src/platform/screenshot-messages";
 import { hasOriginAccess } from "../src/platform/permissions";
 import { downloadReferencedAssetsFromPage } from "../src/platform/page-asset-download";
 import {
@@ -669,7 +671,7 @@ export default defineBackground(() => {
       const settings = await appSettings.get();
       const filename = safePathSegment(new URL(tab.url).hostname) + "-" + kind + "-" +
         new Date().toISOString().replace(/[:.]/g, "-") + ".png";
-      return await downloadBundle(image, settings.downloadSubfolder + "/Screenshots/" + filename,
+      return await downloadScreenshot(image, settings.downloadSubfolder + "/Screenshots/" + filename,
         settings.downloadBehavior === "ask");
     } finally { screenshotTabs.delete(tabId); }
   };
@@ -697,8 +699,11 @@ export default defineBackground(() => {
       }
       if (value.type === "SCRAPEYY_START_SCREENSHOT_SELECTION" && typeof value.tabId === "number") {
         const tabId = value.tabId;
-        return ensureContentScript(tabId).then(() =>
-          extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_START_SCREENSHOT_SELECTION" }));
+        return ensureContentScript(tabId).then(async () => {
+          const response = await extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_START_SCREENSHOT_SELECTION" });
+          assertSelectionReady(response);
+          return response;
+        });
       }
       if (value.type === "SCRAPEYY_SAVE_SCREENSHOT_SELECTION" && sender.tab?.id !== undefined && value.bounds) {
         return saveScreenshot(sender.tab.id, "selection", value.bounds as ElementBounds);

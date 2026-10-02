@@ -109,6 +109,28 @@ function services(
 }
 
 describe("PopupApp", () => {
+  it("shows the real screenshot path only after saving completes", async () => {
+    const user = userEvent.setup();
+    let finish!: (path: string) => void;
+    const api = services({ takeScreenshot: () => new Promise<string>((resolve) => { finish = resolve; }) });
+    render(<PopupApp services={api} />);
+    await screen.findByText("Current site");
+    await user.click(screen.getByRole("button", { name: "Visible page" }));
+    expect(screen.getByText("Saving screenshot…")).toBeVisible();
+    expect(screen.queryByText(/Screenshot saved:/)).not.toBeInTheDocument();
+    finish("C:/Downloads/Scrapeyy/Screenshots/test.png");
+    expect(await screen.findByText("Screenshot saved: C:/Downloads/Scrapeyy/Screenshots/test.png")).toBeVisible();
+  });
+
+  it("shows screenshot failures without claiming a download", async () => {
+    const user = userEvent.setup();
+    render(<PopupApp services={services({ takeScreenshot: vi.fn().mockRejectedValue(new Error("Reload Scrapeyy in Zen.")) })} />);
+    await screen.findByText("Current site");
+    await user.click(screen.getByRole("button", { name: "Draw selection" }));
+    expect(await screen.findByText("Reload Scrapeyy in Zen.")).toBeVisible();
+    expect(screen.queryByText(/Screenshot saved:/)).not.toBeInTheDocument();
+  });
+
   it("automatically restores a minimized on-page recipe", async () => {
     const resumePicker = vi.fn().mockResolvedValue(undefined);
     const appServices = services({

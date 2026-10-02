@@ -11,6 +11,7 @@ import { createDesignSnapshot } from "../src/design/snapshot";
 import { collectAssetReferences, type AssetReference } from "../src/design/assets";
 import { collectVideos, type VideoInventory } from "../src/media/videos";
 import { ScreenshotSelection } from "../src/features/picker/ScreenshotSelection";
+import { CAPTURE_VERSION, screenshotSaved } from "../src/platform/screenshot-messages";
 import { extractRecords } from "../src/extraction/extract";
 import { fingerprintRecord } from "../src/extraction/fingerprint";
 import { extractQuickData } from "../src/extraction/quick-extract";
@@ -420,7 +421,8 @@ export default defineContentScript({
           screenshotUi?.remove();
           await setCaptureUiHidden(true);
           screenshotUi = await createShadowRootUi(ctx, {
-            name: "scrapeyy-screenshot", position: "overlay", zIndex: 2_147_483_647,
+            name: "scrapeyy-screenshot", position: "modal", anchor: document.documentElement,
+            zIndex: 2_147_483_647,
             isolateEvents: true,
             onMount(container) {
               const root = createRoot(container);
@@ -430,18 +432,35 @@ export default defineContentScript({
                 void setCaptureUiHidden(false);
               };
               root.render(<ScreenshotSelection onClose={close} onCapture={async (bounds) => {
-                await browser.runtime.sendMessage({ type: "SCRAPEYY_SAVE_SCREENSHOT_SELECTION", bounds });
+                screenshotSaved(await browser.runtime.sendMessage({ type: "SCRAPEYY_SAVE_SCREENSHOT_SELECTION", bounds }));
               }} />);
               return root;
             },
             onRemove(root) { root?.unmount(); },
           });
           screenshotUi.mount();
+          await waitForPaint();
+          const layer = screenshotUi.shadow.querySelector(".screenshot-selection");
+          const rect = layer?.getBoundingClientRect();
+          if (!rect || rect.width < innerWidth - 1 || rect.height < innerHeight - 1) {
+            screenshotUi.remove();
+            screenshotUi = undefined;
+            await setCaptureUiHidden(false);
+            throw new Error("The selection tool could not cover this page. Reload Scrapeyy and try again.");
+          }
         };
-        return mount().then(() => ({ ok: true }));
+        return mount().then(
+          () => ({ status: "selection-ready", version: CAPTURE_VERSION }),
+          async (error: unknown) => {
+            screenshotUi?.remove();
+            screenshotUi = undefined;
+            await setCaptureUiHidden(false);
+            throw error;
+          },
+        );
       }
       if (value.type === "SCRAPEYY_PING") {
-        return Promise.resolve({ ok: true });
+        return Promise.resolve({ ok: true, version: CAPTURE_VERSION });
       }
       if (value.type === "SCRAPEYY_PICKER_STATUS") {
         return Promise.resolve({

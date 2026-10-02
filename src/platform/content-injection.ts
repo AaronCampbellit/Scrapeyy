@@ -1,6 +1,12 @@
 import type { ScriptPublicPath } from "wxt/utils/inject-script";
 
 import { extensionBrowser } from "./browser-api";
+import { CAPTURE_VERSION } from "./screenshot-messages";
+
+function isCurrentBridge(response: unknown): boolean {
+  const value = response as { ok?: boolean; version?: string } | undefined;
+  return value?.ok === true && value.version === CAPTURE_VERSION;
+}
 
 export interface ContentInjectionApi {
   sendMessage(tabId: number, message: unknown): Promise<unknown>;
@@ -30,11 +36,7 @@ export async function ensureContentScript(
 ): Promise<void> {
   try {
     const response = await api.sendMessage(tabId, { type: "SCRAPEYY_PING" });
-    if (
-      typeof response === "object" &&
-      response !== null &&
-      (response as { ok?: boolean }).ok
-    ) {
+    if (isCurrentBridge(response)) {
       return;
     }
   } catch {
@@ -43,11 +45,7 @@ export async function ensureContentScript(
   await api.insertCSS(tabId, "content-scripts/content.css");
   await api.executeScript(tabId, "content-scripts/content.js");
   const response = await api.sendMessage(tabId, { type: "SCRAPEYY_PING" });
-  if (
-    typeof response !== "object" ||
-    response === null ||
-    !(response as { ok?: boolean }).ok
-  ) {
+  if (!isCurrentBridge(response)) {
     throw new Error("Scrapeyy could not start on this page");
   }
 }

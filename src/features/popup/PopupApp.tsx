@@ -19,6 +19,7 @@ import { SettingsView } from "./SettingsView";
 import { SharePointView } from "./SharePointView";
 import type { SharePointMetadata } from "../../sharepoint/scrape";
 import type { VideoInventory } from "../../media/videos";
+import { CAPTURE_VERSION } from "../../platform/screenshot-messages";
 
 export interface PopupSite {
   origin: string;
@@ -43,7 +44,7 @@ export interface PopupWorkspaceData {
 export interface PopupServices {
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
-  takeScreenshot(kind: "visible" | "full-page" | "selection"): Promise<void>;
+  takeScreenshot(kind: "visible" | "full-page" | "selection"): Promise<string | void>;
   inspectVideos(): Promise<VideoInventory>;
   downloadVideo(url: string): Promise<void>;
   exportVideoDetails(): Promise<void>;
@@ -177,7 +178,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
         </div>
         <div>
           <h1>Scrapeyy</h1>
-          <p>Local capture studio</p>
+          <p>Local capture studio · {CAPTURE_VERSION}</p>
         </div>
         <span className="local-badge">Local-only</span>
       </header>
@@ -208,8 +209,11 @@ export function PopupApp({ services }: { services: PopupServices }) {
             disabled={busy}
             site={data.site}
             onQuickCapture={() => perform(services.startQuickCapture)}
-            onScreenshot={(kind) => perform(() => services.takeScreenshot(kind),
-              kind === "selection" ? undefined : "Screenshot sent to Downloads.")}
+            onScreenshot={(kind) => perform(async () => {
+              setNotice(kind === "selection" ? "Opening selection tool…" : "Saving screenshot…");
+              const filename = await services.takeScreenshot(kind);
+              setNotice(filename ? `Screenshot saved: ${filename}` : undefined);
+            })}
             onInspectVideos={() => perform(async () => { setVideos(await services.inspectVideos()); })}
             onDownloadVideo={(url) => perform(() => services.downloadVideo(url), "Video download requested.")}
             onExportVideoDetails={() => perform(services.exportVideoDetails, "Video details exported.")}
