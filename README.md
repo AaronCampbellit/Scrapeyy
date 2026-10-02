@@ -9,7 +9,11 @@ until the user exports them.
 - Precise click-or-drag Quick Capture, with an explicit full-page option.
 - Smart Quick Capture for dashboard metrics, nested native/ARIA tables,
   repeated lists/cards, open shadow roots, and ordinary regions.
-- Data, Design, and Both capture modes.
+- Independent **Content** and **Design & Code** switches. Enable either or both;
+  both start enabled, and the last choice is remembered for new captures.
+- Image downloads in either capture mode.
+- One-click visible-page and scrolling full-page PNGs, plus draw-selection screenshots.
+- Separate video discovery with direct-file downloads and metadata/caption export.
 - Popup-only management for captures, projects, recipes, inbox runs, exports,
   permissions, and settings.
 - Bounded Next-button and infinite-scroll traversal.
@@ -63,17 +67,44 @@ For a one-time capture:
 
 1. Press **Quick Capture**.
 2. Click an element, drag around a region, or press **Full Page**.
-3. Choose **Data**, **Design**, or **Both**.
+3. Enable **Content**, **Design & Code**, or both.
 4. Press **Capture**.
 5. Reopen the popup and use **Inbox** to preview or export the run.
 
-Quick Data capture automatically recognizes dashboard label/value metrics,
+Quick Content capture automatically recognizes dashboard label/value metrics,
 tables nested anywhere in the selection, ARIA grids, and repeated cards/lists.
 It also includes a normalized visible-text record, links, images, a sanitized
 source URL, and an element description so unfamiliar page structures still
 retain their readable data. Hidden elements and Scrapeyy's own interface are
 excluded. Cross-origin frames and information drawn only as pixels on a canvas
 remain subject to browser security and accessibility limits.
+
+Content captures save discovered image files in the ZIP's `assets/` folder,
+with source URLs and download results in `assets.json`. Design & Code includes
+the same image support plus sanitized HTML, computed CSS (including font,
+color, spacing, and layout values), and a screenshot. Existing saved recipes
+retain their capture settings; the internal mode IDs remain compatible.
+
+The main popup's **Screenshot** section saves PNGs directly using the configured
+download folder and save-dialog preference:
+
+- **Visible page** captures the current viewport.
+- **Full page** scrolls and stitches the page, then restores the original position.
+  Keep the tab selected until it finishes. Extremely large pages exceed canvas
+  limits; endless feeds and late-loading content may need smaller captures.
+- **Draw selection** lets you drag an exact rectangle in the visible page.
+  Release to save, or press Escape to cancel.
+
+**Video tools → Scan videos** lists exposed video elements, direct video links,
+and recognized embedded players. **Download video** is offered for direct file
+sources; websites can still reject a download. Streaming playlists, blob-backed
+players, and cross-origin embeds are identified but not downloaded. **Export
+video details** saves JSON with source links, available metadata, caption-track
+URLs, and already-loaded caption cues. Content exports also include these details
+in `media.json` when videos are found. No playback or caption settings are changed.
+
+Design & Code describes browser-visible HTML and styles, not private server code
+or the site's original application source.
 
 Use **Create Recipe** when the capture needs reusable fields, pagination,
 infinite scrolling, schedules, project assignment, limits, or automatic

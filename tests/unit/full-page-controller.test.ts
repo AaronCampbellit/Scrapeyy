@@ -108,6 +108,8 @@ describe("full-page capture controller", () => {
     expect(fixed.style.visibility).toBe("visible");
 
     await controller.scrollTo(0, 0, 0);
+    expect(document.documentElement.style.getPropertyValue("scroll-behavior")).toBe("auto");
+    expect(document.documentElement.style.getPropertyValue("scroll-snap-type")).toBe("none");
     expect(fixed.style.visibility).toBe("visible");
     await controller.scrollTo(0, 600, 1);
     expect(fixed.style.visibility).toBe("hidden");
@@ -117,5 +119,7 @@ describe("full-page capture controller", () => {
     expect(fixed.style.visibility).toBe("visible");
     expect(scrollTo).toHaveBeenLastCalledWith(12, 34);
     expect(uiStates).toEqual([true, false]);
+    expect(document.documentElement.style.getPropertyValue("scroll-behavior")).toBe("");
+    expect(document.documentElement.style.getPropertyValue("scroll-snap-type")).toBe("");
   });
 });

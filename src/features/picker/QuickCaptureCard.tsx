@@ -1,10 +1,11 @@
-import { useState } from "react";
-
 import type { CaptureMode } from "../../contracts/models";
+import { CaptureOptions } from "../shared/CaptureOptions";
 
 interface QuickCaptureCardProps {
   description: string;
   busy: boolean;
+  mode: CaptureMode;
+  onModeChange(mode: CaptureMode): void;
   onCapture(mode: CaptureMode): void | Promise<void>;
   onCancel(): void;
   onReselect(): void;
@@ -13,32 +14,17 @@ interface QuickCaptureCardProps {
 export function QuickCaptureCard({
   description,
   busy,
+  mode,
+  onModeChange,
   onCapture,
   onCancel,
   onReselect,
 }: QuickCaptureCardProps) {
-  const [mode, setMode] = useState<CaptureMode>("data");
   return (
     <aside className="quick-capture-card" aria-label="Quick Capture">
       <span className="picker-kicker">Selected content</span>
       <strong>{description}</strong>
-      <div
-        className="segmented"
-        role="group"
-        aria-label="Capture type"
-      >
-        {(["data", "design", "both"] as const).map((value) => (
-          <button
-            aria-pressed={mode === value}
-            disabled={busy}
-            key={value}
-            onClick={() => setMode(value)}
-            type="button"
-          >
-            {value[0]!.toUpperCase() + value.slice(1)}
-          </button>
-        ))}
-      </div>
+      <CaptureOptions mode={mode} onChange={onModeChange} disabled={busy} />
       <button
         className="button button-primary quick-confirm"
         disabled={busy}

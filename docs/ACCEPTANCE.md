@@ -1,5 +1,29 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.2 changes
+
+The historical browser results below describe the earlier release. The new
+capture switches, standalone screenshot tools, image exports in Content mode,
+and video inspector have source tests and a Firefox production build. Headless
+Chromium checks cover popup actions/layout, reverse rectangle drawing, Escape
+cancellation, and the two capture switches. Installed Firefox acceptance for
+this release remains pending:
+
+- [ ] Load the 0.1.2 Firefox build and check that capture choices persist.
+- [ ] Export Content-only capture and verify image files plus media.json.
+- [ ] Capture a visible PNG, scrolling full-page PNG, and manually drawn PNG.
+- [ ] Verify crop dimensions at non-default display scaling/browser zoom.
+- [ ] Cancel drawing while a recipe is open and confirm the recipe is preserved.
+- [ ] Download an exposed direct MP4/WebM and export available caption details.
+- [ ] Confirm embedded/streamed video is identified without a download claim.
+
+API references used for this release:
+[visible-tab capture](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/captureVisibleTab),
+[media text tracks](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/textTracks),
+and [MediaSource streams](https://developer.mozilla.org/en-US/docs/Web/API/MediaSource).
+
+## Earlier release evidence
+
 This file separates source/build proof from interactive browser proof. Complete
 the same checklist in current Chrome and Firefox against
 `http://127.0.0.1:4173`.

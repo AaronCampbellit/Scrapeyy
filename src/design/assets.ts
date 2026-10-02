@@ -28,6 +28,7 @@ export function collectAssetReferences(element: Element): AssetReference[] {
   };
 
   for (const candidate of [element, ...element.querySelectorAll("*")]) {
+    if (candidate.closest("[data-scrapeyy-ui], scrapeyy-picker, scrapeyy-screenshot")) continue;
     if (candidate instanceof HTMLImageElement) {
       add("image", candidate.currentSrc || candidate.getAttribute("src") || "");
       for (const url of srcsetUrls(candidate.getAttribute("srcset") ?? "")) {

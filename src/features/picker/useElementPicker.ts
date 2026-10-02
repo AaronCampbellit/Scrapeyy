@@ -126,6 +126,7 @@ export function useElementPicker(
     };
     const onClick = (event: MouseEvent) => select(event.target, event);
     const onKeyDown = (event: KeyboardEvent) => {
+      if (ownerDocument.querySelector("scrapeyy-screenshot")) return;
       if (event.key === "Escape") {
         blockSelectionEvent(event);
         cancelRef.current?.();

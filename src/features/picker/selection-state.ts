@@ -6,7 +6,8 @@ export function shouldIgnorePickerTarget(
   return (
     !(target instanceof Element) ||
     target.closest("[data-scrapeyy-ui]") !== null ||
-    target.closest("scrapeyy-picker") !== null
+    target.closest("scrapeyy-picker") !== null ||
+    target.closest("scrapeyy-screenshot") !== null
   );
 }
 

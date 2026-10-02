@@ -73,6 +73,26 @@ const design: DesignSnapshot = {
 };
 
 describe("capture exports", () => {
+  it("includes image binaries and media details in Content-only exports", async () => {
+    const bundle = await buildRunBundle({
+      project, recipe: { ...recipe, mode: "data" }, run,
+      assetReferences: [{ kind: "image", url: "https://example.test/photo.png" }],
+      assets: [{ url: "https://example.test/photo.png", filename: "photo.png",
+        blob: new Blob(["image-bytes"], { type: "image/png" }) }],
+      media: { pageUrl: recipe.startUrl, notes: [], videos: [
+        { title: "Demo", duration: null, width: 0, height: 0, sources: [], captions: [] },
+      ] },
+    });
+    const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
+    expect(await zip.file("assets/photo.png")?.async("string")).toBe("image-bytes");
+    expect(JSON.parse((await zip.file("assets.json")?.async("string"))!)).toMatchObject({
+      references: [{ kind: "image", url: "https://example.test/photo.png" }],
+      downloaded: [{ filename: "photo.png" }],
+    });
+    expect(zip.file("media.json")).not.toBeNull();
+    expect(zip.file("styles.css")).toBeNull();
+    expect(zip.file("snapshot.html")).toBeNull();
+  });
   it("escapes CSV values and preserves recipe field order", () => {
     expect(serializeCsv(run.records, fields)).toBe(
       'Title,URL\r\n"A, ""B""",\r\n',

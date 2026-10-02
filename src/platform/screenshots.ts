@@ -66,6 +66,7 @@ const CAPTURE_INTERVAL_MS = 550;
 const defaultApi: ScreenshotApi = {
   async getTab(tabId) {
     const tab = await extensionBrowser.tabs.get(tabId);
+    if (!tab.active) throw new Error("Keep the page selected until the screenshot finishes.");
     return tab.windowId === undefined ? {} : { windowId: tab.windowId };
   },
   captureVisibleTab: (windowId) =>
@@ -227,7 +228,7 @@ export async function captureFullPageScreenshot(
         "This page is too large for a single full-page screenshot. Capture a smaller region instead.",
       );
     }
-    const tab = await api.getTab(tabId);
+    await api.getTab(tabId);
     const xStops = captureStops(metrics.documentWidth, metrics.viewportWidth);
     const yStops = captureStops(metrics.documentHeight, metrics.viewportHeight);
     const tiles: FullPageScreenshotTile[] = [];
@@ -240,8 +241,11 @@ export async function captureFullPageScreenshot(
         if (capturedPositions.has(key)) continue;
         capturedPositions.add(key);
         if (tiles.length > 0) await wait(CAPTURE_INTERVAL_MS);
+        const tab = await api.getTab(tabId);
+        const dataUrl = await api.captureVisibleTab(tab.windowId);
+        await api.getTab(tabId);
         tiles.push({
-          dataUrl: await api.captureVisibleTab(tab.windowId),
+          dataUrl,
           x: position.x,
           y: position.y,
         });
@@ -262,6 +266,10 @@ export async function captureElementScreenshot(
   uiVisibility?: ScreenshotUiVisibility,
 ): Promise<Blob | undefined> {
   if (
+    !Number.isFinite(bounds.left) ||
+    !Number.isFinite(bounds.top) ||
+    !Number.isFinite(bounds.viewportWidth) ||
+    !Number.isFinite(bounds.viewportHeight) ||
     !Number.isFinite(bounds.width) ||
     !Number.isFinite(bounds.height) ||
     bounds.width <= 0 ||
@@ -279,6 +287,7 @@ export async function captureElementScreenshot(
       uiHidden = true;
     }
     const dataUrl = await api.captureVisibleTab(tab.windowId);
+    await api.getTab(tabId);
     return await cropper.crop(dataUrl, bounds);
   } catch {
     return undefined;
@@ -286,5 +295,22 @@ export async function captureElementScreenshot(
     if (uiHidden) {
       await uiVisibility?.show().catch(() => undefined);
     }
+  }
+}
+
+export async function captureVisibleScreenshot(
+  tabId: number,
+  uiVisibility?: ScreenshotUiVisibility,
+  api: ScreenshotApi = defaultApi,
+): Promise<Blob> {
+  let hidden = false;
+  try {
+    if (uiVisibility) { await uiVisibility.hide(); hidden = true; }
+    const tab = await api.getTab(tabId);
+    const url = await api.captureVisibleTab(tab.windowId);
+    await api.getTab(tabId);
+    return await fetch(url).then((response) => response.blob());
+  } finally {
+    if (hidden) await uiVisibility?.show();
   }
 }

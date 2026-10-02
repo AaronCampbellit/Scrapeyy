@@ -18,6 +18,7 @@ import { RecipesView } from "./RecipesView";
 import { SettingsView } from "./SettingsView";
 import { SharePointView } from "./SharePointView";
 import type { SharePointMetadata } from "../../sharepoint/scrape";
+import type { VideoInventory } from "../../media/videos";
 
 export interface PopupSite {
   origin: string;
@@ -42,6 +43,10 @@ export interface PopupWorkspaceData {
 export interface PopupServices {
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
+  takeScreenshot(kind: "visible" | "full-page" | "selection"): Promise<void>;
+  inspectVideos(): Promise<VideoInventory>;
+  downloadVideo(url: string): Promise<void>;
+  exportVideoDetails(): Promise<void>;
   startRecipeCapture(recipeId?: string): Promise<void>;
   resumePicker(): Promise<void>;
   scrapeSharePoint(): Promise<SharePointMetadata>;
@@ -85,6 +90,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
+  const [videos, setVideos] = useState<VideoInventory>();
   const [sharePointMetadata, setSharePointMetadata] =
     useState<SharePointMetadata>();
   const resumeAttempted = useRef(false);
@@ -202,6 +208,12 @@ export function PopupApp({ services }: { services: PopupServices }) {
             disabled={busy}
             site={data.site}
             onQuickCapture={() => perform(services.startQuickCapture)}
+            onScreenshot={(kind) => perform(() => services.takeScreenshot(kind),
+              kind === "selection" ? undefined : "Screenshot sent to Downloads.")}
+            onInspectVideos={() => perform(async () => { setVideos(await services.inspectVideos()); })}
+            onDownloadVideo={(url) => perform(() => services.downloadVideo(url), "Video download requested.")}
+            onExportVideoDetails={() => perform(services.exportVideoDetails, "Video details exported.")}
+            videos={videos}
             onCreateRecipe={() =>
               perform(async () => {
                 if (!data.site || data.site.access === "unavailable") {

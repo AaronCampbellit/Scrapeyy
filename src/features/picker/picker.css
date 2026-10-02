@@ -798,3 +798,31 @@ th {
     width: calc(100vw - 24px);
   }
 }
+.screenshot-selection {
+  position: fixed; inset: 0; z-index: 2147483647; cursor: crosshair;
+  user-select: none; touch-action: none;
+}
+.screenshot-instructions {
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 16px; padding: 12px 16px;
+  border-radius: 10px; background: #172033; color: white;
+  font: 13px system-ui; box-shadow: 0 4px 24px #0006;
+}
+.screenshot-instructions button {
+  cursor: pointer; background: #26354a; color: white;
+  border: 1px solid #64748b; border-radius: 6px; padding: 6px 10px;
+}
+.screenshot-area {
+  position: fixed; pointer-events: none; border: 2px solid #60a5fa;
+  box-sizing: border-box; box-shadow: 0 0 0 100vmax #0005;
+}
+.capture-options { display: grid; gap: 8px; margin: 8px 0; }
+.capture-options label {
+  display: flex; align-items: center; gap: 10px; padding: 10px;
+  border: 1px solid var(--scrapeyy-border); border-radius: 8px;
+  background: var(--scrapeyy-surface);
+}
+.capture-options input { accent-color: var(--scrapeyy-accent); width: 16px; height: 16px; }
+.capture-options span { display: grid; gap: 3px; }
+.capture-options strong { font-size: 12px; }
+.capture-options small { color: var(--scrapeyy-muted); font-size: 11px; }

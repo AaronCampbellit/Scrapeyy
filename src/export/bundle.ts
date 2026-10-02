@@ -6,6 +6,8 @@ import type {
   Recipe,
 } from "../contracts/models";
 import type { DesignSnapshot } from "../design/snapshot";
+import type { AssetReference } from "../design/assets";
+import { videoMetadataForExport, type VideoInventory } from "../media/videos";
 import { serializeCsv } from "./csv";
 import { buildRunManifest, stableJson } from "./manifest";
 
@@ -21,12 +23,14 @@ export interface RunBundleInput {
   run: CaptureRun;
   design?: DesignSnapshot;
   assets?: DownloadedAsset[];
+  assetReferences?: AssetReference[];
+  media?: VideoInventory;
 }
 
 const zipDate = new Date("1980-01-01T00:00:00.000Z");
 
 export async function buildRunBundle(input: RunBundleInput): Promise<Blob> {
-  const { project, recipe, run, design, assets = [] } = input;
+  const { project, recipe, run, design, assets = [], assetReferences, media } = input;
   const zip = new JSZip();
   const artifacts: string[] = [];
   const add = async (
@@ -54,6 +58,8 @@ export async function buildRunBundle(input: RunBundleInput): Promise<Blob> {
     if (design.screenshot) {
       await add("screenshot.png", design.screenshot);
     }
+  }
+  if (design || assetReferences || assets.length > 0) {
     for (const asset of [...assets].sort((left, right) =>
       left.filename.localeCompare(right.filename),
     )) {
@@ -62,11 +68,12 @@ export async function buildRunBundle(input: RunBundleInput): Promise<Blob> {
     await add(
       "assets.json",
       stableJson({
-        references: design.assets,
+        references: assetReferences ?? design?.assets ?? [],
         downloaded: assets.map(({ url, filename }) => ({ url, filename })),
       }),
     );
   }
+  if (media?.videos.length) await add("media.json", stableJson(videoMetadataForExport(media)));
 
   const manifest = buildRunManifest(project, recipe, run, [
     "manifest.json",

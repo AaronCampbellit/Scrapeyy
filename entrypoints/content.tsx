@@ -8,6 +8,9 @@ import type {
   RunError,
 } from "../src/contracts/models";
 import { createDesignSnapshot } from "../src/design/snapshot";
+import { collectAssetReferences, type AssetReference } from "../src/design/assets";
+import { collectVideos, type VideoInventory } from "../src/media/videos";
+import { ScreenshotSelection } from "../src/features/picker/ScreenshotSelection";
 import { extractRecords } from "../src/extraction/extract";
 import { fingerprintRecord } from "../src/extraction/fingerprint";
 import { extractQuickData } from "../src/extraction/quick-extract";
@@ -35,6 +38,8 @@ import type { AdvanceResult } from "../src/traversal/types";
 
 async function executeRecipe(recipe: Recipe) {
   const errors: RunError[] = [];
+  const assetReferences = new Map<string, AssetReference>();
+  const media: VideoInventory = { pageUrl: window.location.href, videos: [], notes: [] };
   let matchedAPage = false;
   const readCurrentPage = (): {
     container?: Element;
@@ -111,6 +116,14 @@ async function executeRecipe(recipe: Recipe) {
         return [];
       }
       matchedAPage = true;
+      for (const match of document.querySelectorAll(recipe.containerSelector)) {
+        for (const asset of collectAssetReferences(match)) assetReferences.set(asset.url, asset);
+        if (recipe.mode !== "design") {
+          const found = collectVideos(match);
+          media.videos.push(...found.videos);
+          media.notes = found.notes;
+        }
+      }
       if (recipe.extraction?.kind === "smart") {
         if (!page.datasetMatched) {
           errors.push({
@@ -134,7 +147,9 @@ async function executeRecipe(recipe: Recipe) {
       : undefined;
   const bounds = selected?.getBoundingClientRect();
   return {
-    records: result.records,
+    records: recipe.mode === "design" ? [] : result.records,
+    assetReferences: [...assetReferences.values()],
+    ...(recipe.mode !== "design" ? { media } : {}),
     warnings: result.warnings,
     errors,
     ...(design === undefined ? {} : { design }),
@@ -255,6 +270,8 @@ async function executeQuickCapture(
   const bounds = selected.getBoundingClientRect();
   return {
     ...extraction,
+    assetReferences: design?.assets ?? collectAssetReferences(selected),
+    ...(request.mode !== "design" ? { media: collectVideos(selected) } : {}),
     warnings: [],
     errors: [],
     ...(design ? { design } : {}),
@@ -283,6 +300,7 @@ export default defineContentScript({
     let activePickerVariant: "quick" | "recipe" | undefined;
     let pickerMinimized = false;
     let fullPageCaptureController: FullPageCaptureController | undefined;
+    let screenshotUi: Awaited<ReturnType<typeof createShadowRootUi<Root>>> | undefined;
 
     const waitForPaint = () =>
       new Promise<void>((resolve) => {
@@ -309,6 +327,8 @@ export default defineContentScript({
         draft?: boolean;
       },
     ) => {
+      const savedMode = (await browser.storage.local.get("captureMode")).captureMode;
+      const initialCaptureMode = savedMode === "data" || savedMode === "design" ? savedMode : "both";
       if (ui) {
         ui.remove();
         ui = undefined;
@@ -348,6 +368,8 @@ export default defineContentScript({
               projectName="Local captures"
               projects={availableProjects}
               theme={theme}
+              initialCaptureMode={initialCaptureMode}
+              onCaptureModeChange={(mode) => { void browser.storage.local.set({ captureMode: mode }); }}
               {...(initialRecipe ? { initialRecipe } : {})}
               {...(resume?.step === undefined ? {} : { initialStep: resume.step })}
               {...(resume?.nextVerified === undefined
@@ -390,6 +412,34 @@ export default defineContentScript({
         return undefined;
       }
       const value = message as Record<string, unknown>;
+      if (value.type === "SCRAPEYY_INSPECT_VIDEOS") {
+        return Promise.resolve(collectVideos(document.documentElement));
+      }
+      if (value.type === "SCRAPEYY_START_SCREENSHOT_SELECTION") {
+        const mount = async () => {
+          screenshotUi?.remove();
+          await setCaptureUiHidden(true);
+          screenshotUi = await createShadowRootUi(ctx, {
+            name: "scrapeyy-screenshot", position: "overlay", zIndex: 2_147_483_647,
+            isolateEvents: true,
+            onMount(container) {
+              const root = createRoot(container);
+              const close = () => {
+                screenshotUi?.remove();
+                screenshotUi = undefined;
+                void setCaptureUiHidden(false);
+              };
+              root.render(<ScreenshotSelection onClose={close} onCapture={async (bounds) => {
+                await browser.runtime.sendMessage({ type: "SCRAPEYY_SAVE_SCREENSHOT_SELECTION", bounds });
+              }} />);
+              return root;
+            },
+            onRemove(root) { root?.unmount(); },
+          });
+          screenshotUi.mount();
+        };
+        return mount().then(() => ({ ok: true }));
+      }
       if (value.type === "SCRAPEYY_PING") {
         return Promise.resolve({ ok: true });
       }
@@ -503,6 +553,7 @@ export default defineContentScript({
     };
     browser.runtime.onMessage.addListener(handleRuntimeMessage);
     ctx.onInvalidated(() => {
+      screenshotUi?.remove();
       browser.runtime.onMessage.removeListener(handleRuntimeMessage);
     });
   },

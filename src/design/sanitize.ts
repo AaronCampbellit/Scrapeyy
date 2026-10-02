@@ -7,11 +7,14 @@ const forbiddenTags = new Set([
   "OBJECT",
   "EMBED",
   "PORTAL",
+  "SCRAPEYY-PICKER",
+  "SCRAPEYY-SCREENSHOT",
 ]);
 const secretNamePattern =
   /(?:csrf|xsrf|token|nonce|password|passwd|secret|authorization|session)/i;
 
 export function isSafeCaptureElement(element: Element): boolean {
+  if (element.closest("[data-scrapeyy-ui], scrapeyy-picker, scrapeyy-screenshot")) return false;
   if (forbiddenTags.has(element.tagName)) {
     return false;
   }

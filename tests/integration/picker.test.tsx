@@ -54,16 +54,11 @@ describe("PickerApp", () => {
     fireEvent.click(target);
 
     expect(document.documentElement.style.cursor).toBe("");
-    expect(screen.getByRole("group", { name: "Capture type" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Data" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "Design" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Both" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Capture options" })).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: "Content" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Design & Code" })).toBeChecked();
     expect(screen.getByRole("button", { name: "Reselect" })).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Both" }));
     await user.click(screen.getByRole("button", { name: "Capture" }));
 
     await waitFor(() =>
@@ -92,8 +87,7 @@ describe("PickerApp", () => {
 
     await user.click(screen.getByRole("button", { name: "Capture Full Page" }));
     expect(await screen.findByText("Entire scrollable page")).toBeVisible();
-    expect(screen.getByRole("group", { name: "Capture type" })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Both" }));
+    expect(screen.getByRole("group", { name: "Capture options" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Capture" }));
 
     await waitFor(() =>
@@ -158,7 +152,7 @@ describe("PickerApp", () => {
     expect(recipe).toMatchObject({
       version: 1,
       name: "Product cards",
-      mode: "data",
+      mode: "both",
       containerSelector: "article.product-card",
       extraction: { kind: "smart", datasetKey: "generic" },
       fields: expect.arrayContaining([

@@ -5,6 +5,8 @@ import type {
   RunError,
 } from "../contracts/models";
 import type { DesignSnapshot } from "../design/snapshot";
+import type { AssetReference } from "../design/assets";
+import type { VideoInventory } from "../media/videos";
 import type { ElementBounds } from "../platform/screenshots";
 
 export interface PageExecutionResult {
@@ -12,6 +14,8 @@ export interface PageExecutionResult {
   warnings: string[];
   errors?: RunError[];
   design?: DesignSnapshot;
+  assetReferences?: AssetReference[];
+  media?: VideoInventory;
   designBounds?: ElementBounds;
 }
 

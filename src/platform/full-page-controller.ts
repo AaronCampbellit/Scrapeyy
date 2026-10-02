@@ -49,6 +49,7 @@ export function createFullPageCaptureController(
   let originalScroll = { x: 0, y: 0 };
   let uiHidden = false;
   let repeatedElementsHidden = false;
+  let scrollStyles: Array<{ element: HTMLElement; behavior: string; priority: string; snap: string; snapPriority: string }> = [];
   let fixedElements: Array<{
     element: StyledElement;
     visibility: string;
@@ -65,6 +66,16 @@ export function createFullPageCaptureController(
   return {
     async prepare() {
       originalScroll = { x: ownerWindow.scrollX, y: ownerWindow.scrollY };
+      scrollStyles = [ownerDocument.documentElement, ownerDocument.body].filter(Boolean).map((element) => ({
+        element, behavior: element.style.getPropertyValue("scroll-behavior"),
+        priority: element.style.getPropertyPriority("scroll-behavior"),
+        snap: element.style.getPropertyValue("scroll-snap-type"),
+        snapPriority: element.style.getPropertyPriority("scroll-snap-type"),
+      }));
+      for (const { element } of scrollStyles) {
+        element.style.setProperty("scroll-behavior", "auto", "important");
+        element.style.setProperty("scroll-snap-type", "none", "important");
+      }
       await setUiHidden(true);
       uiHidden = true;
       fixedElements = [...ownerDocument.querySelectorAll("*")]
@@ -94,6 +105,13 @@ export function createFullPageCaptureController(
       setRepeatedElementsHidden(false);
       ownerWindow.scrollTo(originalScroll.x, originalScroll.y);
       await waitForPaint();
+      for (const { element, behavior, priority, snap, snapPriority } of scrollStyles) {
+        if (behavior) element.style.setProperty("scroll-behavior", behavior, priority);
+        else element.style.removeProperty("scroll-behavior");
+        if (snap) element.style.setProperty("scroll-snap-type", snap, snapPriority);
+        else element.style.removeProperty("scroll-snap-type");
+      }
+      scrollStyles = [];
       if (uiHidden) {
         await setUiHidden(false);
         uiHidden = false;

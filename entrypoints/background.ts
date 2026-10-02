@@ -5,6 +5,9 @@ import type {
   Recipe,
 } from "../src/contracts/models";
 import type { DesignSnapshot } from "../src/design/snapshot";
+import type { AssetReference } from "../src/design/assets";
+import { videoMetadataForExport, type VideoInventory } from "../src/media/videos";
+import { safePathSegment } from "../src/export/filename";
 import {
   buildRunBundle,
   type DownloadedAsset,
@@ -21,6 +24,8 @@ import { downloadReferencedAssetsFromPage } from "../src/platform/page-asset-dow
 import {
   captureElementScreenshot,
   captureFullPageScreenshot,
+  captureVisibleScreenshot,
+  type ElementBounds,
 } from "../src/platform/screenshots";
 import { createTabFullPageCaptureController } from "../src/platform/tab-full-page-controller";
 import { advanceAcrossNavigation } from "../src/platform/tab-navigation";
@@ -288,6 +293,8 @@ export default defineBackground(() => {
     const errors: NonNullable<PageExecutionResult["errors"]> = [];
     let design: PageExecutionResult["design"];
     let designBounds: PageExecutionResult["designBounds"];
+    const references = new Map<string, AssetReference>();
+    const media: VideoInventory = { pageUrl: recipe.startUrl, videos: [], notes: [] };
     const singlePageRecipe: Recipe = {
       ...recipe,
       traversal: {
@@ -312,12 +319,19 @@ export default defineBackground(() => {
         errors.push(...(page.errors ?? []));
         design = page.design ?? design;
         designBounds = page.designBounds ?? designBounds;
+        for (const asset of page.assetReferences ?? page.design?.assets ?? []) references.set(asset.url, asset);
+        if (page.media) {
+          media.videos.push(...page.media.videos);
+          media.notes = page.media.notes;
+        }
         return page.records;
       },
       (record) => fingerprintRecord(record, recipe.fields),
     );
     return {
       records: traversal.records,
+      assetReferences: [...references.values()],
+      ...(recipe.mode !== "design" ? { media } : {}),
       warnings: [...new Set([...warnings, ...traversal.warnings])],
       errors,
       ...(design ? { design } : {}),
@@ -332,10 +346,10 @@ export default defineBackground(() => {
     const result = recipe.traversal.kind === "next"
       ? await executeNextOnTab(recipe, tabId)
       : await sendRecipeToTab(recipe, tabId);
-    if (result.design) {
+    if (result.assetReferences || result.design) {
       const downloaded = await downloadReferencedAssetsFromPage(
         tabId,
-        result.design.assets,
+        result.assetReferences ?? result.design?.assets ?? [],
       );
       result.warnings.push(...downloaded.warnings);
       executionAssets.set(recipe.id, downloaded.assets);
@@ -362,7 +376,7 @@ export default defineBackground(() => {
   const storeRunArtifacts = async (
     run: CaptureRun,
     recipe: Recipe,
-    result: Pick<PageExecutionResult, "design">,
+    result: Pick<PageExecutionResult, "design" | "assetReferences" | "media">,
     storeRecipeSnapshot = false,
     downloadedAssets: DownloadedAsset[] = [],
   ) => {
@@ -392,8 +406,14 @@ export default defineBackground(() => {
           blob: screenshot,
         });
       }
-      await storeReferenceAssets(run.id, downloadedAssets, captures);
     }
+    await storeReferenceAssets(run.id, downloadedAssets, captures);
+    await captures.putArtifact({
+      id: run.id + ":resources", runId: run.id, name: "resources.json",
+      blob: new Blob([JSON.stringify({ assetReferences: result.assetReferences,
+        media: result.media ? videoMetadataForExport(result.media) : undefined })],
+        { type: "application/json" }),
+    });
   };
 
   const designForRun = async (
@@ -425,10 +445,15 @@ export default defineBackground(() => {
     try {
       const design = await designForRun(run.id);
       const assets = await loadReferenceAssets(run.id, captures);
+      const resourcesArtifact = await captures.getArtifact(run.id + ":resources");
+      const resources = resourcesArtifact
+        ? JSON.parse(await resourcesArtifact.blob.text()) as Pick<PageExecutionResult, "assetReferences" | "media">
+        : {};
       const bundle = await buildRunBundle({
         project,
         recipe,
         run,
+        ...resources,
         ...(design ? { design } : {}),
         ...(assets.length > 0 ? { assets } : {}),
       });
@@ -592,9 +617,9 @@ export default defineBackground(() => {
             : undefined;
       if (screenshot) execution.design.screenshot = screenshot;
     }
-    const downloadedAssets = execution.design
-      ? await downloadReferencedAssetsFromPage(tabId, execution.design.assets)
-      : { assets: [], warnings: [] };
+    const downloadedAssets = await downloadReferencedAssetsFromPage(
+      tabId, execution.assetReferences ?? execution.design?.assets ?? [],
+    );
     execution.warnings.push(...downloadedAssets.warnings);
     const now = new Date().toISOString();
     const { recipe, run } = createQuickCaptureResult({
@@ -622,6 +647,32 @@ export default defineBackground(() => {
   extensionBrowser.runtime.onInstalled.addListener(() => {
     void ensureDefaultProject().then(syncSchedules);
   });
+  const screenshotTabs = new Set<number>();
+  const saveScreenshot = async (tabId: number, kind: "visible" | "full-page" | "selection", bounds?: ElementBounds) => {
+    if (screenshotTabs.has(tabId)) throw new Error("A screenshot is already in progress.");
+    screenshotTabs.add(tabId);
+    try {
+      const tab = await extensionBrowser.tabs.get(tabId);
+      if (!tab.url || !/^https?:/.test(tab.url)) throw new Error("Open a website to take a screenshot.");
+      await ensureContentScript(tabId);
+      const visibility = {
+        hide: () => extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN", hidden: true }).then(() => undefined),
+        show: () => extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN", hidden: false }).then(() => undefined),
+      };
+      const image = kind === "full-page"
+        ? await captureFullPageScreenshot(tabId, createTabFullPageCaptureController(
+            tabId, (id, message) => extensionBrowser.tabs.sendMessage(id, message)))
+        : kind === "selection" && bounds
+          ? await captureElementScreenshot(tabId, bounds)
+          : await captureVisibleScreenshot(tabId, visibility);
+      if (!image) throw new Error("The screenshot could not be captured. Keep the page selected and try again.");
+      const settings = await appSettings.get();
+      const filename = safePathSegment(new URL(tab.url).hostname) + "-" + kind + "-" +
+        new Date().toISOString().replace(/[:.]/g, "-") + ".png";
+      return await downloadBundle(image, settings.downloadSubfolder + "/Screenshots/" + filename,
+        settings.downloadBehavior === "ask");
+    } finally { screenshotTabs.delete(tabId); }
+  };
   extensionBrowser.runtime.onStartup.addListener(() => {
     void ensureDefaultProject()
       .then(catchUpSchedules)
@@ -640,6 +691,43 @@ export default defineBackground(() => {
     (message: unknown, sender) => {
       if (typeof message !== "object" || message === null) return undefined;
       const value = message as Record<string, unknown>;
+      if (value.type === "SCRAPEYY_SCREENSHOT" && typeof value.tabId === "number" &&
+          (value.kind === "visible" || value.kind === "full-page")) {
+        return saveScreenshot(value.tabId, value.kind);
+      }
+      if (value.type === "SCRAPEYY_START_SCREENSHOT_SELECTION" && typeof value.tabId === "number") {
+        const tabId = value.tabId;
+        return ensureContentScript(tabId).then(() =>
+          extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_START_SCREENSHOT_SELECTION" }));
+      }
+      if (value.type === "SCRAPEYY_SAVE_SCREENSHOT_SELECTION" && sender.tab?.id !== undefined && value.bounds) {
+        return saveScreenshot(sender.tab.id, "selection", value.bounds as ElementBounds);
+      }
+      if (value.type === "SCRAPEYY_DOWNLOAD_VIDEO" && typeof value.tabId === "number" && typeof value.url === "string") {
+        const tabId = value.tabId;
+        const url = value.url;
+        return (async () => {
+          await ensureContentScript(tabId);
+          const inventory = await extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_INSPECT_VIDEOS" }) as VideoInventory;
+          if (!inventory.videos.some((video) => video.sources.some((source) => source.kind === "file" && source.url === url))) {
+            throw new Error("That direct video file is no longer on the page. Scan again.");
+          }
+          const settings = await appSettings.get();
+          const name = safePathSegment(decodeURIComponent(new URL(url).pathname.split("/").pop() || "video"));
+          return extensionBrowser.downloads.download({ url, filename: settings.downloadSubfolder + "/Videos/" + name,
+            saveAs: settings.downloadBehavior === "ask", conflictAction: "uniquify" });
+        })();
+      }
+      if (value.type === "SCRAPEYY_EXPORT_VIDEO_DETAILS" && typeof value.tabId === "number") {
+        const tabId = value.tabId;
+        return (async () => {
+          await ensureContentScript(tabId);
+          const inventory = await extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_INSPECT_VIDEOS" }) as VideoInventory;
+          const settings = await appSettings.get();
+          return downloadBundle(new Blob([JSON.stringify(videoMetadataForExport(inventory), null, 2)], { type: "application/json" }),
+            settings.downloadSubfolder + "/Videos/media.json", settings.downloadBehavior === "ask");
+        })();
+      }
       if (
         (value.type === "SCRAPEYY_START_PICKER" ||
           value.type === "SCRAPEYY_START_QUICK_PICKER") &&

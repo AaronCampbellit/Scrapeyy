@@ -44,7 +44,7 @@ export function RecipesView({
                 <small>
                   {projects.find((project) => project.id === recipe.projectId)?.name ??
                     "Local captures"}{" "}
-                  · {recipe.mode.toUpperCase()} ·{" "}
+                  · {recipe.mode === "data" ? "Content" : recipe.mode === "design" ? "Design & Code" : "Content + Design & Code"} ·{" "}
                   {recipe.schedule?.enabled ? "Scheduled" : "Manual"}
                 </small>
               </div>

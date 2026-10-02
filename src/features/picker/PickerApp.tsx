@@ -30,6 +30,7 @@ import {
 } from "../../traversal/settings";
 import { FieldEditor } from "./FieldEditor";
 import { QuickCaptureCard } from "./QuickCaptureCard";
+import { CaptureOptions } from "../shared/CaptureOptions";
 import { SmartFieldEditor } from "./SmartFieldEditor";
 import {
   blockSelectionEvent,
@@ -47,6 +48,8 @@ export interface PickerAppProps {
   projectName: string;
   projects?: Project[];
   initialRecipe?: Recipe | undefined;
+  initialCaptureMode?: CaptureMode;
+  onCaptureModeChange?(mode: CaptureMode): void;
   theme?: AppTheme;
   onQuickCapture?(capture: QuickCaptureRequest): void | Promise<void>;
   onSaveRecipe?(recipe: Recipe): void | Promise<void>;
@@ -213,6 +216,8 @@ export function PickerApp({
   projectName,
   projects = [],
   initialRecipe,
+  initialCaptureMode = "both",
+  onCaptureModeChange,
   theme = "dark",
   onQuickCapture,
   onSaveRecipe,
@@ -241,7 +246,11 @@ export function PickerApp({
     !initialRecipe || initialRecipe.extraction?.kind === "smart",
   );
   const [step, setStep] = useState(initialStep);
-  const [mode, setMode] = useState<CaptureMode>(draftBase.mode);
+  const [mode, setMode] = useState<CaptureMode>(initialRecipe?.mode ?? initialCaptureMode);
+  const changeMode = (next: CaptureMode) => {
+    setMode(next);
+    onCaptureModeChange?.(next);
+  };
   const [name, setName] = useState(draftBase.name);
   const [selectedProjectId, setSelectedProjectId] = useState(effectiveProjectId);
   const [fields, setFields] = useState<FieldDefinition[]>(draftBase.fields);
@@ -660,6 +669,8 @@ export function PickerApp({
       {variant === "quick" && picker.selected ? (
         <QuickCaptureCard
           busy={busy}
+          mode={mode}
+          onModeChange={changeMode}
           description={picker.scope === "full-page" ? "Entire scrollable page" : describeElement(picker.selected)}
           onCancel={() => onClose?.()}
           onCapture={runQuickCapture}
@@ -871,14 +882,8 @@ export function PickerApp({
                 </select>
               </label>
               <div>
-                <h2>Capture type</h2>
-                <div className="segmented" role="group" aria-label="Recipe capture type">
-                  {(["data", "design", "both"] as const).map((value) => (
-                    <button aria-pressed={mode === value} key={value} onClick={() => setMode(value)} type="button">
-                      {value[0]!.toUpperCase() + value.slice(1)}
-                    </button>
-                  ))}
-                </div>
+                <h2>Capture options</h2>
+                <CaptureOptions mode={mode} onChange={changeMode} disabled={busy} />
               </div>
               <details className="optional-settings">
                 <summary>Automation and downloads</summary>

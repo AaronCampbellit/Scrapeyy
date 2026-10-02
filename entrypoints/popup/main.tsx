@@ -112,6 +112,31 @@ async function pendingRecipeStatus(tabId?: number): Promise<boolean> {
 }
 
 const services: PopupServices = {
+  async takeScreenshot(kind) {
+    const tab = await activeTab();
+    if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
+    await extensionBrowser.runtime.sendMessage({
+      type: kind === "selection" ? "SCRAPEYY_START_SCREENSHOT_SELECTION" : "SCRAPEYY_SCREENSHOT",
+      tabId: tab.id, kind,
+    });
+    if (kind === "selection") window.close();
+  },
+  async inspectVideos() {
+    const tab = await activeTab();
+    if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
+    await ensureContentScript(tab.id);
+    return extensionBrowser.tabs.sendMessage(tab.id, { type: "SCRAPEYY_INSPECT_VIDEOS" });
+  },
+  async downloadVideo(url) {
+    const tab = await activeTab();
+    if (tab?.id === undefined) throw new Error("Open a website first.");
+    await extensionBrowser.runtime.sendMessage({ type: "SCRAPEYY_DOWNLOAD_VIDEO", tabId: tab.id, url });
+  },
+  async exportVideoDetails() {
+    const tab = await activeTab();
+    if (tab?.id === undefined) throw new Error("Open a website first.");
+    await extensionBrowser.runtime.sendMessage({ type: "SCRAPEYY_EXPORT_VIDEO_DETAILS", tabId: tab.id });
+  },
   async load() {
     const tab = await activeTab();
     const savedRecipes = await recipes.list();

@@ -8,6 +8,8 @@ import type {
   RunError,
 } from "../contracts/models";
 import type { DesignSnapshot } from "../design/snapshot";
+import type { AssetReference } from "../design/assets";
+import type { VideoInventory } from "../media/videos";
 import type { QuickExtractionResult } from "../extraction/quick-extract";
 import { sanitizeCapturedUrl } from "../extraction/normalize";
 
@@ -18,6 +20,8 @@ export interface QuickPageExecutionResult {
   warnings: string[];
   errors: RunError[];
   design?: DesignSnapshot;
+  assetReferences?: AssetReference[];
+  media?: VideoInventory;
   designBounds?: {
     left: number;
     top: number;

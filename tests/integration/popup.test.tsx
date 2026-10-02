@@ -75,6 +75,10 @@ function services(
   return {
     load: vi.fn().mockResolvedValue(data),
     startQuickCapture: vi.fn(),
+    takeScreenshot: vi.fn().mockResolvedValue(undefined),
+    inspectVideos: vi.fn().mockResolvedValue({ pageUrl: "https://example.test", videos: [], notes: [] }),
+    downloadVideo: vi.fn().mockResolvedValue(undefined),
+    exportVideoDetails: vi.fn().mockResolvedValue(undefined),
     startRecipeCapture: vi.fn(),
     resumePicker: vi.fn(),
     scrapeSharePoint: vi.fn().mockResolvedValue({
