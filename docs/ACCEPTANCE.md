@@ -1,5 +1,20 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.6 selection-menu layering
+
+- The draw-selection overlay is a transparent native modal dialog in the browser
+  top layer. It escapes ordinary stacking contexts and transformed ancestors;
+  site dialogs/popovers opened afterward re-promote the selection overlay.
+- The instruction menu stays above selection shading. Capture hides the overlay
+  and transparent backdrop from the PNG. Cancel/Escape remove the overlay without
+  closing the site's existing modal or manual popover.
+- Compiled-script Chromium checks cover maximum-z-index menus, existing and later
+  native modals/popovers, a transformed document root, viewport-sized geometry,
+  drag/capture/cancel hit testing, Escape, and an overlay-free saved crop pixel.
+  All 152 tests, type checking, and Firefox/Chrome builds pass. Installed Zen
+  verification remains pending; no desktop/computer-use automation was used.
+
+
 ## Version 0.1.5 full-page screenshot repair
 
 - Substantial nested scrolling panels, including fixed app panels and open

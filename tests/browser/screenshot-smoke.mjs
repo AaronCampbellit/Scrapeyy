@@ -119,6 +119,44 @@ try {
   await page.keyboard.press("Escape");
   await layer.waitFor({ state: "detached" });
   assert.equal(savedFiles.length, 3, "Escape should not download");
+  for (const scenario of ['maximum z-index menu', 'existing modal', 'existing popover', 'later modal', 'later popover', 'transformed document']) {
+    await page.evaluate((scenario) => {
+      document.documentElement.style.transform = scenario === 'transformed document' ? 'translateZ(0)' : '';
+      const menu = document.createElement(scenario.includes('modal') ? 'dialog' : 'div');
+      menu.id = 'site-menu';
+      menu.setAttribute('style', 'position:fixed;inset:0;width:100vw;height:150px;max-width:none;max-height:none;margin:0;padding:0;border:0;background:orange;z-index:2147483647');
+      if (scenario.includes('popover')) menu.setAttribute('popover', 'manual');
+      document.body.append(menu);
+      if (scenario === 'existing modal') menu.showModal();
+      if (scenario === 'existing popover') menu.showPopover();
+    }, scenario);
+    await dispatch(background, { type: 'SCRAPEYY_START_SCREENSHOT_SELECTION', tabId: 1 });
+    if (scenario.startsWith('later ')) {
+      await page.evaluate(scenario => {
+        const menu = document.querySelector('#site-menu');
+        if (scenario.includes('modal')) menu.showModal(); else menu.showPopover();
+      }, scenario);
+    }
+    await page.waitForTimeout(50);
+    assert.equal(await layer.evaluate(node => node.matches(':modal')), true, scenario);
+    assert.deepEqual(await layer.boundingBox(), { x: 0, y: 0, width: 1000, height: 700 }, scenario);
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click({ trial: true });
+    await page.mouse.move(450, 120); await page.mouse.down();
+    await page.mouse.move(100, 80, { steps: 5 }); await page.mouse.up();
+    assert.deepEqual(await page.locator('.screenshot-area').boundingBox(), { x: 100, y: 80, width: 350, height: 40 }, scenario);
+    // Controls remain visible and clickable even when the selection shade
+    // crosses their position or site top-layer menus open during drawing.
+    await page.getByRole('button', { name: 'Capture', exact: true }).click({ trial: true });
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await layer.waitFor({ state: 'detached' });
+    await page.evaluate(scenario => {
+      const menu = document.querySelector('#site-menu');
+      if (scenario.includes('modal') && !menu.open) throw new Error('Site modal was closed');
+      if (scenario.includes('popover') && !menu.matches(':popover-open')) throw new Error('Site popover was closed');
+      menu.remove(); document.documentElement.style.transform = '';
+    }, scenario);
+  }
+  assert.equal(savedFiles.length, 3, 'Layering checks do not download screenshots');
   assert.equal(injections, 1, "the stale script is replaced once, then the current bridge is reused");
   assert.deepEqual(errors, []);
   const results = [];
@@ -131,6 +169,7 @@ try {
       const pixel = [...ctx.getImageData(x, y, 1, 1).data]; image.close(); return pixel;
     }, { bytes, x, y });
   };
+  assert.deepEqual(await samplePixel(savedFiles[0], 20, 20), [226, 232, 240, 255], 'Selection dialog and backdrop must be absent from the saved PNG');
   const fixtureCapture = async (name, body, height, options = {}) => {
     await page.evaluate(({ body }) => {
       document.head.innerHTML = '<style>html,body{margin:0}body{background:white}</style>';
@@ -201,7 +240,7 @@ try {
   });
   await writeFile(path.join(output, 'full-page-results.json'), JSON.stringify(results, null, 2));
   assert.deepEqual(errors, []);
-  console.log("Compiled-script smoke passed: selection, visible/full PNGs, nested/fixed panels, sticky content, overlap, lazy growth, style/scroll restoration.");
+  console.log("Compiled-script smoke passed: top-layer selection over high-z-index menus, existing/later dialogs and popovers, transformed roots, clean crop PNG, visible/full PNGs, nested/fixed panels, sticky content, overlap, lazy growth, style/scroll restoration.");
   console.log(JSON.stringify(results));
 } finally {
   await browser.close();

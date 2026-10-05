@@ -442,7 +442,8 @@ export default defineContentScript({
           await waitForPaint();
           const layer = screenshotUi.shadow.querySelector(".screenshot-selection");
           const rect = layer?.getBoundingClientRect();
-          if (!rect || rect.width < innerWidth - 1 || rect.height < innerHeight - 1) {
+          if (!(layer instanceof HTMLDialogElement) || !layer.open || !layer.matches(":modal") ||
+              !rect || rect.width < innerWidth - 1 || rect.height < innerHeight - 1) {
             screenshotUi.remove();
             screenshotUi = undefined;
             await setCaptureUiHidden(false);

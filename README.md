@@ -109,6 +109,9 @@ All three capture tools use the selected screenshot destination:
   Keep the tab selected until it finishes. Extremely large pages exceed canvas
   limits; endless feeds and late-loading content may need smaller captures.
 - **Draw selection** lets you drag an exact rectangle in the visible page.
+  Its controls use the browser's top layer so site menus, dialogs, popovers, and
+  transformed page elements do not cover the selection menu. A later site dialog
+  or popover re-promotes the selection overlay while it remains open.
   Release to preview the crop, then click **Capture** to save. Drag again to
   redraw, or press Escape to cancel.
 
