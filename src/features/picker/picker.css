@@ -800,9 +800,14 @@ th {
 }
 .screenshot-selection {
   position: fixed; inset: 0; z-index: 2147483647; cursor: crosshair;
+  width: 100vw; height: 100vh; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0; outline: none; overflow: hidden;
+  background: transparent; color: inherit;
   user-select: none; touch-action: none;
 }
+.screenshot-selection::backdrop { background: transparent; }
 .screenshot-instructions {
+  z-index: 2;
   position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 16px; padding: 12px 16px;
   border-radius: 10px; background: #172033; color: white;
@@ -813,6 +818,7 @@ th {
   border: 1px solid #64748b; border-radius: 6px; padding: 6px 10px;
 }
 .screenshot-area {
+  z-index: 1;
   position: fixed; pointer-events: none; border: 2px solid #60a5fa;
   box-sizing: border-box; box-shadow: 0 0 0 100vmax #0005;
 }

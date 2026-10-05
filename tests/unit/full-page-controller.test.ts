@@ -21,14 +21,14 @@ describe("full-page capture controller", () => {
       scrollX: { configurable: true, writable: true, value: 0 },
       scrollY: { configurable: true, writable: true, value: 0 },
     });
-    vi.spyOn(window, "scrollTo").mockImplementation((x, y) => {
+    vi.spyOn(window, "scrollTo").mockImplementation((x: number | ScrollToOptions, y?: number) => {
       Object.defineProperty(window, "scrollX", {
         configurable: true,
-        value: Number(x),
+        value: typeof x === "object" ? x.left : Number(x),
       });
       Object.defineProperty(window, "scrollY", {
         configurable: true,
-        value: Number(y),
+        value: typeof x === "object" ? x.top : Number(y),
       });
     });
     const visibility = createCaptureUiVisibility(
@@ -76,16 +76,16 @@ describe("full-page capture controller", () => {
       scrollX: { configurable: true, writable: true, value: 12 },
       scrollY: { configurable: true, writable: true, value: 34 },
     });
-    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation((x, y) => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation((x: number | ScrollToOptions, y?: number) => {
       Object.defineProperty(window, "scrollX", {
         configurable: true,
         writable: true,
-        value: Number(x),
+        value: typeof x === "object" ? x.left : Number(x),
       });
       Object.defineProperty(window, "scrollY", {
         configurable: true,
         writable: true,
-        value: Number(y),
+        value: typeof x === "object" ? x.top : Number(y),
       });
     });
     const uiStates: boolean[] = [];
@@ -117,7 +117,7 @@ describe("full-page capture controller", () => {
     await controller.restore();
 
     expect(fixed.style.visibility).toBe("visible");
-    expect(scrollTo).toHaveBeenLastCalledWith(12, 34);
+    expect(scrollTo).toHaveBeenLastCalledWith({ left: 12, top: 34, behavior: "instant" });
     expect(uiStates).toEqual([true, false]);
     expect(document.documentElement.style.getPropertyValue("scroll-behavior")).toBe("");
     expect(document.documentElement.style.getPropertyValue("scroll-snap-type")).toBe("");

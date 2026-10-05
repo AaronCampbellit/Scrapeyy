@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ElementBounds } from "../../platform/screenshots";
 
 export function selectionBounds(start: { x: number; y: number }, end: { x: number; y: number },
@@ -19,7 +19,38 @@ export function ScreenshotSelection({ onCapture, onClose }: {
   const [bounds, setBounds] = useState<ElementBounds>();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("Drag to select an area. Escape to cancel.");
-  const layer = useRef<HTMLDivElement>(null);
+  const layer = useRef<HTMLDialogElement>(null);
+  useLayoutEffect(() => {
+    const dialog = layer.current;
+    if (!dialog) return;
+    // z-index cannot outrank native dialogs/popovers or escape transformed
+    // ancestors. A modal dialog puts the entire overlay in the browser top layer.
+    dialog.showModal();
+    const ownerDocument = dialog.ownerDocument;
+    const raise = () => {
+      if (!dialog.isConnected || !dialog.open) return;
+      dialog.close();
+      dialog.showModal();
+    };
+    const toggle = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Element && target !== dialog &&
+          (target.matches("dialog[open]") || target.matches(":popover-open"))) raise();
+    };
+    // A site can open another top-layer menu after selection starts. Re-promote
+    // our dialog when that happens without changing or closing the site's UI.
+    ownerDocument.addEventListener("toggle", toggle, true);
+    const observer = new MutationObserver((records) => {
+      if (records.some((record) => record.target instanceof Element &&
+          record.target !== dialog && record.target.matches("dialog[open]"))) raise();
+    });
+    observer.observe(ownerDocument.documentElement, { subtree: true, attributes: true, attributeFilter: ["open"] });
+    return () => {
+      ownerDocument.removeEventListener("toggle", toggle, true);
+      observer.disconnect();
+      if (dialog.open) dialog.close();
+    };
+  }, []);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") { event.preventDefault(); if (!busy) onClose(); }
@@ -54,7 +85,8 @@ export function ScreenshotSelection({ onCapture, onClose }: {
     }
   };
   return (
-    <div ref={layer} data-scrapeyy-ui className="screenshot-selection"
+    <dialog ref={layer} data-scrapeyy-ui className="screenshot-selection" aria-label="Draw screenshot selection"
+      onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}
       onPointerDown={(event) => {
         if (busy || event.button !== 0 || (event.target as Element).closest("button")) return;
         event.preventDefault();
@@ -83,6 +115,6 @@ export function ScreenshotSelection({ onCapture, onClose }: {
       {bounds ? <div className="screenshot-area" style={{
         left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height,
       }} /> : null}
-    </div>
+    </dialog>
   );
 }

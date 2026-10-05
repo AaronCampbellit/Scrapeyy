@@ -12,6 +12,7 @@ import {
   type PopupSite,
 } from "../../src/features/popup/PopupApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
+import { openCapturePreview } from "../../src/platform/preview-window";
 import { ensureContentScript } from "../../src/platform/content-injection";
 import { assertSelectionReady, screenshotSaved } from "../../src/platform/screenshot-messages";
 import {
@@ -273,6 +274,7 @@ const services: PopupServices = {
     const artifact = await captures.getArtifact(`${runId}:screenshot`);
     return artifact ? URL.createObjectURL(artifact.blob) : undefined;
   },
+  openPreview: openCapturePreview,
   async pinRun(runId, pinned) {
     const run = await captures.getRun(runId);
     if (run) await captures.putRun({ ...run, pinned });

@@ -14,11 +14,14 @@ until the user exports them.
 - Image downloads in either capture mode.
 - One-click visible-page and scrolling full-page PNGs, plus draw-selection screenshots.
 - Separate video discovery with direct-file downloads and metadata/caption export.
-- Popup-only management for captures, projects, recipes, inbox runs, exports,
+- Popup management for captures, projects, recipes, inbox runs, exports,
   permissions, and settings.
 - Bounded Next-button and infinite-scroll traversal.
 - Reusable projects and recipes with manual or scheduled runs.
 - Local capture inbox with partial/error recovery.
+- Inbox **Pop out ↗** opens the selected capture in a separate resizable preview
+  window. Switch between text and screenshots, scroll long PNGs, use Fit width,
+  100%, or 25–400% zoom, and save/export without keeping the toolbar popup open.
 - Deterministic JSON, CSV, and design-reference ZIP exports.
 - Optional per-origin permission for scheduled captures.
 
@@ -100,9 +103,18 @@ All three capture tools use the selected screenshot destination:
 
 - **Visible page** captures the current viewport.
 - **Full page** scrolls and stitches the page, then restores the original position.
+  Substantial nested scrolling panels are temporarily expanded, sticky sections
+  stay at their natural document positions, and original styles and panel scroll
+  positions are restored afterward. The capture follows newly loaded content
+  within size/tile limits and reports stalled scrolling instead of saving an
+  incomplete image. Small scrolling widgets and virtualized feeds may still
+  require a region capture.
   Keep the tab selected until it finishes. Extremely large pages exceed canvas
   limits; endless feeds and late-loading content may need smaller captures.
 - **Draw selection** lets you drag an exact rectangle in the visible page.
+  Its controls use the browser's top layer so site menus, dialogs, popovers, and
+  transformed page elements do not cover the selection menu. A later site dialog
+  or popover re-promotes the selection overlay while it remains open.
   Release to preview the crop, then click **Capture** to save. Drag again to
   redraw, or press Escape to cancel.
 

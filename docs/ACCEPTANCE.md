@@ -1,5 +1,57 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.7 Inbox preview window
+
+- Select a capture in Inbox and click **Pop out ↗**. A separate 1100×800 browser
+  popup window opens at the selected capture and preview type. It uses its own
+  IndexedDB connection and object URL, so the toolbar popup can close safely.
+- Text and screenshot views, Fit width, original image size, 25–400% zoom, image
+  dimensions, vertical/horizontal scrolling, and Save PNG/Export are available.
+  The window follows the saved theme and adapts when resized. Missing captures,
+  missing/invalid screenshots, and load/export failures show clear messages.
+- All 159 unit/integration tests and strict type checking pass; Firefox MV2 and
+  Chrome MV3 builds include `preview.html`. Image URLs are revoked on unmount.
+- `tests/browser/preview-smoke.mjs` checks compiled inbox/preview pages with real
+  IndexedDB, a 1600×4200 PNG, inbox closure, zoom, narrow-window resizing, text,
+  export commands, expired captures, and absence of browser page errors.
+  WebExtension window/storage/export APIs are simulated in headless Chromium;
+  installed Zen/Firefox window behavior still needs manual verification.
+
+## Version 0.1.6 selection-menu layering
+
+- The draw-selection overlay is a transparent native modal dialog in the browser
+  top layer. It escapes ordinary stacking contexts and transformed ancestors;
+  site dialogs/popovers opened afterward re-promote the selection overlay.
+- The instruction menu stays above selection shading. Capture hides the overlay
+  and transparent backdrop from the PNG. Cancel/Escape remove the overlay without
+  closing the site's existing modal or manual popover.
+- Compiled-script Chromium checks cover maximum-z-index menus, existing and later
+  native modals/popovers, a transformed document root, viewport-sized geometry,
+  drag/capture/cancel hit testing, Escape, and an overlay-free saved crop pixel.
+  All 152 tests, type checking, and Firefox/Chrome builds pass. Installed Zen
+  verification remains pending; no desktop/computer-use automation was used.
+
+
+## Version 0.1.5 full-page screenshot repair
+
+- Substantial nested scrolling panels, including fixed app panels and open
+  shadow-root panels, are expanded for viewport capture. Changed style values,
+  priorities, and original panel/window scroll positions are restored.
+- Sticky sections retain their natural document location. Later tiles draw only
+  their uncovered area, preserving the initial fixed header when the last tile
+  overlaps the first. Page dimensions are rechecked as content loads.
+- Stalled scrolling and viewport changes produce an error instead of a silently
+  incomplete PNG. High-DPI canvas limits are checked after the first tile.
+- All 152 unit/integration tests and strict type checking passed. The compiled
+  Firefox scripts passed headless Chromium checks for all three screenshot modes,
+  nested/fixed panels, sticky content, overlap, lazy growth, and restoration,
+  including PNG dimensions and sampled pixel colors. WebExtension capture and
+  download APIs were bridged to Playwright; this is not installed Zen acceptance.
+- Codex browser automation tools are unavailable in the Ubuntu chat running this
+  repair. A local acceptance page is included at `/full-page.html` for native
+  browser testing. Installed Zen acceptance remains pending after loading 0.1.5.
+
+
 ## Version 0.1.4 destinations and video discovery
 
 - Screenshot destination is separate from other exports: automatic device save,

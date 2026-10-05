@@ -20,6 +20,7 @@ import { SharePointView } from "./SharePointView";
 import type { SharePointMetadata } from "../../sharepoint/scrape";
 import type { VideoInventory } from "../../media/videos";
 import { CAPTURE_VERSION, type ScreenshotResult } from "../../platform/screenshot-messages";
+import type { PreviewType } from "../../platform/preview-window";
 
 export interface PopupSite {
   origin: string;
@@ -58,6 +59,7 @@ export interface PopupServices {
   deleteRun(runId: string): Promise<void>;
   clearInbox(): Promise<void>;
   loadRunScreenshot(runId: string): Promise<string | undefined>;
+  openPreview(runId: string, preview: PreviewType): Promise<void>;
   pinRun(runId: string, pinned: boolean): Promise<void>;
   requestOriginAccess(origin: string): Promise<boolean>;
   revokeOriginAccess(origin: string): Promise<boolean>;
@@ -305,6 +307,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
             onExport={(runId) => perform(() => services.exportRun(runId),
               data.runs.find((run) => run.id === runId)?.screenshot ? "Screenshot saved to device." : "Export started.")}
             onLoadScreenshot={services.loadRunScreenshot}
+            onOpenPreview={(runId, preview) => perform(() => services.openPreview(runId, preview))}
             onPin={(runId, pinned) =>
               performAndRefresh(() => services.pinRun(runId, pinned))
             }

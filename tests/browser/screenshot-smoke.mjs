@@ -119,9 +119,129 @@ try {
   await page.keyboard.press("Escape");
   await layer.waitFor({ state: "detached" });
   assert.equal(savedFiles.length, 3, "Escape should not download");
+  for (const scenario of ['maximum z-index menu', 'existing modal', 'existing popover', 'later modal', 'later popover', 'transformed document']) {
+    await page.evaluate((scenario) => {
+      document.documentElement.style.transform = scenario === 'transformed document' ? 'translateZ(0)' : '';
+      const menu = document.createElement(scenario.includes('modal') ? 'dialog' : 'div');
+      menu.id = 'site-menu';
+      menu.setAttribute('style', 'position:fixed;inset:0;width:100vw;height:150px;max-width:none;max-height:none;margin:0;padding:0;border:0;background:orange;z-index:2147483647');
+      if (scenario.includes('popover')) menu.setAttribute('popover', 'manual');
+      document.body.append(menu);
+      if (scenario === 'existing modal') menu.showModal();
+      if (scenario === 'existing popover') menu.showPopover();
+    }, scenario);
+    await dispatch(background, { type: 'SCRAPEYY_START_SCREENSHOT_SELECTION', tabId: 1 });
+    if (scenario.startsWith('later ')) {
+      await page.evaluate(scenario => {
+        const menu = document.querySelector('#site-menu');
+        if (scenario.includes('modal')) menu.showModal(); else menu.showPopover();
+      }, scenario);
+    }
+    await page.waitForTimeout(50);
+    assert.equal(await layer.evaluate(node => node.matches(':modal')), true, scenario);
+    assert.deepEqual(await layer.boundingBox(), { x: 0, y: 0, width: 1000, height: 700 }, scenario);
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click({ trial: true });
+    await page.mouse.move(450, 120); await page.mouse.down();
+    await page.mouse.move(100, 80, { steps: 5 }); await page.mouse.up();
+    assert.deepEqual(await page.locator('.screenshot-area').boundingBox(), { x: 100, y: 80, width: 350, height: 40 }, scenario);
+    // Controls remain visible and clickable even when the selection shade
+    // crosses their position or site top-layer menus open during drawing.
+    await page.getByRole('button', { name: 'Capture', exact: true }).click({ trial: true });
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await layer.waitFor({ state: 'detached' });
+    await page.evaluate(scenario => {
+      const menu = document.querySelector('#site-menu');
+      if (scenario.includes('modal') && !menu.open) throw new Error('Site modal was closed');
+      if (scenario.includes('popover') && !menu.matches(':popover-open')) throw new Error('Site popover was closed');
+      menu.remove(); document.documentElement.style.transform = '';
+    }, scenario);
+  }
+  assert.equal(savedFiles.length, 3, 'Layering checks do not download screenshots');
   assert.equal(injections, 1, "the stale script is replaced once, then the current bridge is reused");
   assert.deepEqual(errors, []);
-  console.log("Compiled-script smoke passed: stale bridge replacement, shadow overlay, reverse drag, Capture, Escape, all 3 PNG files and dimensions, scroll restoration.");
+  const results = [];
+  const samplePixel = async (file, x, y) => {
+    const bytes = [...await readFile(file)];
+    return background.evaluate(async ({ bytes, x, y }) => {
+      const image = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+      const canvas = new OffscreenCanvas(image.width, image.height);
+      const ctx = canvas.getContext("2d"); ctx.drawImage(image, 0, 0);
+      const pixel = [...ctx.getImageData(x, y, 1, 1).data]; image.close(); return pixel;
+    }, { bytes, x, y });
+  };
+  assert.deepEqual(await samplePixel(savedFiles[0], 20, 20), [226, 232, 240, 255], 'Selection dialog and backdrop must be absent from the saved PNG');
+  const fixtureCapture = async (name, body, height, options = {}) => {
+    await page.evaluate(({ body }) => {
+      document.head.innerHTML = '<style>html,body{margin:0}body{background:white}</style>';
+      document.body.innerHTML = body;
+      window.scrollTo(0, 0);
+    }, { body });
+    if (options.setup) await options.setup();
+    const before = await page.evaluate(() => ({
+      styles: [...document.querySelectorAll("*")].map(node => node.getAttribute("style")),
+      x: scrollX, y: scrollY, nestedTop: document.querySelector('#scroller')?.scrollTop,
+    }));
+    const result = await dispatch(background, { type: "SCRAPEYY_SCREENSHOT", tabId: 1, kind: "full-page" });
+    assert.equal(result.status, "saved");
+    const png = await readFile(result.filename);
+    assert.equal(png.readUInt32BE(20), height, name + ': full PNG height');
+    const after = await page.evaluate(() => ({
+      styles: [...document.querySelectorAll("*")].map(node => node.getAttribute("style")),
+      x: scrollX, y: scrollY, nestedTop: document.querySelector('#scroller')?.scrollTop,
+    }));
+    assert.equal(after.x, before.x); assert.equal(after.y, before.y);
+    assert.equal(after.nestedTop, before.nestedTop);
+    // Inline declaration serialization/order may change, but every original
+    // inline property and priority must be restored.
+    await page.evaluate(({ before, siteChangedHeight }) => {
+      const nodes = [...document.querySelectorAll('*')];
+      before.styles.forEach((style, index) => {
+        const expected = document.createElement('div'); expected.setAttribute('style', style || '');
+        const actual = nodes[index].style;
+        for (const property of expected.style) {
+          if (siteChangedHeight && nodes[index].tagName === 'MAIN' && property === 'height') continue;
+          if (actual.getPropertyValue(property) !== expected.style.getPropertyValue(property) ||
+              actual.getPropertyPriority(property) !== expected.style.getPropertyPriority(property)) {
+            throw new Error('Style was not restored: ' + property);
+          }
+        }
+        for (const property of actual) if (!expected.style.getPropertyValue(property)) throw new Error('Capture style was left behind: ' + property);
+      });
+    }, { before, siteChangedHeight: options.siteChangedHeight || false });
+    if (options.sample) assert.deepEqual(await samplePixel(result.filename, ...options.sample.slice(0, 2)), options.sample[2], name);
+    results.push({ name, width: png.readUInt32BE(16), height, file: result.filename });
+  };
+  await fixtureCapture('Nested scrolling panel', '<main id="scroller" style="height:700px;overflow:auto"><div style="height:2100px;background:blue"></div></main>', 2100, {
+    setup: () => page.evaluate(() => { document.querySelector('#scroller').scrollTop = 300; }),
+    sample: [20, 2050, [0, 0, 255, 255]],
+  });
+  await fixtureCapture('Fixed app scrolling panel', '<main id="scroller" style="position:fixed;inset:0;overflow:auto"><div style="height:2100px;background:blue"></div></main>', 2100, {
+    sample: [20, 2050, [0, 0, 255, 255]],
+  });
+  await fixtureCapture('Flex dashboard scrolling panel', '<style>html,body{height:100%;overflow:hidden}body{display:flex;flex-direction:column}header{height:60px;flex-shrink:0}main{flex:1;min-height:0;overflow:auto}</style><header>Dashboard</header><main id="scroller"><div style="height:2100px;background:blue"></div></main>', 2160, {
+    sample: [20, 2100, [0, 0, 255, 255]],
+  });
+  await fixtureCapture('Sticky section below first viewport', '<div style="height:800px;background:blue"></div><header style="position:sticky;top:0;height:100px;background:red"></header><div style="height:1200px;background:blue"></div>', 2100, {
+    sample: [20, 850, [255, 0, 0, 255]],
+  });
+  await fixtureCapture('Overlapping last tile preserves initial header', '<header style="position:fixed;top:0;width:100%;height:150px;background:red"></header><div style="height:800px;background:blue"></div>', 800, {
+    sample: [20, 120, [255, 0, 0, 255]],
+  });
+  await fixtureCapture('Content loaded while scrolling', '<main style="height:1400px;background:blue"></main>', 2100, {
+    siteChangedHeight: true,
+    setup: () => page.evaluate(() => {
+      window.addEventListener('scroll', function grow() {
+        if (!scrollY) return;
+        window.removeEventListener('scroll', grow);
+        document.querySelector('main').style.height = '2100px';
+      });
+    }),
+    sample: [20, 2050, [0, 0, 255, 255]],
+  });
+  await writeFile(path.join(output, 'full-page-results.json'), JSON.stringify(results, null, 2));
+  assert.deepEqual(errors, []);
+  console.log("Compiled-script smoke passed: top-layer selection over high-z-index menus, existing/later dialogs and popovers, transformed roots, clean crop PNG, visible/full PNGs, nested/fixed panels, sticky content, overlap, lazy growth, style/scroll restoration.");
+  console.log(JSON.stringify(results));
 } finally {
   await browser.close();
 }
