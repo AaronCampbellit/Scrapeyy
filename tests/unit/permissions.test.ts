@@ -180,7 +180,7 @@ describe("origin permissions", () => {
         expect(tiles).toEqual([
           { dataUrl: "tile-1", x: 0, y: 0 },
           { dataUrl: "tile-2", x: 0, y: 100 },
-          { dataUrl: "tile-3", x: 0, y: 150 },
+          { dataUrl: "tile-3", x: 0, y: 150, clipTop: 50 },
         ]);
         events.push("stitch");
         return new Blob(["full-page"], { type: "image/png" });

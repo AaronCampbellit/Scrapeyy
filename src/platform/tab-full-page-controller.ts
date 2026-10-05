@@ -10,6 +10,9 @@ export function createTabFullPageCaptureController(
   sendMessage: SendTabMessage,
 ): FullPageCaptureController {
   return {
+    async measure() {
+      return (await sendMessage(tabId, { type: "SCRAPEYY_MEASURE_FULL_PAGE_CAPTURE" })) as Awaited<ReturnType<FullPageCaptureController["prepare"]>>;
+    },
     async prepare() {
       return (await sendMessage(tabId, {
         type: "SCRAPEYY_PREPARE_FULL_PAGE_CAPTURE",

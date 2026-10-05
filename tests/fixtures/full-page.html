@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scrapeyy full-page screenshot acceptance</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; font: 16px/1.5 system-ui, sans-serif; color: #172338; }
+    body { display: flex; flex-direction: column; }
+    header { flex-shrink: 0; padding: 18px 32px; background: #172338; color: white; }
+    h1 { margin: 0; font-size: 22px; }
+    main { flex: 1; min-height: 0; overflow: auto; }
+    section { height: 700px; padding: 40px; border-bottom: 2px solid #172338; }
+    section:nth-child(1) { background: #e2e8f0; }
+    section:nth-child(2) { background: #fbbf24; }
+    section:nth-child(3) { background: #38bdf8; }
+    h2 { position: sticky; top: 0; padding: 12px; background: white; }
+    p { max-width: 760px; }
+  </style>
+</head>
+<body>
+  <header><h1>Full-page screenshot acceptance</h1></header>
+  <main id="scroller">
+    <section><h2>1 · Top</h2><p>Load Scrapeyy 0.1.5 and choose Full page. The saved PNG should include this header and all three colored sections.</p><p>This page scrolls inside its main panel. Version 0.1.4 captures only the visible part.</p></section>
+    <section><h2>2 · Middle</h2><p>This sticky heading should appear here in the PNG. It should not disappear or repeat in other sections.</p></section>
+    <section><h2>3 · Bottom</h2><p>End of content. This text must appear in the saved PNG. After capture, the panel should have its original size and scroll position.</p></section>
+  </main>
+</body>
+</html>

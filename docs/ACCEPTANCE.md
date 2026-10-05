@@ -1,5 +1,25 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.5 full-page screenshot repair
+
+- Substantial nested scrolling panels, including fixed app panels and open
+  shadow-root panels, are expanded for viewport capture. Changed style values,
+  priorities, and original panel/window scroll positions are restored.
+- Sticky sections retain their natural document location. Later tiles draw only
+  their uncovered area, preserving the initial fixed header when the last tile
+  overlaps the first. Page dimensions are rechecked as content loads.
+- Stalled scrolling and viewport changes produce an error instead of a silently
+  incomplete PNG. High-DPI canvas limits are checked after the first tile.
+- All 152 unit/integration tests and strict type checking passed. The compiled
+  Firefox scripts passed headless Chromium checks for all three screenshot modes,
+  nested/fixed panels, sticky content, overlap, lazy growth, and restoration,
+  including PNG dimensions and sampled pixel colors. WebExtension capture and
+  download APIs were bridged to Playwright; this is not installed Zen acceptance.
+- Codex browser automation tools are unavailable in the Ubuntu chat running this
+  repair. A local acceptance page is included at `/full-page.html` for native
+  browser testing. Installed Zen acceptance remains pending after loading 0.1.5.
+
+
 ## Version 0.1.4 destinations and video discovery
 
 - Screenshot destination is separate from other exports: automatic device save,

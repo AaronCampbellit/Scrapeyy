@@ -518,6 +518,10 @@ export default defineContentScript({
           value.tileIndex,
         );
       }
+      if (value.type === "SCRAPEYY_MEASURE_FULL_PAGE_CAPTURE") {
+        if (!fullPageCaptureController?.measure) return Promise.reject(new Error("Full-page capture was not prepared"));
+        return fullPageCaptureController.measure();
+      }
       if (value.type === "SCRAPEYY_RESTORE_FULL_PAGE_CAPTURE") {
         const restore = fullPageCaptureController?.restore();
         fullPageCaptureController = undefined;

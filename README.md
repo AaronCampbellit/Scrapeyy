@@ -100,6 +100,12 @@ All three capture tools use the selected screenshot destination:
 
 - **Visible page** captures the current viewport.
 - **Full page** scrolls and stitches the page, then restores the original position.
+  Substantial nested scrolling panels are temporarily expanded, sticky sections
+  stay at their natural document positions, and original styles and panel scroll
+  positions are restored afterward. The capture follows newly loaded content
+  within size/tile limits and reports stalled scrolling instead of saving an
+  incomplete image. Small scrolling widgets and virtualized feeds may still
+  require a region capture.
   Keep the tab selected until it finishes. Extremely large pages exceed canvas
   limits; endless feeds and late-loading content may need smaller captures.
 - **Draw selection** lets you drag an exact rectangle in the visible page.

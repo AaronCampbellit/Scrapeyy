@@ -34,10 +34,13 @@ export interface FullPageScreenshotTile {
   dataUrl: string;
   x: number;
   y: number;
+  clipLeft?: number;
+  clipTop?: number;
 }
 
 export interface FullPageCaptureController {
   prepare(): Promise<FullPageMetrics>;
+  measure?(): Promise<FullPageMetrics>;
   scrollTo(
     x: number,
     y: number,
@@ -148,23 +151,25 @@ const offscreenStitcher: FullPageImageStitcher = {
     }
 
     const drawTile = (image: ImageBitmap, tile: FullPageScreenshotTile) => {
+      const sourceX = Math.round((tile.clipLeft ?? 0) * scaleX);
+      const sourceY = Math.round((tile.clipTop ?? 0) * scaleY);
       const sourceWidth = Math.min(
-        image.width,
-        Math.round((metrics.documentWidth - tile.x) * scaleX),
+        image.width - sourceX,
+        Math.round((metrics.documentWidth - tile.x) * scaleX) - sourceX,
       );
       const sourceHeight = Math.min(
-        image.height,
-        Math.round((metrics.documentHeight - tile.y) * scaleY),
+        image.height - sourceY,
+        Math.round((metrics.documentHeight - tile.y) * scaleY) - sourceY,
       );
       if (sourceWidth <= 0 || sourceHeight <= 0) return;
       context.drawImage(
         image,
-        0,
-        0,
+        sourceX,
+        sourceY,
         sourceWidth,
         sourceHeight,
-        Math.round(tile.x * scaleX),
-        Math.round(tile.y * scaleY),
+        Math.round(tile.x * scaleX) + sourceX,
+        Math.round(tile.y * scaleY) + sourceY,
         sourceWidth,
         sourceHeight,
       );
@@ -187,14 +192,6 @@ const offscreenStitcher: FullPageImageStitcher = {
   },
 };
 
-function captureStops(documentSize: number, viewportSize: number): number[] {
-  const stops: number[] = [];
-  for (let position = 0; position < documentSize; position += viewportSize) {
-    stops.push(position);
-  }
-  return stops.length > 0 ? stops : [0];
-}
-
 function validFullPageMetrics(metrics: FullPageMetrics): boolean {
   return Object.values(metrics).every(
     (value) => Number.isFinite(value) && value > 0,
@@ -215,41 +212,75 @@ export async function captureFullPageScreenshot(
   let prepared = false;
   try {
     prepared = true;
-    const metrics = await controller.prepare();
+    let metrics = await controller.prepare();
     if (!validFullPageMetrics(metrics)) {
       throw new Error("The page reported invalid full-page dimensions");
     }
-    if (
-      metrics.documentWidth > MAX_CANVAS_DIMENSION ||
-      metrics.documentHeight > MAX_CANVAS_DIMENSION ||
-      metrics.documentWidth * metrics.documentHeight > MAX_CANVAS_PIXELS
-    ) {
-      throw new Error(
-        "This page is too large for a single full-page screenshot. Capture a smaller region instead.",
-      );
-    }
+    let scaleX = 1;
+    let scaleY = 1;
+    const checkSize = () => {
+      if (metrics.documentWidth * scaleX > MAX_CANVAS_DIMENSION ||
+          metrics.documentHeight * scaleY > MAX_CANVAS_DIMENSION ||
+          metrics.documentWidth * scaleX * metrics.documentHeight * scaleY > MAX_CANVAS_PIXELS) {
+        throw new Error("This page is too large for a single full-page screenshot. Capture a smaller region instead.");
+      }
+    };
+    const measure = async () => {
+      if (controller.measure) {
+        const next = await controller.measure();
+        if (!validFullPageMetrics(next) || next.viewportWidth !== metrics.viewportWidth || next.viewportHeight !== metrics.viewportHeight ||
+            next.documentWidth + 1 < metrics.documentWidth || next.documentHeight + 1 < metrics.documentHeight) {
+          throw new Error("The page layout changed during the screenshot. Keep the window size unchanged and try again.");
+        }
+        metrics = next;
+      }
+      checkSize();
+    };
+    checkSize();
     await api.getTab(tabId);
-    const xStops = captureStops(metrics.documentWidth, metrics.viewportWidth);
-    const yStops = captureStops(metrics.documentHeight, metrics.viewportHeight);
     const tiles: FullPageScreenshotTile[] = [];
-    const capturedPositions = new Set<string>();
     let tileIndex = 0;
-    for (const y of yStops) {
-      for (const x of xStops) {
-        const position = await controller.scrollTo(x, y, tileIndex);
-        const key = `${position.x}:${position.y}`;
-        if (capturedPositions.has(key)) continue;
-        capturedPositions.add(key);
+    for (let y = 0; y < metrics.documentHeight; y += metrics.viewportHeight) {
+      for (let x = 0; x < metrics.documentWidth; x += metrics.viewportWidth) {
+        if (tileIndex >= 100) throw new Error("This page keeps growing or needs too many screenshot tiles. Capture a smaller region instead.");
+        let position = await controller.scrollTo(x, y, tileIndex);
         if (tiles.length > 0) await wait(CAPTURE_INTERVAL_MS);
+        await measure();
+        let expectedX = Math.min(x, Math.max(0, metrics.documentWidth - metrics.viewportWidth));
+        let expectedY = Math.min(y, Math.max(0, metrics.documentHeight - metrics.viewportHeight));
+        // Loading content can move the bottom boundary after the browser clamps
+        // a scroll. Retry against the refreshed dimensions before rejecting it.
+        for (let attempt = 0; attempt < 2 &&
+             (Math.abs(position.x - expectedX) > 1 || Math.abs(position.y - expectedY) > 1); attempt++) {
+          position = await controller.scrollTo(x, y, tileIndex);
+          await measure();
+          expectedX = Math.min(x, Math.max(0, metrics.documentWidth - metrics.viewportWidth));
+          expectedY = Math.min(y, Math.max(0, metrics.documentHeight - metrics.viewportHeight));
+        }
+        if (!Number.isFinite(position.x) || !Number.isFinite(position.y) ||
+            Math.abs(position.x - expectedX) > 1 || Math.abs(position.y - expectedY) > 1) {
+          throw new Error("The page could not scroll to all its content. Full-page screenshot was stopped to avoid saving an incomplete image.");
+        }
         const tab = await api.getTab(tabId);
         const dataUrl = await api.captureVisibleTab(tab.windowId);
         await api.getTab(tabId);
+        // Check high-DPI canvas limits after tile one, before capturing the rest.
+        if (tiles.length === 0 && !dependencies.stitcher) {
+          const image = await createImageBitmap(await fetch(dataUrl).then((response) => response.blob()));
+          scaleX = image.width / metrics.viewportWidth;
+          scaleY = image.height / metrics.viewportHeight;
+          image.close();
+          checkSize();
+        }
         tiles.push({
           dataUrl,
           x: position.x,
           y: position.y,
+          ...(x > position.x ? { clipLeft: x - position.x } : {}),
+          ...(y > position.y ? { clipTop: y - position.y } : {}),
         });
         tileIndex += 1;
+        await measure();
       }
     }
     return await stitcher.stitch(metrics, tiles);
