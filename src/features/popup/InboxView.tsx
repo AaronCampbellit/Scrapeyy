@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
 import type { CaptureRun, Recipe } from "../../contracts/models";
+import { captureText } from "../preview/capture-text";
+import type { PreviewType } from "../../platform/preview-window";
 
 interface InboxViewProps {
   runs: CaptureRun[];
@@ -10,6 +12,7 @@ interface InboxViewProps {
   onDelete(runId: string): void | Promise<void>;
   onExport(runId: string): void | Promise<void>;
   onLoadScreenshot(runId: string): Promise<string | undefined>;
+  onOpenPreview(runId: string, preview: PreviewType): void | Promise<void>;
   onPin(runId: string, pinned: boolean): void | Promise<void>;
   onRetry(recipeId: string): void | Promise<void>;
 }
@@ -22,6 +25,7 @@ export function InboxView({
   onDelete,
   onExport,
   onLoadScreenshot,
+  onOpenPreview,
   onPin,
   onRetry,
 }: InboxViewProps) {
@@ -76,20 +80,7 @@ export function InboxView({
     }
   };
 
-  const readableText = selected?.records
-    .map((record) => {
-      if (record.text?.trim()) return record.text.trim();
-      const values = Object.entries(record)
-        .filter(
-          ([key, value]) =>
-            value?.trim() &&
-            !["source_url", "links", "images", "element"].includes(key),
-        )
-        .map(([key, value]) => `${key.replaceAll("_", " ")}: ${value}`);
-      return values.join("\n");
-    })
-    .filter(Boolean)
-    .join("\n\n");
+  const readableText = selected ? captureText(selected) : "";
   const warnings = selected?.warnings ?? [];
 
   return (
@@ -172,6 +163,11 @@ export function InboxView({
               ) : null}
               <div className="preview-heading">
                 <h3>Preview</h3>
+                <button className="small-button preview-popout" type="button"
+                  aria-label="Pop out preview" disabled={disabled}
+                  onClick={() => void onOpenPreview(selected.id, preview)}>
+                  Pop out ↗
+                </button>
                 <div className="preview-tabs" role="group" aria-label="Preview type">
                   <button
                     aria-pressed={preview === "text"}

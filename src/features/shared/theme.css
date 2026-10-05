@@ -81,7 +81,8 @@ textarea {
   color: var(--ink);
 }
 
-.popup-shell[data-theme="dark"] {
+.popup-shell[data-theme="dark"],
+.preview-shell[data-theme="dark"] {
   color-scheme: dark;
   --ink: #edf3ff;
   --ink-soft: #c8d4e7;

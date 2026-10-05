@@ -100,6 +100,7 @@ function services(
     loadRunScreenshot: vi
       .fn()
       .mockResolvedValue("data:image/png;base64,c2NyZWVuc2hvdA=="),
+    openPreview: vi.fn().mockResolvedValue(undefined),
     pinRun: vi.fn(),
     requestOriginAccess: vi.fn().mockResolvedValue(true),
     revokeOriginAccess: vi.fn(),
@@ -123,6 +124,11 @@ describe("PopupApp", () => {
     expect(api.saveSettings).toHaveBeenCalledWith({ ...data.settings, screenshotDestination: "inbox" });
     await user.click(screen.getByRole("tab", { name: "Inbox" }));
     expect(await screen.findByAltText("Captured screenshot")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Pop out preview" }));
+    expect(api.openPreview).toHaveBeenCalledWith("png", "screenshot");
+    await user.click(screen.getByRole("button", { name: /^Text$/ }));
+    await user.click(screen.getByRole("button", { name: "Pop out preview" }));
+    expect(api.openPreview).toHaveBeenLastCalledWith("png", "text");
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Save screenshot PNG" }));
     expect(api.exportRun).toHaveBeenCalledWith("png");

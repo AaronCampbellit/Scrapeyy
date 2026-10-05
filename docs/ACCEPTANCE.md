@@ -1,5 +1,22 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.7 Inbox preview window
+
+- Select a capture in Inbox and click **Pop out ↗**. A separate 1100×800 browser
+  popup window opens at the selected capture and preview type. It uses its own
+  IndexedDB connection and object URL, so the toolbar popup can close safely.
+- Text and screenshot views, Fit width, original image size, 25–400% zoom, image
+  dimensions, vertical/horizontal scrolling, and Save PNG/Export are available.
+  The window follows the saved theme and adapts when resized. Missing captures,
+  missing/invalid screenshots, and load/export failures show clear messages.
+- All 159 unit/integration tests and strict type checking pass; Firefox MV2 and
+  Chrome MV3 builds include `preview.html`. Image URLs are revoked on unmount.
+- `tests/browser/preview-smoke.mjs` checks compiled inbox/preview pages with real
+  IndexedDB, a 1600×4200 PNG, inbox closure, zoom, narrow-window resizing, text,
+  export commands, expired captures, and absence of browser page errors.
+  WebExtension window/storage/export APIs are simulated in headless Chromium;
+  installed Zen/Firefox window behavior still needs manual verification.
+
 ## Version 0.1.6 selection-menu layering
 
 - The draw-selection overlay is a transparent native modal dialog in the browser
