@@ -207,3 +207,64 @@ For a Both-mode run, inspect the downloaded ZIP and confirm:
 - Browser download policies may show a save prompt. A failed download remains
   recoverable from the Capture Inbox.
 - Site terms and content rights remain the user's responsibility.
+## Version 0.1.8 embedded document screenshot repair
+
+- Full-page screenshot recognizes a dominant embedded document viewer on a
+  viewport-sized page, including IT Glue's Office iframe without a `src`.
+- It discovers frames through optional `webNavigation` access and requests only
+  the uniquely identified viewer origin. Version 0.1.9 uses dedicated Allow
+  buttons for each missing permission, as described below.
+  Ambiguous or inaccessible viewers stop with a clear message, not a partial PNG.
+- The frame is matched to its actual parent iframe using a per-capture token and
+  `postMessage` source identity. Captures scroll the document panel and crop out
+  the viewer toolbar/footer before stitching. Original scroll and styles are
+  restored on success and failure, and high-DPI/last-tile overlap is covered.
+- Scope: the viewer must be fully visible and unscaled. A normal long outer page
+  continues using the existing page capture path. Nested inaccessible viewers
+  require separately granted origin access; their content is not silently skipped.
+- Regression checks cover the live IT Glue dimensions (1244px outer viewport,
+  1131px panel, 2855px document), explicit missing permission errors, origin
+  selection, failed-capture cleanup, and 2x pixel stitching.
+- Codex in-app browser fixture validation captured a real cross-origin,
+  three-page/2850px viewer with no iframe `src`, including END OF DOCUMENT, and
+  restored the panel to its starting scroll position of 137px. Fixture transport
+  simulates the WebExtension APIs; installed add-on testing on IT Glue is a
+  separate check after the browser reloads the updated local extension.
+- Live IT Glue validation: after reloading the local 0.1.8 extension and running
+  Full page on `/5667882/docs/21231734`, Aaron confirmed **All three pages
+  captured** on 2026-10-05. This is user-confirmed installed-extension evidence.
+
+## Version 0.1.9 permission gesture repair
+
+- Real-browser feedback exposed a 0.1.8 failure: awaited frame discovery caused
+  `permissions.request may only be called from a user input handler`, before a
+  permission dialog could appear.
+- Full page now discovers the next missing permission without requesting it.
+  The popup shows **Allow viewer discovery**, then **Allow document access**
+  with the exact viewer origin. Each click invokes `permissions.request`
+  synchronously before awaiting any browser API. Already granted permissions
+  are skipped; capture continues after the final grant.
+- Denial leaves the Allow button available to retry and prevents partial capture.
+  The selected tab is checked again before resuming a pending screenshot.
+- Regression tests enforce the original click stack for both permission stages,
+  exact-origin scope, asynchronous discovery without permission requests, and
+  denial/retry behavior. TypeScript, 32 test files/171 tests, and Chrome MV3 plus
+  Firefox MV2 production builds passed on 2026-10-05.
+- Codex browser testing rendered the actual popup with simulated WebExtension
+  permission APIs. Native click-dispatch checks passed for discovery and exact
+  viewer-origin access, including a denied request and successful retry. Capture
+  resumed after the final grant. Aaron confirmed the native permission flow
+  worked in a real browser on 2026-10-05, then requested a higher prompt position.
+
+## Version 0.1.10 permission prompt visibility
+
+- The document access prompt sits directly below the popup's tabs, outside the
+  scrolling content area. Its Allow button stays visible when the capture tools
+  are scrolled and when a denied request displays a notice.
+- The popup uses a fixed-height flex column so optional notices and permission
+  prompts take their own space while the tools continue scrolling below them.
+- Browser fixture validation at 600px and 500px popup heights kept the Allow
+  button at 180px below the popup top while the content scrolled (182px/282px).
+  The denied-request notice also left the button visible at the compact height.
+  Both permission clicks still ran during native click dispatch and capture
+  resumed. TypeScript and the 20 popup/capture integration tests passed.

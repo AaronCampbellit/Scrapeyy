@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,7 @@ import type {
 import { PopupApp } from "../../src/features/popup/PopupApp";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "../../src/storage/app-settings";
 import { CAPTURE_VERSION, type ScreenshotResult } from "../../src/platform/screenshot-messages";
+import { requestEmbeddedViewerPermission, type EmbeddedFrameApi, type EmbeddedViewerPermission } from "../../src/platform/embedded-frame-capture";
 
 const data: PopupWorkspaceData = {
   site: { origin: "https://example.test", access: "one-time" },
@@ -78,6 +79,8 @@ function services(
     load: vi.fn().mockResolvedValue(data),
     startQuickCapture: vi.fn(),
     takeScreenshot: vi.fn().mockResolvedValue(undefined),
+    prepareFullPageAccess: vi.fn().mockResolvedValue(undefined),
+    requestFullPageAccess: vi.fn().mockResolvedValue(true),
     inspectVideos: vi.fn().mockResolvedValue({ pageUrl: "https://example.test", videos: [], notes: [] }),
     downloadVideo: vi.fn().mockResolvedValue(undefined),
     exportVideoDetails: vi.fn().mockResolvedValue(undefined),
@@ -112,6 +115,57 @@ function services(
 }
 
 describe("PopupApp", () => {
+  it("uses two fresh Allow clicks and calls the permission API inside each click before capturing", async () => {
+    const user = userEvent.setup();
+    const discovery: EmbeddedViewerPermission = { kind: "discovery", tabId: 7 };
+    const origin: EmbeddedViewerPermission = { kind: "origin", tabId: 7, origin: "https://word-view.officeapps.live.com" };
+    let gesture = false;
+    const request = vi.fn(() => {
+      if (!gesture) throw new Error("permissions.request may only be called from a user input handler");
+      return Promise.resolve(true);
+    });
+    const api = services({
+      prepareFullPageAccess: vi.fn().mockResolvedValueOnce(discovery).mockResolvedValueOnce(origin).mockResolvedValue(undefined),
+      requestFullPageAccess: permission => requestEmbeddedViewerPermission(permission, { request } as unknown as EmbeddedFrameApi),
+    });
+    render(<PopupApp services={api} />);
+    await screen.findByText("Current site");
+    await user.click(screen.getByRole("button", { name: "Full page" }));
+    const allowDiscovery = await screen.findByRole("button", { name: "Allow viewer discovery" });
+    expect(request).not.toHaveBeenCalled();
+    expect(api.takeScreenshot).not.toHaveBeenCalled();
+    gesture = true;
+    fireEvent.click(allowDiscovery);
+    gesture = false;
+    const allowOrigin = await screen.findByRole("button", { name: "Allow document access" });
+    expect(screen.getByText(/Allow access to https:\/\/word-view.officeapps.live.com/)).toBeVisible();
+    expect(request).toHaveBeenCalledOnce();
+    expect(api.takeScreenshot).not.toHaveBeenCalled();
+    gesture = true;
+    fireEvent.click(allowOrigin);
+    gesture = false;
+    await waitFor(() => expect(api.takeScreenshot).toHaveBeenCalledWith("full-page", 7));
+    expect(request.mock.calls).toEqual([[{ permissions: ["webNavigation"] }], [{ origins: ["https://word-view.officeapps.live.com/*"] }]]);
+    expect(screen.queryByRole("button", { name: "Allow document access" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the Allow button available after a denied permission without taking a partial screenshot", async () => {
+    const user = userEvent.setup();
+    const permission: EmbeddedViewerPermission = { kind: "origin", tabId: 7, origin: "https://viewer.test" };
+    const api = services({
+      prepareFullPageAccess: vi.fn().mockResolvedValueOnce(permission).mockResolvedValue(undefined),
+      requestFullPageAccess: vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
+    });
+    render(<PopupApp services={api} />);
+    await screen.findByText("Current site");
+    await user.click(screen.getByRole("button", { name: "Full page" }));
+    await user.click(await screen.findByRole("button", { name: "Allow document access" }));
+    expect(await screen.findByText(/Permission was not granted/)).toBeVisible();
+    expect(api.takeScreenshot).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Allow document access" }));
+    await waitFor(() => expect(api.takeScreenshot).toHaveBeenCalledWith("full-page", 7));
+    expect(api.requestFullPageAccess).toHaveBeenCalledTimes(2);
+  });
   it("persists screenshot destinations separately and previews an inbox PNG without recipe retry", async () => {
     const user = userEvent.setup();
     const run = { ...data.runs[0]!, id: "png", recordCount: 0, records: [], screenshot: {

@@ -28,6 +28,8 @@ export interface FullPageMetrics {
   documentHeight: number;
   viewportWidth: number;
   viewportHeight: number;
+  /** Visible document region inside the tab; excludes the viewer's toolbar. */
+  captureBounds?: ElementBounds;
 }
 
 export interface FullPageScreenshotTile {
@@ -129,8 +131,8 @@ const offscreenStitcher: FullPageImageStitcher = {
       response.blob(),
     );
     const firstImage = await createImageBitmap(firstSource);
-    const scaleX = firstImage.width / metrics.viewportWidth;
-    const scaleY = firstImage.height / metrics.viewportHeight;
+    const scaleX = firstImage.width / (metrics.captureBounds?.viewportWidth ?? metrics.viewportWidth);
+    const scaleY = firstImage.height / (metrics.captureBounds?.viewportHeight ?? metrics.viewportHeight);
     const canvasWidth = Math.round(metrics.documentWidth * scaleX);
     const canvasHeight = Math.round(metrics.documentHeight * scaleY);
     if (
@@ -151,15 +153,17 @@ const offscreenStitcher: FullPageImageStitcher = {
     }
 
     const drawTile = (image: ImageBitmap, tile: FullPageScreenshotTile) => {
-      const sourceX = Math.round((tile.clipLeft ?? 0) * scaleX);
-      const sourceY = Math.round((tile.clipTop ?? 0) * scaleY);
+      const clipLeft = tile.clipLeft ?? 0;
+      const clipTop = tile.clipTop ?? 0;
+      const sourceX = Math.round(((metrics.captureBounds?.left ?? 0) + clipLeft) * scaleX);
+      const sourceY = Math.round(((metrics.captureBounds?.top ?? 0) + clipTop) * scaleY);
       const sourceWidth = Math.min(
         image.width - sourceX,
-        Math.round((metrics.documentWidth - tile.x) * scaleX) - sourceX,
+        Math.round(Math.min(metrics.viewportWidth - clipLeft, metrics.documentWidth - tile.x - clipLeft) * scaleX),
       );
       const sourceHeight = Math.min(
         image.height - sourceY,
-        Math.round((metrics.documentHeight - tile.y) * scaleY) - sourceY,
+        Math.round(Math.min(metrics.viewportHeight - clipTop, metrics.documentHeight - tile.y - clipTop) * scaleY),
       );
       if (sourceWidth <= 0 || sourceHeight <= 0) return;
       context.drawImage(
@@ -168,8 +172,8 @@ const offscreenStitcher: FullPageImageStitcher = {
         sourceY,
         sourceWidth,
         sourceHeight,
-        Math.round(tile.x * scaleX) + sourceX,
-        Math.round(tile.y * scaleY) + sourceY,
+        Math.round((tile.x + clipLeft) * scaleX),
+        Math.round((tile.y + clipTop) * scaleY),
         sourceWidth,
         sourceHeight,
       );
@@ -193,7 +197,7 @@ const offscreenStitcher: FullPageImageStitcher = {
 };
 
 function validFullPageMetrics(metrics: FullPageMetrics): boolean {
-  return Object.values(metrics).every(
+  return [metrics.documentWidth, metrics.documentHeight, metrics.viewportWidth, metrics.viewportHeight].every(
     (value) => Number.isFinite(value) && value > 0,
   );
 }
@@ -267,8 +271,8 @@ export async function captureFullPageScreenshot(
         // Check high-DPI canvas limits after tile one, before capturing the rest.
         if (tiles.length === 0 && !dependencies.stitcher) {
           const image = await createImageBitmap(await fetch(dataUrl).then((response) => response.blob()));
-          scaleX = image.width / metrics.viewportWidth;
-          scaleY = image.height / metrics.viewportHeight;
+          scaleX = image.width / (metrics.captureBounds?.viewportWidth ?? metrics.viewportWidth);
+          scaleY = image.height / (metrics.captureBounds?.viewportHeight ?? metrics.viewportHeight);
           image.close();
           checkSize();
         }

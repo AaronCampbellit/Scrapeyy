@@ -20,10 +20,11 @@ export default defineConfig({
         ? { browser_action: { default_icon: icons } }
         : { action: { default_icon: icons } }),
       permissions: ["activeTab", "scripting", "storage", "downloads", "alarms"],
+      optional_permissions: ["webNavigation"],
       ...(manifestVersion === 2
         ? {
             optional_permissions:
-              optionalOrigins as unknown as NonNullable<
+              ["webNavigation", ...optionalOrigins] as unknown as NonNullable<
                 UserManifest["optional_permissions"]
               >,
           }

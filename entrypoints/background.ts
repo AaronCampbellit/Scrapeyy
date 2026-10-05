@@ -31,6 +31,7 @@ import {
   type ElementBounds,
 } from "../src/platform/screenshots";
 import { createTabFullPageCaptureController } from "../src/platform/tab-full-page-controller";
+import { createEmbeddedFrameCaptureController } from "../src/platform/embedded-frame-capture";
 import { advanceAcrossNavigation } from "../src/platform/tab-navigation";
 import {
   acquireRecipeTab,
@@ -601,11 +602,7 @@ export default defineBackground(() => {
         request.scope === "full-page"
           ? await captureFullPageScreenshot(
               tabId,
-              createTabFullPageCaptureController(
-                tabId,
-                (targetTabId, message) =>
-                  extensionBrowser.tabs.sendMessage(targetTabId, message),
-              ),
+              await fullPageController(tabId),
             )
           : execution.designBounds
             ? await captureElementScreenshot(
@@ -664,6 +661,22 @@ export default defineBackground(() => {
     void ensureDefaultProject().then(syncSchedules);
   });
   const screenshotTabs = new Set<number>();
+  const fullPageController = async (tabId: number) => {
+    const embedded = await createEmbeddedFrameCaptureController(tabId);
+    if (!embedded) return createTabFullPageCaptureController(tabId, (id, message) => extensionBrowser.tabs.sendMessage(id, message));
+    return {
+      async prepare() {
+        await extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN", hidden: true });
+        return embedded.prepare();
+      },
+      measure: () => embedded.measure!(),
+      scrollTo: embedded.scrollTo,
+      async restore() {
+        try { await embedded.restore(); }
+        finally { await extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN", hidden: false }); }
+      },
+    };
+  };
   const saveScreenshot = async (tabId: number, kind: "visible" | "full-page" | "selection", bounds?: ElementBounds) => {
     if (screenshotTabs.has(tabId)) throw new Error("A screenshot is already in progress.");
     screenshotTabs.add(tabId);
@@ -676,8 +689,7 @@ export default defineBackground(() => {
         show: () => extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_SET_CAPTURE_UI_HIDDEN", hidden: false }).then(() => undefined),
       };
       const image = kind === "full-page"
-        ? await captureFullPageScreenshot(tabId, createTabFullPageCaptureController(
-            tabId, (id, message) => extensionBrowser.tabs.sendMessage(id, message)))
+        ? await captureFullPageScreenshot(tabId, await fullPageController(tabId))
         : kind === "selection" && bounds
           ? await captureElementScreenshot(tabId, bounds)
           : await captureVisibleScreenshot(tabId, visibility);

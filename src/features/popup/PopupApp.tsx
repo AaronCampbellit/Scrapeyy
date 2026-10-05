@@ -21,6 +21,7 @@ import type { SharePointMetadata } from "../../sharepoint/scrape";
 import type { VideoInventory } from "../../media/videos";
 import { CAPTURE_VERSION, type ScreenshotResult } from "../../platform/screenshot-messages";
 import type { PreviewType } from "../../platform/preview-window";
+import type { EmbeddedViewerPermission } from "../../platform/embedded-frame-capture";
 
 export interface PopupSite {
   origin: string;
@@ -45,7 +46,9 @@ export interface PopupWorkspaceData {
 export interface PopupServices {
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
-  takeScreenshot(kind: "visible" | "full-page" | "selection"): Promise<ScreenshotResult | void>;
+  takeScreenshot(kind: "visible" | "full-page" | "selection", expectedTabId?: number): Promise<ScreenshotResult | void>;
+  prepareFullPageAccess(expectedTabId?: number): Promise<EmbeddedViewerPermission | undefined>;
+  requestFullPageAccess(permission: EmbeddedViewerPermission): Promise<boolean>;
   inspectVideos(): Promise<VideoInventory>;
   downloadVideo(url: string): Promise<void>;
   exportVideoDetails(): Promise<void>;
@@ -94,6 +97,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
   const [videos, setVideos] = useState<VideoInventory>();
+  const [fullPagePermission, setFullPagePermission] = useState<EmbeddedViewerPermission>();
   const [sharePointMetadata, setSharePointMetadata] =
     useState<SharePointMetadata>();
   const resumeAttempted = useRef(false);
@@ -168,6 +172,23 @@ export function PopupApp({ services }: { services: PopupServices }) {
     }
   };
 
+  const saveScreenshot = async (kind: "visible" | "full-page" | "selection", expectedTabId?: number) => {
+    setNotice(kind === "selection" ? "Opening selection tool…" : "Saving screenshot…");
+    const result = expectedTabId === undefined
+      ? await services.takeScreenshot(kind)
+      : await services.takeScreenshot(kind, expectedTabId);
+    if (result && "destination" in result && result.destination === "inbox") {
+      await refresh();
+      setNotice("Screenshot saved to Inbox.");
+    } else setNotice(result ? `Screenshot saved: ${result.filename}` : undefined);
+  };
+
+  const continueFullPage = async (expectedTabId?: number) => {
+    const permission = await services.prepareFullPageAccess(expectedTabId);
+    setFullPagePermission(permission);
+    if (!permission) await saveScreenshot("full-page", expectedTabId);
+  };
+
   return (
     <main
       className="popup-shell"
@@ -205,6 +226,21 @@ export function PopupApp({ services }: { services: PopupServices }) {
 
       {notice ? <div className="popup-notice" role="status">{notice}</div> : null}
 
+      {view === "capture" && fullPagePermission ? <section className="screenshot-permission" aria-label="Document access">
+        <strong>Capture every document page</strong>
+        <small>{fullPagePermission.kind === "discovery"
+          ? "Allow Scrapeyy to identify the embedded document viewer. Your browser will ask you to approve access."
+          : `Allow access to ${fullPagePermission.origin} so Scrapeyy can scroll and capture the whole document.`}</small>
+        <button type="button" disabled={busy} onClick={() => void perform(async () => {
+          // Invoke directly in the click handler, before any asynchronous work.
+          const granted = await services.requestFullPageAccess(fullPagePermission);
+          if (!granted) throw new Error("Permission was not granted. Click Allow again to retry, or use Visible page.");
+          await continueFullPage(fullPagePermission.tabId);
+        })}>
+          {fullPagePermission.kind === "discovery" ? "Allow viewer discovery" : "Allow document access"}
+        </button>
+      </section> : null}
+
       <div className="popup-content">
         {view === "capture" ? (
           <CaptureView
@@ -214,12 +250,9 @@ export function PopupApp({ services }: { services: PopupServices }) {
             site={data.site}
             onQuickCapture={() => perform(services.startQuickCapture)}
             onScreenshot={(kind) => perform(async () => {
-              setNotice(kind === "selection" ? "Opening selection tool…" : "Saving screenshot…");
-              const result = await services.takeScreenshot(kind);
-              if (result && "destination" in result && result.destination === "inbox") {
-                await refresh();
-                setNotice("Screenshot saved to Inbox.");
-              } else setNotice(result ? `Screenshot saved: ${result.filename}` : undefined);
+              setFullPagePermission(undefined);
+              if (kind === "full-page") await continueFullPage();
+              else await saveScreenshot(kind);
             })}
             onInspectVideos={() => perform(async () => { setVideos(await services.inspectVideos()); })}
             onDownloadVideo={(url) => perform(() => services.downloadVideo(url), "Video download requested.")}

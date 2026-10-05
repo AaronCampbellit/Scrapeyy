@@ -14,6 +14,7 @@ import {
 import { extensionBrowser } from "../../src/platform/browser-api";
 import { openCapturePreview } from "../../src/platform/preview-window";
 import { ensureContentScript } from "../../src/platform/content-injection";
+import { prepareEmbeddedViewerAccess, requestEmbeddedViewerPermission } from "../../src/platform/embedded-frame-capture";
 import { assertSelectionReady, screenshotSaved } from "../../src/platform/screenshot-messages";
 import {
   isSharePointMetadata,
@@ -114,9 +115,17 @@ async function pendingRecipeStatus(tabId?: number): Promise<boolean> {
 }
 
 const services: PopupServices = {
-  async takeScreenshot(kind) {
+  async prepareFullPageAccess(expectedTabId) {
     const tab = await activeTab();
     if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
+    if (expectedTabId !== undefined && tab.id !== expectedTabId) throw new Error("The selected tab changed. Click Full page again on the document.");
+    return prepareEmbeddedViewerAccess(tab.id);
+  },
+  requestFullPageAccess: requestEmbeddedViewerPermission,
+  async takeScreenshot(kind, expectedTabId) {
+    const tab = await activeTab();
+    if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
+    if (expectedTabId !== undefined && tab.id !== expectedTabId) throw new Error("The selected tab changed. Click Full page again on the document.");
     const response = await extensionBrowser.runtime.sendMessage({
       type: kind === "selection" ? "SCRAPEYY_START_SCREENSHOT_SELECTION" : "SCRAPEYY_SCREENSHOT",
       tabId: tab.id, kind,

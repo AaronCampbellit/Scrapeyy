@@ -42,6 +42,14 @@ try {
     injections++;
     await page.addScriptTag({ path: path.join(build, "content-scripts/content.js") });
   });
+  await background.exposeFunction("injectCommand", async (source, args) => {
+    const result = await page.evaluate(async ({ source, args }) => {
+      // The production API serializes injected functions into the target frame.
+      const command = (0, eval)("(" + source + ")");
+      return await command(...args);
+    }, { source, args });
+    return [{ frameId: 0, result }];
+  });
   await background.exposeFunction("capturePage", async () => {
     const bytes = await page.screenshot();
     return "data:image/png;base64," + bytes.toString("base64");
@@ -72,7 +80,8 @@ try {
         alarms: { onAlarm: event() },
         tabs: { get: async () => ({ id: 1, windowId: 1, active: true, url: "https://fixture.test/" }),
           sendMessage: (_id, message) => window.sendPage(message), captureVisibleTab: () => window.capturePage() },
-        scripting: { insertCSS: async () => {}, executeScript: () => window.injectContent() },
+        scripting: { insertCSS: async () => {}, executeScript: (details) => details.func
+          ? window.injectCommand(details.func.toString(), details.args || []) : window.injectContent() },
         downloads: { onChanged: changed, search: async ({ id }) => downloads.has(id) ? [downloads.get(id)] : [],
           download: async ({ url, filename }) => {
             const bytes = [...new Uint8Array(await (await fetch(url)).arrayBuffer())];
