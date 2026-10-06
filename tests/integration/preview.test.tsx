@@ -38,6 +38,7 @@ function services(): PreviewServices {
   return {
     load: vi.fn().mockResolvedValue(capture),
     exportRun: vi.fn().mockResolvedValue(undefined),
+    copyScreenshot: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -97,6 +98,32 @@ it("explains expired captures and never creates an image URL for them", async ()
     "no longer in the Inbox",
   );
   expect(screen.queryByRole("button", { name: "Save PNG…" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Copy image" })).toBeNull();
+});
+
+it("copies the saved PNG and only confirms after the clipboard accepts it", async () => {
+  const api = services();
+  let finish!: () => void;
+  vi.mocked(api.copyScreenshot).mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
+  const user = userEvent.setup();
+  render(<PreviewApp runId="run-1" initialView="screenshot" services={api} />);
+  await user.click(await screen.findByRole("button", { name: "Copy image" }));
+  expect(api.copyScreenshot).toHaveBeenCalledWith(capture.screenshot);
+  expect(screen.getByRole("button", { name: "Copying…" })).toBeDisabled();
+  expect(screen.queryByText("Screenshot copied — ready to paste.")).toBeNull();
+  finish();
+  expect(await screen.findByText("Screenshot copied — ready to paste.")).toBeVisible();
+  expect(api.exportRun).not.toHaveBeenCalled();
+});
+
+it("reports clipboard failure and leaves Copy image available to retry", async () => {
+  const api = services();
+  vi.mocked(api.copyScreenshot).mockRejectedValue(new Error("Clipboard access denied"));
+  const user = userEvent.setup();
+  render(<PreviewApp runId="run-1" initialView="screenshot" services={api} />);
+  await user.click(await screen.findByRole("button", { name: "Copy image" }));
+  expect(await screen.findByText("Clipboard access denied")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Copy image" })).toBeEnabled();
 });
 
 it("shows capture-load failures and rejects a missing capture ID without querying storage", async () => {

@@ -3,7 +3,7 @@ import type { StorageArea } from "./settings-repository";
 
 export type AppTheme = "dark" | "light";
 export type DownloadBehavior = "ask" | "automatic";
-export type ScreenshotDestination = DownloadBehavior | "inbox";
+export type ScreenshotDestination = DownloadBehavior | "inbox" | "clipboard";
 
 export interface AppSettings {
   theme: AppTheme;
@@ -47,7 +47,7 @@ export function normalizeAppSettings(input: unknown): AppSettings {
     downloadBehavior:
       value.downloadBehavior === "automatic" ? "automatic" : "ask",
     downloadSubfolder: normalizeDownloadSubfolder(value.downloadSubfolder),
-    screenshotDestination: value.screenshotDestination === "inbox" || value.screenshotDestination === "automatic" || value.screenshotDestination === "ask"
+    screenshotDestination: value.screenshotDestination === "clipboard" || value.screenshotDestination === "inbox" || value.screenshotDestination === "automatic" || value.screenshotDestination === "ask"
       ? value.screenshotDestination : value.downloadBehavior === "automatic" ? "automatic" : "ask",
     screenshotSubfolder: typeof value.screenshotSubfolder === "string" && validScreenshotSubfolder(value.screenshotSubfolder)
       ? normalizeDownloadSubfolder(value.screenshotSubfolder)

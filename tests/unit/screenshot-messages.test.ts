@@ -19,4 +19,11 @@ describe("screenshot acknowledgements", () => {
     expect(screenshotSaved(saved)).toEqual(saved);
     expect(() => screenshotSaved({ ...saved, runId: undefined })).toThrow();
   });
+  it("requires a distinct confirmed clipboard receipt", () => {
+    const copied = { status: "copied", destination: "clipboard", version: CAPTURE_VERSION, filename: "page.png" };
+    expect(screenshotSaved(copied)).toEqual(copied);
+    expect(() => screenshotSaved({ ...copied, status: "saved" })).toThrow();
+    expect(() => screenshotSaved({ ...copied, version: "old" })).toThrow();
+    expect(() => screenshotSaved({ status: "saved", destination: "unknown", version: CAPTURE_VERSION, filename: "page.png", downloadId: 1 })).toThrow();
+  });
 });

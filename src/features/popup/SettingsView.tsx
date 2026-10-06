@@ -133,6 +133,7 @@ export function SettingsView({
             <option value="ask">Save As dialog</option>
             <option value="automatic">Automatically save to device</option>
             <option value="inbox">Scrapeyy Inbox</option>
+            <option value="clipboard">Clipboard</option>
           </select>
         </label>
         {settings.screenshotDestination === "automatic" ? <>
@@ -146,7 +147,9 @@ export function SettingsView({
           {!validScreenshotSubfolder(screenshotSubfolder) ? <small role="alert">Enter a relative subfolder, such as Scrapeyy/Screenshots, without a drive letter or ..</small> : null}
           <button className="settings-save" type="button" disabled={disabled || !validScreenshotSubfolder(screenshotSubfolder)}
             onClick={() => void onUpdateSettings({ ...settings, screenshotSubfolder })}>Save screenshot location</button>
-        </> : <small>{settings.screenshotDestination === "inbox"
+        </> : <small>{settings.screenshotDestination === "clipboard"
+          ? "Copy screenshots directly to the clipboard, then paste with Ctrl+V."
+          : settings.screenshotDestination === "inbox"
           ? "Keep PNGs in this browser’s Inbox. Preview, pin, or save them to your device later. Unpinned items follow inbox retention."
           : "Choose the filename and any location on this device each time."}</small>}
       </div>

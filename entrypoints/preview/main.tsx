@@ -7,6 +7,7 @@ import {
   type PreviewServices,
 } from "../../src/features/preview/PreviewApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
+import { copyScreenshotToClipboard } from "../../src/platform/image-clipboard";
 import { createAppSettingsStore } from "../../src/storage/app-settings";
 import { CaptureDatabase } from "../../src/storage/capture-database";
 import {
@@ -19,6 +20,7 @@ const storage = extensionBrowser.storage.local as StorageArea;
 const recipes = createSettingsRepository<Recipe>(storage, "recipes");
 const settings = createAppSettingsStore(storage);
 const services: PreviewServices = {
+  copyScreenshot: copyScreenshotToClipboard,
   async load(runId) {
     const run = await captures.getRun(runId);
     if (!run) return undefined;

@@ -1,5 +1,28 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.11 screenshot clipboard
+
+- **Clipboard** is available in the Capture and Settings screenshot destination
+  menus. Visible page, Full page, and Draw selection use the selected destination.
+  Clipboard capture creates no download or Inbox item.
+- **Copy image** in the Inbox pop-out preview copies the original saved PNG,
+  regardless of zoom or the selected preview view. Progress, successful copy,
+  denied clipboard access, and retry are covered.
+- Firefox/Zen use the native image clipboard API. Chrome background captures
+  use a focused copy window, which shows confirmation and closes automatically.
+  Chrome preview copies run directly in the focused preview. Only clipboard-write
+  permission is requested; the extension never reads the clipboard.
+- Strict TypeScript, 33 Vitest files / 184 tests, both production builds, and
+  compiled browser checks passed. The Chrome copy page wrote a real 80 by 40 PNG
+  with verified green pixels and reported a denied write without success.
+  Both compiled preview builds copied a real 1600 by 4200 PNG.
+  Screenshot regressions covered all three modes, nested panels, sticky content,
+  overlap, lazy growth, and restoration.
+- Browser fixtures bridge extension runtime/window APIs. The extension-capable
+  Chromium executable failed to launch after three retries on this Windows host.
+  Reloading the user's installed browser and native Firefox/Zen clipboard acceptance
+  remain unverified.
+
 ## Version 0.1.7 Inbox preview window
 
 - Select a capture in Inbox and click **Pop out ↗**. A separate 1100×800 browser

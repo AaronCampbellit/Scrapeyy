@@ -16,6 +16,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext({
     viewport: { width: 1100, height: 800 },
+    permissions: ["clipboard-read", "clipboard-write"],
   });
   const errors = [];
   context.on("page", (page) =>
@@ -140,7 +141,9 @@ try {
   await popup.goto("https://extension.test/popup.html");
   await popup.getByRole("tab", { name: "Inbox" }).click();
   await popup.getByAltText("Captured screenshot").waitFor();
+  const previewOpened = context.waitForEvent("page");
   await popup.getByRole("button", { name: "Pop out preview" }).click();
+  preview = await previewOpened;
   await popup.waitForFunction(
     () =>
       !document.querySelector("main").getAttribute("aria-busy") ||
@@ -153,6 +156,17 @@ try {
     "preview & capture",
   );
   await preview.getByText("1600 × 4200 px").waitFor();
+  await preview.getByRole("button", { name: "Copy image", exact: true }).click();
+  await preview.getByText("Screenshot copied — ready to paste.").waitFor();
+  const copiedImage = await preview.evaluate(async () => {
+    const [item] = await navigator.clipboard.read();
+    const png = await item.getType("image/png");
+    const image = await createImageBitmap(png);
+    const size = { width: image.width, height: image.height, type: png.type };
+    image.close();
+    return size;
+  });
+  assert.deepEqual(copiedImage, { width: 1600, height: 4200, type: "image/png" });
   await popup.close();
   assert.equal(
     await preview.getByRole("heading", { level: 1 }).textContent(),
@@ -216,6 +230,7 @@ try {
         checks: [
           "Compiled inbox opens selected capture in separate window",
           "Real IndexedDB screenshot survives inbox close",
+          "Copy image writes a 1600 by 4200 PNG to the real clipboard",
           "Full-height image scrolling",
           "Native size and 125% zoom",
           "Horizontal scrolling",
@@ -233,7 +248,7 @@ try {
     ),
   );
   console.log(
-    "Preview browser checks passed: window opening, independent IndexedDB loading, long-image scrolling, zoom, resizing, text, export, expired captures.",
+    "Preview browser checks passed: window opening, independent IndexedDB loading, PNG clipboard copy, long-image scrolling, zoom, resizing, text, export, expired captures.",
   );
 } finally {
   await browser.close();

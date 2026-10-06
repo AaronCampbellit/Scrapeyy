@@ -19,7 +19,7 @@ export default defineConfig({
       ...(manifestVersion === 2
         ? { browser_action: { default_icon: icons } }
         : { action: { default_icon: icons } }),
-      permissions: ["activeTab", "scripting", "storage", "downloads", "alarms"],
+      permissions: ["activeTab", "scripting", "storage", "downloads", "alarms", "clipboardWrite"],
       optional_permissions: ["webNavigation"],
       ...(manifestVersion === 2
         ? {

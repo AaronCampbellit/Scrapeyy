@@ -11,6 +11,7 @@ import { createDesignSnapshot } from "../src/design/snapshot";
 import { collectAssetReferences, type AssetReference } from "../src/design/assets";
 import { collectVideos, type VideoInventory } from "../src/media/videos";
 import { ScreenshotSelection } from "../src/features/picker/ScreenshotSelection";
+import { COPIED_NOTICE } from "../src/platform/image-clipboard";
 import { CAPTURE_VERSION, screenshotSaved } from "../src/platform/screenshot-messages";
 import { extractRecords } from "../src/extraction/extract";
 import { fingerprintRecord } from "../src/extraction/fingerprint";
@@ -432,7 +433,8 @@ export default defineContentScript({
                 void setCaptureUiHidden(false);
               };
               root.render(<ScreenshotSelection onClose={close} onCapture={async (bounds) => {
-                screenshotSaved(await browser.runtime.sendMessage({ type: "SCRAPEYY_SAVE_SCREENSHOT_SELECTION", bounds }));
+                const result = screenshotSaved(await browser.runtime.sendMessage({ type: "SCRAPEYY_SAVE_SCREENSHOT_SELECTION", bounds }));
+                return "destination" in result && result.destination === "clipboard" ? COPIED_NOTICE : undefined;
               }} />);
               return root;
             },

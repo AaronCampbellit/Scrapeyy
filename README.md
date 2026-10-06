@@ -97,6 +97,12 @@ The main popup's **Screenshot** section has its own **Save screenshots to** sett
   arbitrary absolute path.
 - **Scrapeyy Inbox** stores the PNG locally with a preview. Use **Save PNG…** to
   export it later, or pin it to preserve it beyond normal inbox retention.
+- **Clipboard** copies the PNG directly, ready to paste with **Ctrl+V** in an
+  app that accepts images. No download or Inbox item is created. Chrome briefly
+  opens a copy window that closes automatically; Firefox and Zen copy directly.
+
+Saved captures with a screenshot also offer **Copy image** in the pop-out preview.
+Copying requires clipboard-write permission. Scrapeyy does not read the clipboard.
 
 These choices persist and do not change the destination of other exports.
 All three capture tools use the selected screenshot destination:
@@ -119,7 +125,8 @@ All three capture tools use the selected screenshot destination:
   redraw, or press Escape to cancel.
 
 Screenshot success is shown only after the browser confirms the file finished
-saving (with the actual saved path), or the PNG is stored in the inbox.
+saving (with the actual saved path), the PNG is stored in the inbox, or the
+browser confirms the image was copied to the clipboard.
 Cancelled or interrupted saves report an
 error. After replacing the build files, open
 `about:debugging#/runtime/this-firefox` in Firefox or Zen and click **Reload**

@@ -67,9 +67,11 @@ export function CaptureView({
             <option value="ask">Save As dialog</option>
             <option value="automatic">Automatically save to device</option>
             <option value="inbox">Scrapeyy Inbox</option>
+            <option value="clipboard">Clipboard</option>
           </select>
         </label>
         {settings.screenshotDestination === "automatic" ? <small>Download folder / {settings.screenshotSubfolder} · Change location in Settings.</small> : null}
+        {settings.screenshotDestination === "clipboard" ? <small>Copy the image, then paste it with Ctrl+V. No download needed.</small> : null}
         <div className="screenshot-actions">
           <button type="button" disabled={!available || disabled} onClick={() => void onScreenshot("visible")}>Visible page</button>
           <button type="button" disabled={!available || disabled} onClick={() => void onScreenshot("full-page")}>Full page</button>

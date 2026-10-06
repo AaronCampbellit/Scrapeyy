@@ -12,7 +12,7 @@ export function selectionBounds(start: { x: number; y: number }, end: { x: numbe
 }
 
 export function ScreenshotSelection({ onCapture, onClose }: {
-  onCapture(bounds: ElementBounds): Promise<void>;
+  onCapture(bounds: ElementBounds): Promise<void | string>;
   onClose(): void;
 }) {
   const start = useRef<{ x: number; y: number } | undefined>(undefined);
@@ -76,7 +76,12 @@ export function ScreenshotSelection({ onCapture, onClose }: {
     if (layer.current) layer.current.style.visibility = "hidden";
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     try {
-      await onCapture(bounds);
+      const completedNotice = await onCapture(bounds);
+      if (completedNotice) {
+        setNotice(completedNotice);
+        if (layer.current) layer.current.style.visibility = "visible";
+        await new Promise<void>((resolve) => setTimeout(resolve, 1200));
+      }
       onClose();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Screenshot failed. Try again.");
@@ -107,7 +112,7 @@ export function ScreenshotSelection({ onCapture, onClose }: {
         setNotice(`${Math.round(area.width)} × ${Math.round(area.height)} px. Capture or drag again to redraw.`);
       }}>
       <div className="screenshot-instructions" role="status">
-        <span>{notice}</span>
+        <span role="status" aria-live="polite">{notice}</span>
         {bounds && bounds.width >= 3 && bounds.height >= 3 ?
           <button type="button" disabled={busy} onClick={() => { void capture(); }}>Capture</button> : null}
         <button type="button" disabled={busy} onClick={onClose}>Cancel</button>

@@ -72,6 +72,19 @@ const data: PopupWorkspaceData = {
   },
 };
 
+it("offers Clipboard as a destination and confirms a copied screenshot without claiming a download", async () => {
+  const api = services({ takeScreenshot: vi.fn().mockResolvedValue({
+    status: "copied", destination: "clipboard", version: CAPTURE_VERSION, filename: "page.png",
+  }) });
+  const user = userEvent.setup();
+  render(<PopupApp services={api} />);
+  await user.selectOptions(await screen.findByRole("combobox", { name: "Save screenshots to" }), "clipboard");
+  expect(api.saveSettings).toHaveBeenCalledWith({ ...data.settings, screenshotDestination: "clipboard" });
+  await user.click(screen.getByRole("button", { name: "Visible page" }));
+  expect(await screen.findByText("Screenshot copied — ready to paste.")).toBeVisible();
+  expect(screen.queryByText(/Screenshot saved:/)).toBeNull();
+});
+
 function services(
   overrides: Partial<PopupServices> = {},
 ): PopupServices {

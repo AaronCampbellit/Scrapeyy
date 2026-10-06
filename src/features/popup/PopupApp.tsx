@@ -13,6 +13,7 @@ import {
 import "../shared/theme.css";
 import "./popup.css";
 import { CaptureView } from "./CaptureView";
+import { COPIED_NOTICE } from "../../platform/image-clipboard";
 import { InboxView } from "./InboxView";
 import { RecipesView } from "./RecipesView";
 import { SettingsView } from "./SettingsView";
@@ -177,7 +178,9 @@ export function PopupApp({ services }: { services: PopupServices }) {
     const result = expectedTabId === undefined
       ? await services.takeScreenshot(kind)
       : await services.takeScreenshot(kind, expectedTabId);
-    if (result && "destination" in result && result.destination === "inbox") {
+    if (result && "destination" in result && result.destination === "clipboard") {
+      setNotice(COPIED_NOTICE);
+    } else if (result && "destination" in result && result.destination === "inbox") {
       await refresh();
       setNotice("Screenshot saved to Inbox.");
     } else setNotice(result ? `Screenshot saved: ${result.filename}` : undefined);

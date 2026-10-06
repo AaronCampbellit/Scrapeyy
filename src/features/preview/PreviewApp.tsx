@@ -4,6 +4,7 @@ import type { CaptureRun } from "../../contracts/models";
 import type { PreviewType } from "../../platform/preview-window";
 import type { AppTheme } from "../../storage/app-settings";
 import { captureText } from "./capture-text";
+import { COPIED_NOTICE } from "../../platform/image-clipboard";
 import "../shared/theme.css";
 import "./preview.css";
 
@@ -17,6 +18,7 @@ export interface PreviewCapture {
 export interface PreviewServices {
   load(runId: string): Promise<PreviewCapture | undefined>;
   exportRun(runId: string): Promise<void>;
+  copyScreenshot(image: Blob): Promise<void>;
 }
 
 export function PreviewApp({
@@ -40,6 +42,7 @@ export function PreviewApp({
   }>();
   const [zoom, setZoom] = useState<number | "fit">("fit");
   const [exporting, setExporting] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [notice, setNotice] = useState<string>();
 
   useEffect(() => {
@@ -121,6 +124,20 @@ export function PreviewApp({
   const readableText =
     capture && view === "text" ? captureText(capture.run) : "";
 
+  const copyImage = async () => {
+    if (!capture?.screenshot || copying) return;
+    setCopying(true);
+    setNotice(undefined);
+    try {
+      await services.copyScreenshot(capture.screenshot);
+      setNotice(COPIED_NOTICE);
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : "Could not copy the screenshot.");
+    } finally {
+      setCopying(false);
+    }
+  };
+
   return (
     <main
       className="preview-shell"
@@ -144,6 +161,11 @@ export function PreviewApp({
             </p>
           ) : null}
         </div>
+        {capture?.screenshot ? (
+          <button type="button" disabled={copying} onClick={() => void copyImage()}>
+            {copying ? "Copying…" : "Copy image"}
+          </button>
+        ) : null}
         {capture ? (
           <button
             className="preview-save"

@@ -20,8 +20,9 @@ import { extensionBrowser } from "../src/platform/browser-api";
 import { ensureContentScript } from "../src/platform/content-injection";
 import { downloadBundle } from "../src/platform/downloads";
 import { downloadScreenshot } from "../src/platform/screenshot-download";
+import { copyScreenshotToClipboard } from "../src/platform/image-clipboard";
 import { saveScreenshotToInbox } from "../src/storage/screenshot-inbox";
-import { assertSelectionReady } from "../src/platform/screenshot-messages";
+import { assertSelectionReady, CAPTURE_VERSION } from "../src/platform/screenshot-messages";
 import { hasOriginAccess } from "../src/platform/permissions";
 import { downloadReferencedAssetsFromPage } from "../src/platform/page-asset-download";
 import {
@@ -697,6 +698,10 @@ export default defineBackground(() => {
       const settings = await appSettings.get();
       const filename = safePathSegment(new URL(tab.url).hostname) + "-" + kind + "-" +
         new Date().toISOString().replace(/[:.]/g, "-") + ".png";
+      if (settings.screenshotDestination === "clipboard") {
+        await copyScreenshotToClipboard(image);
+        return { status: "copied" as const, destination: "clipboard" as const, version: CAPTURE_VERSION, filename };
+      }
       if (settings.screenshotDestination === "inbox") {
         return await saveScreenshotToInbox(image, {
           kind, filename, sourceUrl: tab.url, title: tab.title || new URL(tab.url).hostname,
