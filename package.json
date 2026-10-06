@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@wxt-dev/module-react": "1.2.2",
-    "dompurify": "3.4.13",
+    "dompurify": "3.4.16",
     "jszip": "3.10.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -35,6 +35,6 @@
     "jsdom": "30.0.1",
     "typescript": "7.0.2",
     "vite": "7.3.6",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }
