@@ -20,6 +20,15 @@ export default defineConfig({
         ? { browser_action: { default_icon: icons } }
         : { action: { default_icon: icons } }),
       permissions: ["activeTab", "scripting", "storage", "downloads", "alarms"],
+      // On-demand content scripts have no manifest matches for WXT to inherit.
+      // Their shadow-root UI still fetches this packaged stylesheet.
+      web_accessible_resources: [
+        {
+          resources: ["content-scripts/content.css"],
+          matches: optionalOrigins,
+          use_dynamic_url: true,
+        },
+      ],
       ...(manifestVersion === 2
         ? {
             optional_permissions:
