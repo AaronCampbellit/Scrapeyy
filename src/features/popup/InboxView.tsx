@@ -11,6 +11,7 @@ interface InboxViewProps {
   onClear(): void | Promise<void>;
   onDelete(runId: string): void | Promise<void>;
   onExport(runId: string): void | Promise<void>;
+  onCopyScreenshot(runId: string): void | Promise<void>;
   onLoadScreenshot(runId: string): Promise<string | undefined>;
   onOpenPreview(runId: string, preview: PreviewType): void | Promise<void>;
   onPin(runId: string, pinned: boolean): void | Promise<void>;
@@ -24,6 +25,7 @@ export function InboxView({
   onClear,
   onDelete,
   onExport,
+  onCopyScreenshot,
   onLoadScreenshot,
   onOpenPreview,
   onPin,
@@ -203,6 +205,7 @@ export function InboxView({
                 <div className="preview-empty">No screenshot was captured for this run.</div>
               )}
               <div className="detail-actions">
+                {selected.screenshot || screenshotUrl ? <button disabled={disabled} onClick={() => void onCopyScreenshot(selected.id)} type="button">Copy image</button> : null}
                 <button aria-label={selected.screenshot ? "Save screenshot PNG" : "Export run"} disabled={disabled} onClick={() => void onExport(selected.id)} type="button">{selected.screenshot ? "Save PNG…" : "Export"}</button>
                 {!selected.screenshot ? <button disabled={disabled} onClick={() => void onRetry(selected.recipeId)} type="button">Retry</button> : null}
                 <button disabled={disabled} onClick={() => void onPin(selected.id, !selected.pinned)} type="button">{selected.pinned ? "Unpin" : "Pin"}</button>

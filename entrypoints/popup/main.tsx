@@ -13,6 +13,7 @@ import {
 } from "../../src/features/popup/PopupApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
 import { openCapturePreview } from "../../src/platform/preview-window";
+import { copyScreenshotToClipboard } from "../../src/platform/image-clipboard";
 import { ensureContentScript } from "../../src/platform/content-injection";
 import { prepareEmbeddedViewerAccess, requestEmbeddedViewerPermission } from "../../src/platform/embedded-frame-capture";
 import { assertSelectionReady, screenshotSaved } from "../../src/platform/screenshot-messages";
@@ -278,6 +279,11 @@ const services: PopupServices = {
     });
   },
   deleteRun: (runId) => captures.deleteRun(runId),
+  async copyRunScreenshot(runId) {
+    const artifact = await captures.getArtifact(`${runId}:screenshot`);
+    if (!artifact) throw new Error("No screenshot is available to copy for this capture.");
+    await copyScreenshotToClipboard(artifact.blob);
+  },
   clearInbox: () => captures.clearUnpinnedRuns().then(() => undefined),
   async loadRunScreenshot(runId) {
     const artifact = await captures.getArtifact(`${runId}:screenshot`);

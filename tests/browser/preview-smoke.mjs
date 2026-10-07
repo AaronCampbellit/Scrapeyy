@@ -141,6 +141,16 @@ try {
   await popup.goto("https://extension.test/popup.html");
   await popup.getByRole("tab", { name: "Inbox" }).click();
   await popup.getByAltText("Captured screenshot").waitFor();
+  const inlineCopy = popup.getByRole("button", { name: "Copy image", exact: true });
+  assert.equal(await inlineCopy.evaluate((button) => button.nextElementSibling.getAttribute("aria-label")), "Save screenshot PNG");
+  await inlineCopy.click();
+  await popup.getByText("Screenshot copied — ready to paste.").waitFor();
+  assert.deepEqual(await popup.evaluate(async () => {
+    const [item] = await navigator.clipboard.read();
+    const image = await createImageBitmap(await item.getType("image/png"));
+    const size = { width: image.width, height: image.height };
+    image.close(); return size;
+  }), { width: 1600, height: 4200 });
   const previewOpened = context.waitForEvent("page");
   await popup.getByRole("button", { name: "Pop out preview" }).click();
   preview = await previewOpened;

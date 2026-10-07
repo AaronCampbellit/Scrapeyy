@@ -60,6 +60,7 @@ export interface PopupServices {
   deleteRecipe(recipeId: string): Promise<void>;
   saveProject(project: Project): Promise<void>;
   exportRun(runId: string): Promise<void>;
+  copyRunScreenshot(runId: string): Promise<void>;
   deleteRun(runId: string): Promise<void>;
   clearInbox(): Promise<void>;
   loadRunScreenshot(runId: string): Promise<string | undefined>;
@@ -342,6 +343,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
             }
             onExport={(runId) => perform(() => services.exportRun(runId),
               data.runs.find((run) => run.id === runId)?.screenshot ? "Screenshot saved to device." : "Export started.")}
+            onCopyScreenshot={(runId) => perform(() => services.copyRunScreenshot(runId), COPIED_NOTICE)}
             onLoadScreenshot={services.loadRunScreenshot}
             onOpenPreview={(runId, preview) => perform(() => services.openPreview(runId, preview))}
             onPin={(runId, pinned) =>

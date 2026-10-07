@@ -1,5 +1,20 @@
 # Scrapeyy V1 Acceptance
 
+## Version 0.1.12 inline screenshot copy
+
+- **Copy image** sits immediately before **Save PNG…** in the Inbox as well as
+  the pop-out preview. It remains available for captures containing a screenshot
+  regardless of the screenshot destination or selected text/screenshot view.
+- Copying reads the original saved PNG and reports success only after the
+  clipboard write finishes. It does not change settings, save a file, or export
+  the capture.
+- Strict TypeScript, 33 Vitest files / 185 tests, and Chrome MV3 plus Firefox MV2
+  production builds passed. Both compiled Inbox/preview checks verified the
+  inline button order and a real 1600 by 4200 PNG clipboard write.
+- Both existing local build folders were refreshed to 0.1.12 and all 38 files
+  were SHA-256 verified against the production build. Browser reload and native
+  Firefox/Zen acceptance are left to Aaron for testing at his request.
+
 ## Version 0.1.11 screenshot clipboard
 
 - **Clipboard** is available in the Capture and Settings screenshot destination

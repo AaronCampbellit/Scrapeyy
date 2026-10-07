@@ -85,6 +85,27 @@ it("offers Clipboard as a destination and confirms a copied screenshot without c
   expect(screen.queryByText(/Screenshot saved:/)).toBeNull();
 });
 
+it("keeps Copy image immediately before Save PNG in the Inbox without changing the save destination", async () => {
+  const screenshotRun = {
+    ...data.runs[0]!,
+    screenshot: { kind: "visible" as const, filename: "page.png", title: "Example page", sourceUrl: "https://example.test" },
+  };
+  const api = services({ load: vi.fn().mockResolvedValue({ ...data, runs: [screenshotRun] }) });
+  const user = userEvent.setup();
+  render(<PopupApp services={api} />);
+  await user.click(await screen.findByRole("tab", { name: "Inbox" }));
+  const copy = await screen.findByRole("button", { name: /^Copy image$/ });
+  const save = screen.getByRole("button", { name: "Save screenshot PNG" });
+  expect(copy.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: /^Text$/ }));
+  expect(copy).toBeVisible();
+  await user.click(copy);
+  expect(api.copyRunScreenshot).toHaveBeenCalledWith(screenshotRun.id);
+  expect(await screen.findByText("Screenshot copied — ready to paste.")).toBeVisible();
+  expect(api.saveSettings).not.toHaveBeenCalled();
+  expect(api.exportRun).not.toHaveBeenCalled();
+});
+
 function services(
   overrides: Partial<PopupServices> = {},
 ): PopupServices {
@@ -111,6 +132,7 @@ function services(
     deleteRecipe: vi.fn(),
     saveProject: vi.fn(),
     exportRun: vi.fn(),
+    copyRunScreenshot: vi.fn().mockResolvedValue(undefined),
     deleteRun: vi.fn(),
     clearInbox: vi.fn(),
     loadRunScreenshot: vi

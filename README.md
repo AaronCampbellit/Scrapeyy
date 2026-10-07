@@ -101,7 +101,9 @@ The main popup's **Screenshot** section has its own **Save screenshots to** sett
   app that accepts images. No download or Inbox item is created. Chrome briefly
   opens a copy window that closes automatically; Firefox and Zen copy directly.
 
-Saved captures with a screenshot also offer **Copy image** in the pop-out preview.
+Saved captures with a screenshot also offer **Copy image** directly before
+**Save PNG…** in the Inbox and in the pop-out preview. This button is available
+regardless of the screenshot save destination.
 Copying requires clipboard-write permission. Scrapeyy does not read the clipboard.
 
 These choices persist and do not change the destination of other exports.
