@@ -7,3 +7,7 @@ coverage/
 dist/
 *.zip
 .DS_Store
+
+# Local browser automation records
+.playwright-cli/
+.playwright/
