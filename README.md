@@ -124,3 +124,7 @@ roots, canvas-only content, protected assets, virtualized feeds, and extremely
 large pages can limit capture. A schedule needs the browser running, the required
 origin permission, and a valid website session. Video downloads require an
 exposed direct file; streaming playlists and blob-backed players remain metadata.
+
+## License
+
+Aaron Campbell reserves all rights to the original material he owns; see [LICENSE](LICENSE). Third-party code, dependencies, and assets retain their own licenses and notices. See [third-party notices](THIRD_PARTY_NOTICES.md) for reviewed components and outstanding publication or distribution requirements.
