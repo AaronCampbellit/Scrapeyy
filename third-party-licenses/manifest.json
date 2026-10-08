@@ -892,11 +892,12 @@
       "declared_license": "MIT",
       "lock_path": "node_modules/@napi-rs/lzma-linux-x64-gnu",
       "lock_dev": false,
-      "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
+      "role": "Build/test tool only; no native addon or stackback code shipped in the browser extension. Registry SPDX is MIT; pinned upstream has no full license file.",
       "source_url": "https://github.com/Brooooooklyn/lzma",
       "npm_tarball": "https://registry.npmjs.org/@napi-rs/lzma-linux-x64-gnu/-/lzma-linux-x64-gnu-1.5.1.tgz",
       "texts": [],
-      "gap": "Declared SPDX license found; no version-verified full license text copied."
+      "gap": "No full upstream text supplied at the verified source revision; tool binaries/source are not redistributed in application artifacts.",
+      "verified_source_revision": "f164df92d83e095f195d628b1a68a141ae2eb638"
     },
     {
       "component_root": ".",
@@ -1677,8 +1678,15 @@
       "role": "extension code or imported extension helper; WXT also supplies the build tool",
       "source_url": "https://github.com/wxt-dev/wxt",
       "npm_tarball": "https://registry.npmjs.org/@wxt-dev/browser/-/browser-0.2.5.tgz",
-      "texts": [],
-      "gap": "Declared SPDX license found; no version-verified full license text copied."
+      "texts": [
+        {
+          "kind": "upstream-license",
+          "sha256": "7b0b00fcdbc6a036078aad84d0bc0fae240ac67144b86c911149c2daa37c9f85",
+          "copied_text": "third-party-licenses/texts/7b0b00fcdbc6a036078a--WXT-LICENSE",
+          "source_url": "https://raw.githubusercontent.com/wxt-dev/wxt/71876fd1c19e0faf8412664f12b6fd890c0244df/LICENSE",
+          "verification": "Upstream package.json at pinned commit declares 0.2.5; runtime src/index.mjs is byte-identical to installed npm package."
+        }
+      ]
     },
     {
       "component_root": ".",
@@ -4813,11 +4821,12 @@
       "declared_license": "MIT",
       "lock_path": "node_modules/stackback",
       "lock_dev": true,
-      "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
+      "role": "Build/test tool only; no native addon or stackback code shipped in the browser extension. Registry SPDX is MIT; pinned upstream has no full license file.",
       "source_url": "https://github.com/shtylman/node-stackback",
       "npm_tarball": "https://registry.npmjs.org/stackback/-/stackback-0.0.2.tgz",
       "texts": [],
-      "gap": "Declared SPDX license found; no version-verified full license text copied."
+      "gap": "No full upstream text supplied at the verified source revision; tool binaries/source are not redistributed in application artifacts.",
+      "verified_source_revision": "2963095372abf7b75ba55f01cef08ab1e62c2ff4"
     },
     {
       "component_root": ".",

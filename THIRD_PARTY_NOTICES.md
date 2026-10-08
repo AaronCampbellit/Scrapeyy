@@ -11,15 +11,15 @@ Source imports confirm React/React DOM, DOMPurify and JSZip in the extension. WX
 - **pako:** Both the root MIT text and `lib/zlib/README` zlib notices are preserved. The latter credits Jean-loup Gailly, Mark Adler, Vitaly Puzrin and Andrey Tupitsin. A rights-reserved statement for Scrapeyy does not claim their code.
 - **React and React DOM:** Preserve their MIT copyright/license with bundled portions. The inventory includes their exact installed versions and texts.
 
-The inspected `.output/chrome-mv3` and `.output/firefox-mv2` builds have no standalone third-party license files copied into them. Adding this source notice does not automatically include it in extension ZIPs. Before distributing an extension, include the applicable notices/license texts in that artifact and retain required copyright notices. This documentation pass does not change release packaging.
+Chrome and Firefox builds, including extension ZIPs, include this notice, the original-material terms and all collected full texts in `legal/`. A build hook packages them automatically; retain this directory and the generated copyright notices with distributed extensions.
 
 ## Build and test tools
 
 The inventory also includes WXT's tooling, Vite, TypeScript, Vitest, Babel, platform bindings and their dependencies. `caniuse-lite` is CC-BY-4.0 browser-support data used through build tooling; retain its attribution/terms if that data or tool package is redistributed. This does not apply CC-BY to separately authored Scrapeyy code. Native build-tool package metadata is not a complete audit of embedded native components.
 
-## Assets and provenance still to resolve
+## Publication assets and provenance
 
-No license/provenance record was found for `docs/design/scrapeyy-dashboard-concept.png`, `docs/design/scrapeyy-picker-concept.png`, `docs/design/scrapeyy-icon-source.png`, or the icon PNGs in `public/icon/`. Redistribution and original ownership remain unverified for those images; no owner or infringement is inferred from the missing record. Record their actual origin and rights before claiming ownership or distributing them publicly.
+The current icon is original geometric SVG artwork rendered locally. Three unreferenced old concept images and unverified icon rasters were removed or replaced. See [asset provenance](docs/ASSET_PROVENANCE.md).
 
 The implementation screenshots in `docs/screenshots/` are documented local captures of synthetic content in `docs/screenshots/README.md`. Underlying third-party code/assets/marks retain their own rights. Scraping/capturing an external website through Scrapeyy does not transfer the website's copyright or grant permission to republish its content.
 
@@ -28,11 +28,10 @@ The implementation screenshots in `docs/screenshots/` are documented local captu
 
 This inventory records the installed packages inspected on 2026-10-08. Platform-specific packages present only in the lockfile were not unpacked here. Native binaries may embed additional components; this is not a complete operating-system/container-image license inventory. Recheck notices when dependencies or release contents change. Full texts below retain their upstream copyrights and terms; identical texts are stored once.
 
-Full-text gaps remain for these installed components. Their declared license is recorded in the manifest, but that declaration does not replace the missing copyright/license text. Resolve each relevant gap before distributing a release containing the component.
+The following two build/test-only components supply MIT metadata but no full grant text at their verified upstream revisions. They are not shipped extension dependencies; redistributing those tool packages remains outside this application license pack. The imported browser helper now has a version-verified full MIT text.
 
-- `./@napi-rs/lzma-linux-x64-gnu@1.5.1`: Declared SPDX license found; no version-verified full license text copied.
-- `./@wxt-dev/browser@0.2.5`: Declared SPDX license found; no version-verified full license text copied.
-- `./stackback@0.0.2`: Declared SPDX license found; no version-verified full license text copied.
+- `@napi-rs/lzma-linux-x64-gnu@1.5.1`: Native build-tool binding; absent from delivered browser code.
+- `stackback@0.0.2`: Test runner helper; absent from delivered browser code.
 
 
 <details>
@@ -121,7 +120,7 @@ The last column links preserved texts. The lock's dev flag describes installatio
 | `@webext-core/fake-browser` | `2.0.1` | MIT | declared non-dev | [source](https://github.com/aklinker1/webext-core) · [text 1](third-party-licenses/texts/3ecd2df3daf4e8ad35ab---webext-core__fake-browser-2.0.1-LICENSE) |
 | `@webext-core/isolated-element` | `3.0.0` | MIT | declared non-dev | [source](https://github.com/aklinker1/webext-core) · [text 1](third-party-licenses/texts/3ecd2df3daf4e8ad35ab---webext-core__isolated-element-3.0.0-LICENSE) |
 | `@webext-core/match-patterns` | `2.0.0` | MIT | declared non-dev | [source](https://github.com/aklinker1/webext-core) · [text 1](third-party-licenses/texts/3ecd2df3daf4e8ad35ab---webext-core__match-patterns-2.0.0-LICENSE) |
-| `@wxt-dev/browser` | `0.2.5` | MIT | declared non-dev | [source](https://github.com/wxt-dev/wxt) · full text unresolved |
+| `@wxt-dev/browser` | `0.2.5` | MIT | extension runtime helper | [source](https://github.com/wxt-dev/wxt/tree/71876fd1c19e0faf8412664f12b6fd890c0244df) · [full text](third-party-licenses/texts/7b0b00fcdbc6a036078a--WXT-LICENSE) |
 | `@wxt-dev/module-react` | `1.2.2` | MIT | declared non-dev | [source](https://github.com/wxt-dev/wxt) · [text 1](third-party-licenses/texts/7b0b00fcdbc6a036078a--LICENSE) |
 | `@wxt-dev/storage` | `1.2.9` | MIT | declared non-dev | [source](https://github.com/wxt-dev/wxt) · [text 1](third-party-licenses/texts/7b0b00fcdbc6a036078a---wxt-dev__storage-1.2.9-LICENSE) |
 | `acorn` | `8.18.0` | MIT | declared non-dev | [source](https://github.com/acornjs/acorn) · [text 1](third-party-licenses/texts/76a876cf886ff9be2a8b--LICENSE) |
@@ -320,3 +319,9 @@ The last column links preserved texts. The lock's dev flag describes installatio
 | `yargs-parser` | `21.1.1` | ISC | declared non-dev | [source](https://github.com/yargs/yargs-parser) · [text 1](third-party-licenses/texts/365496ca1f56da40b23c--LICENSE.txt) |
 
 </details>
+
+## Build outputs
+
+WXT’s `build:done` hook copies the collected legal documents to `legal/` for Chrome and Firefox builds, including the extension ZIP produced by `wxt zip`. Preserve that directory with the artifact. The inventory conservatively includes build-tool notices too; inclusion is not a claim that every listed package is shipped. DOMPurify uses its Apache-2.0 alternative and JSZip its MIT alternative.
+
+`stackback@0.0.2` and `@napi-rs/lzma-linux-x64-gnu@1.5.1` declare MIT in their npm metadata, but their pinned upstream sources supply no full grant text. They run in the build/test toolchain and are excluded from extension code and source bundles as installed dependencies. This is not a license pack for redistributing those tool binaries. The manifest records the verified revisions and this remaining upstream documentation limitation.
