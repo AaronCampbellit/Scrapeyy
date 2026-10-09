@@ -72,6 +72,21 @@ const data: PopupWorkspaceData = {
   },
 };
 
+it("shows Wistia download qualities and sends the selected asset to the download service", async () => {
+  const url = "https://embed-ssl.wistia.com/deliveries/webinar.bin";
+  const api = services({ inspectVideos: vi.fn().mockResolvedValue({ pageUrl: "https://example.test", notes: [], videos: [{
+    title: "IT Glue webinar", duration: 3582.73, width: 1920, height: 1080, captions: [],
+    sources: [{ url, kind: "file", type: "video/mp4", note: "Wistia MP4 · 1080p · 241.5 MB" }],
+  }] }) });
+  const user = userEvent.setup();
+  render(<PopupApp services={api} />);
+  await user.click(await screen.findByRole("button", { name: "Scan videos" }));
+  expect(await screen.findByText("IT Glue webinar")).toBeVisible();
+  expect(screen.getByText("Wistia MP4 · 1080p · 241.5 MB")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Download video" }));
+  expect(api.downloadVideo).toHaveBeenCalledWith(url);
+});
+
 it("offers Clipboard as a destination and confirms a copied screenshot without claiming a download", async () => {
   const api = services({ takeScreenshot: vi.fn().mockResolvedValue({
     status: "copied", destination: "clipboard", version: CAPTURE_VERSION, filename: "page.png",

@@ -1,10 +1,15 @@
 import { sanitizeCapturedUrl } from "../extraction/normalize";
+import { wistiaElementId, wistiaEmbedUrl, wistiaMediaId } from "./wistia";
 
 export interface VideoSource {
   url: string;
   kind: "file" | "stream" | "blob" | "embed" | "unknown";
   type: string;
   note?: string;
+  filename?: string;
+  width?: number;
+  height?: number;
+  size?: number;
 }
 export interface VideoCaption {
   language: string;
@@ -78,7 +83,7 @@ function redditPost(element: Element): Element | undefined {
 
 function embeddedVideoUrl(url: string): boolean {
   const { hostname, pathname, searchParams } = new URL(url);
-  return hostname === "v.redd.it" || hostname === "youtu.be" ||
+  return !!wistiaMediaId(url) || hostname === "v.redd.it" || hostname === "youtu.be" ||
     (/^(www\.)?(youtube\.com|youtube-nocookie\.com)$/.test(hostname) &&
       (/^\/(embed|shorts)\//.test(pathname) || (pathname === "/watch" && searchParams.has("v")))) ||
     (/^(player\.)?vimeo\.com$/.test(hostname) && /^\/(video\/)?\d+/.test(pathname)) ||
@@ -87,6 +92,8 @@ function embeddedVideoUrl(url: string): boolean {
 
 function mediaIdentity(url: string): string {
   try {
+    const wistiaId = wistiaMediaId(url);
+    if (wistiaId) return `wistia:${wistiaId}`;
     const parsed = new URL(url);
     return parsed.hostname === "v.redd.it" ? `${parsed.origin}/${parsed.pathname.split("/")[1]}` : url;
   } catch { return url; }
@@ -151,6 +158,8 @@ export function collectVideos(root: Element): VideoInventory {
       if (video.currentSrc && !sources.has(video.currentSrc)) add(video.currentSrc);
       const post = redditPost(element);
       if (post) add(post.getAttribute("content-href"));
+      const frameMediaId = wistiaMediaId(element.ownerDocument.location.href);
+      if (frameMediaId) add(wistiaEmbedUrl(frameMediaId));
       const captions: VideoCaption[] = [];
       const trackElements = [...element.querySelectorAll("track")];
       for (const track of Array.from(video.textTracks ?? [])) {
@@ -175,6 +184,8 @@ export function collectVideos(root: Element): VideoInventory {
       const poster = httpUrl(element.getAttribute("poster"), base);
       let owner = element;
       for (let parent = composedParent(element); parent; parent = composedParent(parent)) {
+        const wistiaId = wistiaElementId(parent);
+        if (wistiaId) { add(wistiaEmbedUrl(wistiaId)); owner = parent; break; }
         if (redditPlayer(parent)) { owner = parent; break; }
       }
       addVideo({
@@ -189,6 +200,10 @@ export function collectVideos(root: Element): VideoInventory {
       if (!url || !embeddedVideoUrl(url)) continue;
       addVideo({ title: element.getAttribute("title") || "Embedded video", duration: null, width: 0, height: 0,
         sources: [{ url, kind: "embed", type: "" }], captions: [] });
+    } else if (wistiaElementId(element)) {
+      const id = wistiaElementId(element)!;
+      addVideo({ title: element.getAttribute("aria-label") || "Wistia video", duration: null, width: 0, height: 0,
+        sources: [{ url: wistiaEmbedUrl(id), kind: "embed", type: "" }], captions: [] }, element);
     } else if (redditPlayer(element) || (element.localName === "shreddit-post" && element.getAttribute("content-type") === "video")) {
       const sources = new Map<string, VideoSource>();
       const add = (raw: string | null) => {
@@ -232,8 +247,8 @@ export function collectVideos(root: Element): VideoInventory {
       sources: [found], captions: [] });
   }
   return { pageUrl: root.ownerDocument.location.href, videos, notes: [
-    "Scans loaded page content, open shadow players, accessible frames, and exposed Reddit player metadata.",
-    ...(inaccessibleFrames ? ["Some frames are inaccessible from this page. Open an embedded player on its own page to scan it."] : []),
+    "Scans loaded page content, open shadow players, accessible frames, and Wistia and Reddit embeds.",
+    ...(inaccessibleFrames ? ["Some embedded frames cannot be read directly. Video tools can resolve public Wistia players; other players may need to be opened on their own page."] : []),
     ...(!videos.length ? ["No video is exposed yet. Scroll the video into view or start playback, then scan again."] : []),
     "Captions contain currently loaded cues only. Blob URLs and streaming playlists need a separate site-specific downloader.",
   ] };

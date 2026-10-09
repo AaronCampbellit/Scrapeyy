@@ -306,3 +306,40 @@ For a Both-mode run, inspect the downloaded ZIP and confirm:
   The denied-request notice also left the button visible at the compact height.
   Both permission clicks still ran during native click dispatch and capture
   resumed. TypeScript and the 20 popup/capture integration tests passed.
+
+## Version 0.1.13 Wistia video discovery and MP4 downloads
+
+- Video tools recognize Wistia iframe, legacy async/class, script and Aurora
+  embeds, combining duplicate references before resolving public player metadata.
+  Scanning does not start playback or transfer the video itself.
+- Public MP4 playback assets appear in descending quality with resolution and
+  file size. Downloads retain the actual exposed asset URL and save with a
+  readable `.mp4` filename even when the CDN URL ends in `.bin`.
+- Downloads re-scan the selected page and re-resolve the provider's current
+  assets before accepting a URL. Unsupported/protected metadata, unrelated
+  delivery hosts, originals, audio-only assets, images and streaming playlists
+  do not become provider download candidates. Failures keep the embed visible.
+- Metadata requests omit credentials and referrers, reject redirects, and bound
+  response size, time and per-page work. Public metadata uses CORS; no new host
+  permission or Wistia API token was added.
+- Exact live source: [IT Glue Q3 2026 innovation webinar recap](https://community.kaseya.com/quarterly-innovation-webinars-157/it-glue-q3-2026-innovation-webinar-recap-31893),
+  Wistia media `i0vm82gvvs`, checked on 2026-10-09. Public metadata exposed five
+  MP4 assets: 1080p, 720p, 540p, 360p and 224p. Each returned HTTP 206 for a
+  32-byte range, the MP4 `ftyp` signature, `video/mp4` content type and a total
+  size matching its metadata. This checks real file availability without
+  transferring the full 59-minute webinar.
+- The actual popup components and shipping resolver were tested in the Codex
+  browser using a fixture containing the live page's exact iframe. The resolver
+  fetched real Wistia metadata across origins, displayed one webinar with five
+  downloads, and selecting 1080p produced the expected asset request. The fixture
+  records download requests; it does not simulate a completed native download.
+- TypeScript, all 35 test files / 204 tests, and Chrome MV3 / Firefox MV2
+  production builds passed. Regression coverage includes discovery, deduplication,
+  quality ordering, filename safety, metadata failures, protection handling,
+  invalid delivery hosts, stale/arbitrary download rejection and popup actions.
+- Local evidence is in `work/wistia-video`: `live-verification.json`,
+  `wistia-video-validation.jpg`, staged builds, release ZIPs and hash receipts.
+  Both durable `.output` folders are refreshed by the validated release workflow.
+- Installed 0.1.13 acceptance remains pending manual browser reload/update.
+  Browser policy blocks agent access to the extension manager and forbids
+  workarounds; the local build and fixture are not installed-extension evidence.

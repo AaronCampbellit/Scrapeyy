@@ -138,12 +138,18 @@ instruction instead of claiming it saved a file.
 
 **Video tools → Scan videos** checks loaded page content, nested open shadow
 roots, accessible frames, Reddit player attributes and packaged media metadata,
-and recognized video links. Duplicate references to a Reddit video are combined.
+Wistia embeds, and recognized video links. Duplicate references are combined.
+Wistia iframe, legacy and Aurora players are recognized before playback. Video
+tools read their public player metadata and offer MP4 files by quality, highest
+first, with resolution and file size. Files save with readable `.mp4` names,
+including when Wistia's asset URL ends in `.bin`. No API key or extra host access
+is required for the public, CORS-enabled metadata endpoint. Protected or unavailable
+videos remain visible with an explanation. Scanning does not download a video.
 Scroll an unloaded video into view or start playback, then scan again if needed.
 Closed players and cross-origin frames can expose fewer details; detected player
 links are shown even when no direct file is available. **Download video** is offered for direct file
 sources; websites can still reject a download. Streaming playlists, blob-backed
-players, and cross-origin embeds are identified but not downloaded. **Export
+players, and unsupported cross-origin embeds are identified but not downloaded. **Export
 video details** saves JSON with source links, available metadata, caption-track
 URLs, and already-loaded caption cues. Content exports also include these details
 in `media.json` when videos are found. No playback or caption settings are changed.

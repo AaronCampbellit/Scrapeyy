@@ -142,7 +142,7 @@ const services: PopupServices = {
     const tab = await activeTab();
     if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
     await ensureContentScript(tab.id);
-    return extensionBrowser.tabs.sendMessage(tab.id, { type: "SCRAPEYY_INSPECT_VIDEOS" });
+    return extensionBrowser.runtime.sendMessage({ type: "SCRAPEYY_INSPECT_VIDEOS", tabId: tab.id });
   },
   async downloadVideo(url) {
     const tab = await activeTab();
