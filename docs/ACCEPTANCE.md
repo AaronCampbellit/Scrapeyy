@@ -340,6 +340,8 @@ For a Both-mode run, inspect the downloaded ZIP and confirm:
 - Local evidence is in `work/wistia-video`: `live-verification.json`,
   `wistia-video-validation.jpg`, staged builds, release ZIPs and hash receipts.
   Both durable `.output` folders are refreshed by the validated release workflow.
-- Installed 0.1.13 acceptance remains pending manual browser reload/update.
-  Browser policy blocks agent access to the extension manager and forbids
-  workarounds; the local build and fixture are not installed-extension evidence.
+- After updating/reloading Chrome 0.1.13, Aaron confirmed on 2026-10-09 that the
+  installed Codex browser extension shows the webinar and all five download
+  choices. This is user-confirmed installed discovery evidence. A completed
+  native transfer of the full webinar and installed Firefox acceptance were
+  not reported; file availability was checked using the real MP4 byte ranges.
