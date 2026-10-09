@@ -370,9 +370,9 @@ For a Both-mode run, inspect the downloaded ZIP and confirm:
   live CORS-enabled metadata/caption responses in a labeled validation fixture.
   All three formats produced the expected content/counts; the text controls fit
   the popup without overflow. The fixture clipboard write resolved and displayed
-  success, but the browser tool's separate clipboard read returned empty. Native
-  installed clipboard readback and Save As downloads remain manual checks; the
-  fixture's success notice alone is not proof of either.
+  success, but the browser tool's separate clipboard read returned empty. The
+  fixture's success notice alone was not treated as proof of native clipboard
+  or Save As behavior; installed acceptance was subsequently confirmed by Aaron.
 - TypeScript, all 36 Vitest files / 222 tests, and Chrome MV3 / Firefox MV2 builds
   passed. Coverage includes parsing/conversion, language selection, full versus
   partial text, absent timings, size limits, stale/forged selection rejection,
@@ -380,5 +380,8 @@ For a Both-mode run, inspect the downloaded ZIP and confirm:
 - Both durable `.output` folders and all ZIP entries match staged builds by
   SHA-256 (21 Chrome files, 17 Firefox files). Evidence, sample TXT/VTT/SRT exports,
   ZIPs, source/build verification and prior-build backups are in `work/video-text`.
-  Installed 0.1.14 update/reload remains pending: browser policy prevents operating
-  the extension manager, and no installed-browser acceptance has been supplied.
+  Browser policy prevents the agent from operating the extension manager.
+- After the manual Chrome update/reload and webinar refresh, Aaron confirmed on
+  2026-10-09: "Yes, copy and downloads work." This confirms the installed English
+  controls, Copy transcript/paste, and TXT/VTT/SRT downloads requested in the
+  acceptance question. Installed Firefox/Zen acceptance remains pending.
