@@ -20,6 +20,7 @@ import { SettingsView } from "./SettingsView";
 import { SharePointView } from "./SharePointView";
 import type { SharePointMetadata } from "../../sharepoint/scrape";
 import type { VideoInventory } from "../../media/videos";
+import type { VideoTextRequest } from "../../media/video-text";
 import { CAPTURE_VERSION, type ScreenshotResult } from "../../platform/screenshot-messages";
 import type { PreviewType } from "../../platform/preview-window";
 import type { EmbeddedViewerPermission } from "../../platform/embedded-frame-capture";
@@ -53,6 +54,8 @@ export interface PopupServices {
   inspectVideos(): Promise<VideoInventory>;
   downloadVideo(url: string): Promise<void>;
   exportVideoDetails(): Promise<void>;
+  exportVideoText(request: VideoTextRequest): Promise<void>;
+  copyVideoTranscript(request: VideoTextRequest): Promise<void>;
   startRecipeCapture(recipeId?: string): Promise<void>;
   resumePicker(): Promise<void>;
   scrapeSharePoint(): Promise<SharePointMetadata>;
@@ -261,6 +264,8 @@ export function PopupApp({ services }: { services: PopupServices }) {
             onInspectVideos={() => perform(async () => { setVideos(await services.inspectVideos()); })}
             onDownloadVideo={(url) => perform(() => services.downloadVideo(url), "Video download requested.")}
             onExportVideoDetails={() => perform(services.exportVideoDetails, "Video details exported.")}
+            onExportVideoText={(request) => perform(() => services.exportVideoText(request), request.format === "txt" ? "Transcript download requested." : "Caption download requested.")}
+            onCopyVideoTranscript={(request) => perform(() => services.copyVideoTranscript(request), "Transcript copied — ready to paste.")}
             videos={videos}
             onCreateRecipe={() =>
               perform(async () => {

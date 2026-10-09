@@ -345,3 +345,40 @@ For a Both-mode run, inspect the downloaded ZIP and confirm:
   choices. This is user-confirmed installed discovery evidence. A completed
   native transfer of the full webinar and installed Firefox acceptance were
   not reported; file availability was checked using the real MP4 byte ranges.
+
+## Version 0.1.14 independent captions and transcript exports
+
+- Video tools now expose text actions above MP4 downloads, grouped by language:
+  Copy transcript, Download transcript (TXT), Captions (VTT), and Captions (SRT).
+  The metadata-only action is labeled Export video metadata (JSON).
+- Public Wistia metadata supplies complete transcript text plus canonical caption
+  endpoints. TXT/copy uses this text without transferring subtitle or video bytes.
+  Other exposed VTT/SRT tracks can be read on demand; currently loaded browser
+  cues remain a clearly labeled partial fallback when no track URL exists.
+  Transcript-only tracks never receive fabricated subtitle timings.
+- Exports re-scan the current page and validate the selected video/track identity
+  before reading its URL. Caption requests omit credentials/referrers, reject
+  redirects, and enforce a 10-second timeout and 2 MB response limit. No new host
+  permissions, API tokens, microphone access, or transcription service was added.
+  If the player exposes no text, the UI reports that limitation; audio speech-to-
+  text generation is outside this feature.
+- Exact live webinar `i0vm82gvvs`, checked 2026-10-09: one English track, 51,737
+  characters in the titled/source-attributed TXT export; VTT and SRT each contain
+  1,132 cues ending at 3580.055 seconds of the 3582.73-second webinar. Both subtitle
+  exports round-trip to the same cue text/times. No video bytes were downloaded.
+- The shipping popup/resolver/exporter were exercised in the Codex browser using
+  live CORS-enabled metadata/caption responses in a labeled validation fixture.
+  All three formats produced the expected content/counts; the text controls fit
+  the popup without overflow. The fixture clipboard write resolved and displayed
+  success, but the browser tool's separate clipboard read returned empty. Native
+  installed clipboard readback and Save As downloads remain manual checks; the
+  fixture's success notice alone is not proof of either.
+- TypeScript, all 36 Vitest files / 222 tests, and Chrome MV3 / Firefox MV2 builds
+  passed. Coverage includes parsing/conversion, language selection, full versus
+  partial text, absent timings, size limits, stale/forged selection rejection,
+  background routing, clipboard text retrieval, and independent popup actions.
+- Both durable `.output` folders and all ZIP entries match staged builds by
+  SHA-256 (21 Chrome files, 17 Firefox files). Evidence, sample TXT/VTT/SRT exports,
+  ZIPs, source/build verification and prior-build backups are in `work/video-text`.
+  Installed 0.1.14 update/reload remains pending: browser policy prevents operating
+  the extension manager, and no installed-browser acceptance has been supplied.

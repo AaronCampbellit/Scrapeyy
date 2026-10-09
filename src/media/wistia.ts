@@ -1,4 +1,4 @@
-import type { VideoDetails, VideoInventory, VideoSource } from "./videos";
+import type { VideoCaption, VideoDetails, VideoInventory, VideoSource } from "./videos";
 import { safePathSegment } from "../export/filename";
 
 const MEDIA_ID = /^[a-z0-9]{10}$/i;
@@ -79,9 +79,20 @@ export function parseWistiaMedia(payload: unknown, expectedId: string): VideoDet
       note: `Wistia MP4 · ${height}p${size ? ` · ${(size / 1_000_000).toFixed(1)} MB` : ""}` });
   }
   sources.sort((a, b) => (b.height ?? 0) - (a.height ?? 0) || (b.width ?? 0) - (a.width ?? 0));
-  if (!sources.length) throw new Error("This Wistia player exposes no downloadable MP4 files.");
-  return { title, duration: number(media.duration) || null, width: sources[0]!.width ?? 0,
-    height: sources[0]!.height ?? 0, ...(poster ? { poster } : {}), sources, captions: [] };
+  const captions: VideoCaption[] = [];
+  for (const value of Array.isArray(media.captions) ? media.captions.slice(0, 50) : []) {
+    const caption = record(value);
+    const language = caption?.language;
+    if (typeof language !== "string" || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(language) || language.length > 24 ||
+        captions.some((item) => item.language === language)) continue;
+    let label = language;
+    try { label = new Intl.DisplayNames(["en"], { type: "language" }).of(language) || language; } catch { /* Preserve the language code. */ }
+    captions.push({ language, label, url: `https://fast.wistia.net/embed/captions/${expectedId}.vtt?language=${encodeURIComponent(language)}`,
+      ...(typeof caption?.text === "string" && caption.text.trim() ? { text: caption.text.slice(0, MAX_METADATA_BYTES) } : {}), cues: [] });
+  }
+  if (!sources.length && !captions.length) throw new Error("This Wistia player exposes no downloadable MP4 files.");
+  return { title, duration: number(media.duration) || null, width: sources[0]?.width ?? 0,
+    height: sources[0]?.height ?? 0, ...(poster ? { poster } : {}), sources, captions };
 }
 
 async function fetchMedia(id: string, fetcher: typeof fetch): Promise<VideoDetails> {
@@ -133,7 +144,7 @@ export async function resolveWistiaVideos(inventory: VideoInventory, fetcher: ty
     const id = video.sources.map((source) => wistiaMediaId(source.url)).find((id) => id && resolved.has(id));
     const media = id ? resolved.get(id) : undefined;
     if (!media) return video;
-    return { ...video, ...media, captions: video.captions,
+    return { ...video, ...media, captions: [...media.captions, ...video.captions.filter((track) => !media.captions.some((item) => item.url === track.url || item.language === track.language))],
       sources: [...media.sources, ...video.sources.filter((source) => !media.sources.some((asset) => asset.url === source.url))] };
   }) };
 }

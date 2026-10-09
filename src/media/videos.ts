@@ -15,6 +15,8 @@ export interface VideoCaption {
   language: string;
   label: string;
   url?: string;
+  text?: string;
+  partial?: boolean;
   cues: Array<{ start: number; end: number; text: string }>;
 }
 export interface VideoDetails {
@@ -168,6 +170,7 @@ export function collectVideos(root: Element): VideoInventory {
         const url = httpUrl(node?.getAttribute("src") ?? null, base);
         captions.push({
           language: track.language, label: track.label,
+          partial: true,
           ...(url ? { url } : {}),
           cues: Array.from(track.cues ?? []).filter((cue) => "text" in cue).map((cue) => ({
             start: cue.startTime, end: cue.endTime, text: String((cue as VTTCue).text),
@@ -250,6 +253,6 @@ export function collectVideos(root: Element): VideoInventory {
     "Scans loaded page content, open shadow players, accessible frames, and Wistia and Reddit embeds.",
     ...(inaccessibleFrames ? ["Some embedded frames cannot be read directly. Video tools can resolve public Wistia players; other players may need to be opened on their own page."] : []),
     ...(!videos.length ? ["No video is exposed yet. Scroll the video into view or start playback, then scan again."] : []),
-    "Captions contain currently loaded cues only. Blob URLs and streaming playlists need a separate site-specific downloader.",
+    "Export captions or a transcript separately when a track is exposed. Loaded cues may be incomplete; Wistia can also provide full transcript text. Blob URLs and streaming playlists need a separate site-specific downloader.",
   ] };
 }

@@ -1,5 +1,6 @@
 import type { PopupSite } from "./PopupApp";
 import type { VideoInventory } from "../../media/videos";
+import { captionTextKey, videoTextKey, type VideoTextRequest } from "../../media/video-text";
 import type { AppSettings, ScreenshotDestination } from "../../storage/app-settings";
 
 interface CaptureViewProps {
@@ -13,6 +14,8 @@ interface CaptureViewProps {
   onInspectVideos(): void | Promise<void>;
   onDownloadVideo(url: string): void | Promise<void>;
   onExportVideoDetails(): void | Promise<void>;
+  onExportVideoText(request: VideoTextRequest): void | Promise<void>;
+  onCopyVideoTranscript(request: VideoTextRequest): void | Promise<void>;
   videos?: VideoInventory | undefined;
 }
 
@@ -27,6 +30,8 @@ export function CaptureView({
   onInspectVideos,
   onDownloadVideo,
   onExportVideoDetails,
+  onExportVideoText,
+  onCopyVideoTranscript,
   videos,
 }: CaptureViewProps) {
   const available = site && site.access !== "unavailable";
@@ -80,13 +85,33 @@ export function CaptureView({
         {disabled ? <small role="status">Working… Keep this page selected.</small> : null}
       </section>
       <section className="quick-tools" aria-label="Video tools">
-        <div className="tool-heading"><div><strong>Video tools</strong><small>Find video files, links, and captions</small></div>
+        <div className="tool-heading"><div><strong>Video tools</strong><small>Save videos, captions, or transcripts</small></div>
           <button type="button" disabled={!available || disabled} onClick={() => void onInspectVideos()}>Scan videos</button>
         </div>
         {videos ? <div className="video-results">
           <small>{videos.videos.length} video{videos.videos.length === 1 ? "" : "s"} found</small>
           {videos.videos.map((video, index) => <article key={index}>
             <strong>{video.title}</strong>
+            {video.captions.length ? <div className="video-text-tracks">
+              <small>Text only · no video download</small>
+              {video.captions.map((caption) => {
+                const timed = !!caption.url || caption.cues.some((cue) => Number.isFinite(cue.start) && Number.isFinite(cue.end) && cue.end > cue.start && cue.start >= 0 && cue.text.trim());
+                const text = timed || !!caption.text?.trim();
+                const request = (format: VideoTextRequest["format"]) => onExportVideoText({ videoKey: videoTextKey(video), captionKey: captionTextKey(caption), format });
+                return <div className="video-text-track" key={captionTextKey(caption)}>
+                  <small>{caption.label || caption.language || "Caption track"}</small>
+                  <div className="video-text-actions">
+                    <button type="button" disabled={disabled || !text} onClick={() => void onCopyVideoTranscript({ videoKey: videoTextKey(video), captionKey: captionTextKey(caption), format: "txt" })}>Copy transcript</button>
+                    <button type="button" disabled={disabled || !text} onClick={() => void request("txt")}>Download transcript (TXT)</button>
+                    <button type="button" disabled={disabled || !timed} onClick={() => void request("vtt")}>Captions (VTT)</button>
+                    <button type="button" disabled={disabled || !timed} onClick={() => void request("srt")}>Captions (SRT)</button>
+                  </div>
+                  {caption.partial && !caption.url ? <small>Loaded captions only; text may be incomplete.</small> : null}
+                  {!timed && text ? <small>Transcript available; no caption timings exposed.</small> : null}
+                  {!text ? <small>This track has no readable text yet. Enable captions in the player, then scan again.</small> : null}
+                </div>;
+              })}
+            </div> : <small>No captions or transcript exposed by this player.</small>}
             {video.sources.map((source) => <div className="video-source" key={source.url}>
               <small>{source.kind === "file" ? "Direct file" : source.kind === "stream" ? "Streaming playlist" :
                 source.kind === "blob" ? "Browser stream" : source.kind === "embed" ? "Embedded player" : "Media link"}</small>
@@ -100,7 +125,8 @@ export function CaptureView({
               {video.duration === null ? "" : " · " + Math.round(video.duration) + " seconds"}</small>
           </article>)}
           {videos.notes.map((note) => <p key={note}>{note}</p>)}
-          <button type="button" disabled={disabled} onClick={() => void onExportVideoDetails()}>Export video details</button>
+          <button type="button" disabled={disabled} onClick={() => void onExportVideoDetails()}>Export video metadata (JSON)</button>
+          <small>Metadata includes titles, source links, and caption-track details.</small>
         </div> : null}
       </section>
       <button

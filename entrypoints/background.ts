@@ -8,6 +8,7 @@ import type { DesignSnapshot } from "../src/design/snapshot";
 import type { AssetReference } from "../src/design/assets";
 import { videoMetadataForExport, type VideoInventory } from "../src/media/videos";
 import { resolveWistiaVideos } from "../src/media/wistia";
+import { createVideoTextExport, type VideoTextRequest } from "../src/media/video-text";
 import { safePathSegment } from "../src/export/filename";
 import {
   buildRunBundle,
@@ -767,6 +768,21 @@ export default defineBackground(() => {
           const name = safePathSegment(source.filename || decodeURIComponent(new URL(url).pathname.split("/").pop() || "video"));
           return extensionBrowser.downloads.download({ url, filename: settings.downloadSubfolder + "/Videos/" + name,
             saveAs: settings.downloadBehavior === "ask", conflictAction: "uniquify" });
+        })();
+      }
+      if ((value.type === "SCRAPEYY_EXPORT_VIDEO_TEXT" || value.type === "SCRAPEYY_READ_VIDEO_TEXT") && typeof value.tabId === "number" &&
+          typeof value.videoKey === "string" && typeof value.captionKey === "string" &&
+          ["txt", "vtt", "srt"].includes(String(value.format))) {
+        const tabId = value.tabId;
+        const readText = value.type === "SCRAPEYY_READ_VIDEO_TEXT";
+        const request: VideoTextRequest = { videoKey: value.videoKey, captionKey: value.captionKey, format: readText ? "txt" : value.format as VideoTextRequest["format"] };
+        return (async () => {
+          await ensureContentScript(tabId);
+          const inventory = await resolveWistiaVideos(await extensionBrowser.tabs.sendMessage(tabId, { type: "SCRAPEYY_INSPECT_VIDEOS" }) as VideoInventory);
+          const exported = await createVideoTextExport(inventory, request);
+          if (readText) return exported.blob.text();
+          const settings = await appSettings.get();
+          return downloadBundle(exported.blob, settings.downloadSubfolder + "/Transcripts/" + exported.filename, settings.downloadBehavior === "ask");
         })();
       }
       if (value.type === "SCRAPEYY_EXPORT_VIDEO_DETAILS" && typeof value.tabId === "number") {

@@ -33,7 +33,7 @@ describe("capture tools", () => {
     const screenshot = vi.fn();
     render(<CaptureView settings={DEFAULT_APP_SETTINGS} onScreenshotDestinationChange={vi.fn()} disabled={false} site={{ origin: "https://example.test", access: "one-time" }}
       onScreenshot={screenshot} onCreateRecipe={vi.fn()} onQuickCapture={vi.fn()}
-      onInspectVideos={vi.fn()} onDownloadVideo={vi.fn()} onExportVideoDetails={vi.fn()} />);
+      onInspectVideos={vi.fn()} onDownloadVideo={vi.fn()} onExportVideoDetails={vi.fn()} onExportVideoText={vi.fn()} onCopyVideoTranscript={vi.fn()} />);
     const user = userEvent.setup();
     for (const name of ["Visible page", "Full page", "Draw selection"]) await user.click(screen.getByRole("button", { name }));
     expect(screenshot.mock.calls).toEqual([["visible"], ["full-page"], ["selection"]]);
@@ -42,7 +42,7 @@ describe("capture tools", () => {
   it("only offers downloads for exposed direct video files", () => {
     render(<CaptureView settings={DEFAULT_APP_SETTINGS} onScreenshotDestinationChange={vi.fn()} disabled={false} site={{ origin: "https://example.test", access: "one-time" }}
       onScreenshot={vi.fn()} onCreateRecipe={vi.fn()} onQuickCapture={vi.fn()}
-      onInspectVideos={vi.fn()} onDownloadVideo={vi.fn()} onExportVideoDetails={vi.fn()}
+      onInspectVideos={vi.fn()} onDownloadVideo={vi.fn()} onExportVideoDetails={vi.fn()} onExportVideoText={vi.fn()} onCopyVideoTranscript={vi.fn()}
       videos={{ pageUrl: "https://example.test", notes: [], videos: [{
         title: "Demo", width: 0, height: 0, duration: null, captions: [], sources: [
           { url: "https://cdn.test/demo.mp4", kind: "file", type: "" },

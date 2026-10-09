@@ -10,6 +10,26 @@ const payload = (fields = {}) => ({ media: { hashedId: id, name: "IT Glue Q3 pro
   mediaType: "Video", protected: false, duration: 3582.73, assets: [asset(360), asset(1080), asset(720)], ...fields } });
 
 describe("Wistia videos", () => {
+  it("discovers full transcript text and canonical timed caption URLs from public metadata", async () => {
+    document.body.innerHTML = `<iframe src="https://fast.wistia.net/embed/iframe/${id}"></iframe>`;
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(payload({ captions: [
+      { language: "eng", text: "Welcome.\n\nFull webinar transcript." }, { language: "eng", text: "Duplicate" },
+      { language: "../evil", text: "Invalid" }, { language: "fra", text: "Bonjour." },
+    ] }))));
+    const result = await resolveWistiaVideos(collectVideos(document.body), fetcher);
+    expect(result.videos[0]!.captions).toHaveLength(2);
+    expect(result.videos[0]!.captions[0]).toMatchObject({ language: "eng", text: "Welcome.\n\nFull webinar transcript.",
+      url: `https://fast.wistia.net/embed/captions/${id}.vtt?language=eng`, cues: [] });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps transcripts available when no MP4 playback assets are exposed", () => {
+    const video = parseWistiaMedia(payload({ assets: [], captions: [{ language: "eng", text: "Text only" }] }), id);
+    expect(video.sources).toEqual([]);
+    expect(video.captions[0]!.text).toBe("Text only");
+    expect(video.width).toBe(0);
+  });
+
   it("recognizes the actual cross-origin webinar iframe before playback", () => {
     document.body.innerHTML = `<iframe src="https://fast.wistia.net/embed/iframe/${id}" title="Webinar Video"></iframe>`;
     const inventory = collectVideos(document.body);

@@ -776,6 +776,11 @@
 .video-source { display: grid; gap: 5px; }
 .video-source span { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .video-source button { justify-self: start; }
+.video-text-tracks, .video-text-track { display: grid; gap: 6px; }
+.video-text-tracks { padding: 10px; background: var(--blue-soft); border-radius: 8px; }
+.video-text-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.video-text-actions button:first-child { width: 100%; }
+.video-text-actions button:nth-child(2) { width: 100%; }
 .video-results p { font-size: 11px; color: var(--muted); line-height: 1.5; margin: 0; }
 .screenshot-permission { display: grid; gap: 8px; border-bottom: 1px solid var(--border); padding: 12px 14px; background: var(--blue-soft); }
 .screenshot-permission strong { font-size: 12px; }

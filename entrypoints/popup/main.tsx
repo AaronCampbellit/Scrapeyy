@@ -154,6 +154,18 @@ const services: PopupServices = {
     if (tab?.id === undefined) throw new Error("Open a website first.");
     await extensionBrowser.runtime.sendMessage({ type: "SCRAPEYY_EXPORT_VIDEO_DETAILS", tabId: tab.id });
   },
+  async exportVideoText(request) {
+    const tab = await activeTab();
+    if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
+    await extensionBrowser.runtime.sendMessage({ type: "SCRAPEYY_EXPORT_VIDEO_TEXT", tabId: tab.id, ...request });
+  },
+  async copyVideoTranscript(request) {
+    const tab = await activeTab();
+    if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");
+    const text: unknown = await extensionBrowser.runtime.sendMessage({ type: "SCRAPEYY_READ_VIDEO_TEXT", tabId: tab.id, ...request, format: "txt" });
+    if (typeof text !== "string" || !text.trim()) throw new Error("Reload Scrapeyy, then scan videos again to copy the transcript.");
+    await navigator.clipboard.writeText(text);
+  },
   async load() {
     const tab = await activeTab();
     const savedRecipes = await recipes.list();

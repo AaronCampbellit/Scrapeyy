@@ -149,10 +149,23 @@ Scroll an unloaded video into view or start playback, then scan again if needed.
 Closed players and cross-origin frames can expose fewer details; detected player
 links are shown even when no direct file is available. **Download video** is offered for direct file
 sources; websites can still reject a download. Streaming playlists, blob-backed
-players, and unsupported cross-origin embeds are identified but not downloaded. **Export
-video details** saves JSON with source links, available metadata, caption-track
-URLs, and already-loaded caption cues. Content exports also include these details
-in `media.json` when videos are found. No playback or caption settings are changed.
+players, and unsupported cross-origin embeds are identified but not downloaded.
+Each available text track has independent **Download transcript (TXT)**,
+**Captions (VTT)**, and **Captions (SRT)** actions. Choose the language under the
+video title; **Copy transcript** puts the text directly on the clipboard, without
+a Save As dialog. Text exports do not download the video. TXT preserves Wistia's full
+public transcript when supplied; otherwise it reads the exposed VTT/SRT track,
+or clearly labels an export containing only currently loaded browser cues.
+VTT and SRT preserve actual cue timings; transcript-only text never gets invented
+timestamps. Caption URLs are re-discovered on the current page before fetching,
+and reads are limited in size/time with no new API key or host permissions.
+Files use readable title/language names under the configured download folder's
+`Transcripts` subfolder and respect the existing Save As/automatic setting.
+No captions exposed means no text export; this feature does not generate new
+speech-to-text from audio. **Export video metadata (JSON)** saves source links,
+available metadata, caption-track URLs/text and loaded cues. Content exports also
+include detected DOM media details in `media.json`; public Wistia enrichment is
+specific to Video tools. No playback or caption settings are changed.
 
 Design & Code describes browser-visible HTML and styles, not private server code
 or the site's original application source.
