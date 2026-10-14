@@ -151,20 +151,26 @@ try {
     const size = { width: image.width, height: image.height };
     image.close(); return size;
   }), { width: 1600, height: 4200 });
-  const previewOpened = context.waitForEvent("page");
-  await popup.getByRole("button", { name: "Pop out preview" }).click();
-  preview = await previewOpened;
+  await popup.evaluate(() => {
+    window.resizeSamples = [];
+    const start = performance.now();
+    const sample = () => {
+      window.resizeSamples.push(document.body.getBoundingClientRect().width);
+      if (performance.now() - start < 800) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await popup.getByRole("button", { name: "Expand preview" }).click();
+  preview = popup.locator('.preview-embedded');
   await popup.waitForFunction(
     () =>
       !document.querySelector("main").getAttribute("aria-busy") ||
       document.querySelector("main").getAttribute("aria-busy") === "false",
   );
-  assert.equal(windows.length, 1);
-  assert.equal(windows[0].type, "popup");
-  assert.equal(
-    new URL(windows[0].url).searchParams.get("run"),
-    "preview & capture",
-  );
+  assert.equal(windows.length, 0, 'Preview stays in the existing pane');
+  assert.equal(context.pages().length, 1, 'No extra tab or window');
+  await popup.waitForFunction(() => Math.abs(document.body.getBoundingClientRect().width - 780) < 1);
+  assert.ok(await popup.evaluate(() => resizeSamples.some(width => width > 420 && width < 779)), 'Pane animates through intermediate sizes');
   await preview.getByText("1600 × 4200 px").waitFor();
   await preview.getByRole("button", { name: "Copy image", exact: true }).click();
   await preview.getByText("Screenshot copied — ready to paste.").waitFor();
@@ -177,7 +183,6 @@ try {
     return size;
   });
   assert.deepEqual(copiedImage, { width: 1600, height: 4200, type: "image/png" });
-  await popup.close();
   assert.equal(
     await preview.getByRole("heading", { level: 1 }).textContent(),
     "Screenshot · Full-page fixture",
@@ -189,7 +194,7 @@ try {
     await content.evaluate((el) => el.scrollHeight > el.clientHeight),
     true,
   );
-  await preview.screenshot({ path: path.join(output, "preview-window.png") });
+  await popup.locator('.popup-shell').screenshot({ path: path.join(output, "expanded-preview.png") });
   await preview.getByRole("button", { name: "Actual size" }).click();
   assert.equal(
     await image.evaluate((img) => img.getBoundingClientRect().width),
@@ -207,12 +212,16 @@ try {
   await content.evaluate((el) => (el.scrollTop = el.scrollHeight));
   assert.equal(await content.evaluate((el) => el.scrollTop > 0), true);
   await preview.getByRole("button", { name: "Fit width" }).click();
-  await preview.setViewportSize({ width: 500, height: 600 });
+  await popup.setViewportSize({ width: 500, height: 600 });
+  await popup.evaluate(() => Object.defineProperty(screen, 'availWidth', { configurable: true, value: 500 }));
+  await preview.getByRole('button', { name: 'Text', exact: true }).click();
+  await preview.getByRole('button', { name: 'Screenshot', exact: true }).click();
+  await popup.waitForFunction(() => Math.abs(document.body.getBoundingClientRect().width - 480) < 1);
   assert.ok(
     (await image.evaluate((img) => img.getBoundingClientRect().width)) <= 472,
   );
   assert.equal(
-    await preview.evaluate(
+    await popup.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
     true,
@@ -224,10 +233,23 @@ try {
   await preview.getByRole("button", { name: "Save PNG…" }).click();
   await preview.getByText("Screenshot saved to device.").waitFor();
   assert.deepEqual(exports, ["preview & capture"]);
-  await preview.goto(
+  await preview.getByRole('button', { name: '← Back to Inbox' }).click();
+  await popup.waitForFunction(() => Math.abs(document.body.getBoundingClientRect().width - 420) < 1);
+  assert.equal(await popup.getByRole('button', { name: 'Expand preview' }).evaluate(node => node === document.activeElement), true, 'Back restores focus');
+  assert.equal(await popup.locator('.run-list-item.is-selected').count(), 1, 'Selected capture stays selected');
+  await popup.getByRole('button', { name: 'Expand preview' }).click();
+  await preview.getByRole('button', { name: '← Back to Inbox' }).waitFor();
+  await popup.keyboard.press('Escape');
+  await preview.waitFor({ state: 'detached' });
+  await popup.emulateMedia({ reducedMotion: 'reduce' });
+  await popup.getByRole('button', { name: 'Expand preview' }).click();
+  assert.equal(await popup.evaluate(() => getComputedStyle(document.body).transitionDuration), '0s');
+  assert.equal(await popup.locator('.popup-expanded-preview').evaluate(node => getComputedStyle(node).animationName), 'none');
+  await popup.getByRole('button', { name: '← Back to Inbox' }).click();
+  await popup.goto(
     "https://extension.test/preview.html?run=expired&view=screenshot",
   );
-  await preview
+  await popup
     .getByRole("alert")
     .filter({ hasText: "no longer in the Inbox" })
     .waitFor();
@@ -238,27 +260,30 @@ try {
       {
         build,
         checks: [
-          "Compiled inbox opens selected capture in separate window",
-          "Real IndexedDB screenshot survives inbox close",
+          "Compiled inbox expands selected capture in the same pane with zero window/tab creation",
+          "Real IndexedDB screenshot loads inside the existing pane",
+          "Animation passes through intermediate widths",
+          "Back and Escape restore compact pane, selection and keyboard focus",
+          "Reduced-motion disables expansion and reveal animation",
           "Copy image writes a 1600 by 4200 PNG to the real clipboard",
           "Full-height image scrolling",
           "Native size and 125% zoom",
           "Horizontal scrolling",
-          "Fit width on narrow window",
+          "Fit width on narrow screen",
           "Text/screenshot switching",
           "Export command targets selected capture",
           "Expired capture message",
           "No browser page errors",
         ],
         windowAPIs:
-          "Simulated with Playwright pages; installed Zen/Firefox window behavior remains unverified",
+          "Page-based popup resizing test; installed Zen/Firefox toolbar resizing remains unverified",
       },
       null,
       2,
     ),
   );
   console.log(
-    "Preview browser checks passed: window opening, independent IndexedDB loading, PNG clipboard copy, long-image scrolling, zoom, resizing, text, export, expired captures.",
+    "Preview browser checks passed: in-pane preview without new windows/tabs, animated sizing, reduced motion, Back/Escape, focus/selection restoration, IndexedDB, PNG clipboard copy, scrolling, zoom, text, export, expired captures.",
   );
 } finally {
   await browser.close();

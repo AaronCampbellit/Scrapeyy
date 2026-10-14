@@ -12,7 +12,6 @@ import {
   type PopupSite,
 } from "../../src/features/popup/PopupApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
-import { openCapturePreview } from "../../src/platform/preview-window";
 import { copyScreenshotToClipboard } from "../../src/platform/image-clipboard";
 import { ensureContentScript } from "../../src/platform/content-injection";
 import { prepareEmbeddedViewerAccess, requestEmbeddedViewerPermission } from "../../src/platform/embedded-frame-capture";
@@ -301,7 +300,15 @@ const services: PopupServices = {
     const artifact = await captures.getArtifact(`${runId}:screenshot`);
     return artifact ? URL.createObjectURL(artifact.blob) : undefined;
   },
-  openPreview: openCapturePreview,
+  async loadPreview(runId) {
+    const run = await captures.getRun(runId);
+    if (!run) return undefined;
+    const [artifact, recipe, settings] = await Promise.all([
+      captures.getArtifact(`${runId}:screenshot`), recipes.get(run.recipeId), appSettings.get(),
+    ]);
+    return { run, title: run.screenshot ? `Screenshot · ${run.screenshot.title}` : recipe?.name ?? "Quick capture",
+      theme: settings.theme, ...(artifact ? { screenshot: artifact.blob } : {}) };
+  },
   async pinRun(runId, pinned) {
     const run = await captures.getRun(runId);
     if (run) await captures.putRun({ ...run, pinned });

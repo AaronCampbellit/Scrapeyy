@@ -227,8 +227,30 @@ try {
   await fixtureCapture('Fixed app scrolling panel', '<main id="scroller" style="position:fixed;inset:0;overflow:auto"><div style="height:2100px;background:blue"></div></main>', 2100, {
     sample: [20, 2050, [0, 0, 255, 255]],
   });
-  await fixtureCapture('Flex dashboard scrolling panel', '<style>html,body{height:100%;overflow:hidden}body{display:flex;flex-direction:column}header{height:60px;flex-shrink:0}main{flex:1;min-height:0;overflow:auto}</style><header>Dashboard</header><main id="scroller"><div style="height:2100px;background:blue"></div></main>', 2160, {
-    sample: [20, 2100, [0, 0, 255, 255]],
+  await fixtureCapture('Reversed chat conversation scroll offsets', '<style>html,body{height:100%;overflow:hidden}#scroller{display:flex;flex-direction:column-reverse;overflow:auto;height:700px}#scroller article{height:700px;flex-shrink:0}</style><main id="scroller"><article style="background:blue">Latest message</article><article style="background:green">Middle message</article><article style="background:red">Oldest message</article></main>', 2100, {
+    setup: () => page.evaluate(() => { document.querySelector('#scroller').scrollTop = -340; }),
+    sample: [20, 2050, [0, 0, 255, 255]],
+  });
+  assert.deepEqual(await samplePixel(results.at(-1).file, 20, 20), [255, 0, 0, 255], 'Oldest chat content belongs at the top');
+  assert.deepEqual(await samplePixel(results.at(-1).file, 20, 1000), [0, 128, 0, 255], 'Middle chat content is retained');
+  await fixtureCapture('Viewport-clipped app shell with oversized outer root', '<style>body{height:1400px}.app{position:fixed;inset:0;overflow:hidden;display:flex}.sidebar{width:250px;background:orange}#scroller{width:750px;height:700px;overflow:auto}</style><div class="app"><aside class="sidebar">Chat list</aside><main id="scroller"><article style="height:2100px;background:blue">Conversation</article></main></div>', 2100, {
+    setup: () => page.evaluate(() => { document.querySelector('#scroller').scrollTop = 340; }),
+    sample: [20, 2050, [0, 0, 255, 255]],
+  });
+  assert.equal(results.at(-1).width, 750, 'Capture the conversation instead of attempting to expand its app shell');
+  for (const overflow of ['hidden', 'clip']) {
+    await fixtureCapture('Webmail split pane with ' + overflow + ' root', `<style>html,body{height:100%;overflow:${overflow}}.shell{position:fixed;inset:60px 0 40px;display:flex;gap:10px;overflow:hidden}.folders{width:90px;background:#111}.list{width:540px;overflow:auto;background:orange}#scroller{width:350px;overflow:auto;min-width:0}#scroller section{height:600px}</style><div class="shell"><nav class="folders">Folders</nav><div class="list" role="listbox"><div style="height:8400px">Virtual message list</div></div><main id="scroller"><article role="document"><section style="background:red">Email top</section><section style="background:green">Email middle</section><section style="background:blue;height:650px">Email bottom</section></article></main></div>`, 1850, {
+      setup: () => page.evaluate(() => { document.querySelector('#scroller').scrollTop = 340; document.querySelector('.list').scrollTop = 200; }),
+      sample: [20, 1820, [0, 0, 255, 255]],
+    });
+    const result = results.at(-1);
+    assert.equal(result.width, 350, 'Capture the email pane, excluding folders and the larger virtual list');
+    assert.deepEqual(await samplePixel(result.file, 20, 20), [255, 0, 0, 255], 'First email tile');
+    assert.deepEqual(await samplePixel(result.file, 20, 800), [0, 128, 0, 255], 'Middle email tile');
+    assert.equal(await page.locator('.list').evaluate(node => node.scrollTop), 200, 'Unselected list position is untouched');
+  }
+  await fixtureCapture('Flex dashboard scrolling panel', '<style>html,body{height:100%;overflow:hidden}body{display:flex;flex-direction:column}header{height:60px;flex-shrink:0}main{flex:1;min-height:0;overflow:auto}</style><header>Dashboard</header><main id="scroller"><div style="height:2100px;background:blue"></div></main>', 2100, {
+    sample: [20, 2050, [0, 0, 255, 255]],
   });
   await fixtureCapture('Sticky section below first viewport', '<div style="height:800px;background:blue"></div><header style="position:sticky;top:0;height:100px;background:red"></header><div style="height:1200px;background:blue"></div>', 2100, {
     sample: [20, 850, [255, 0, 0, 255]],

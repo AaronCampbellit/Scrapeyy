@@ -1,4 +1,4 @@
-import type { FullPageCaptureController } from "./screenshots";
+import type { FullPageCaptureController, FullPageMetrics } from "./screenshots";
 
 type StyledElement = Element & ElementCSSInlineStyle;
 type SavedProperty = { value: string; priority: string };
@@ -52,6 +52,9 @@ export function createFullPageCaptureController(
   const styles = new Map<StyledElement, Map<string, SavedProperty>>();
   let fixedElements: StyledElement[] = [];
   let expanded: Array<{ element: StyledElement; x: number; y: number }> = [];
+  let scrollPanel: StyledElement | undefined;
+  let initialPanelMetrics: FullPageMetrics | undefined;
+  let reversedPanelY = false;
 
   const setStyle = (element: StyledElement, property: string, value: string) => {
     let saved = styles.get(element);
@@ -63,12 +66,87 @@ export function createFullPageCaptureController(
     element.style.setProperty(property, value, "important");
   };
 
+  const panelMetrics = (): FullPageMetrics => {
+    if (!scrollPanel?.isConnected) throw new Error("The scrolling content changed during capture. Try again.");
+    const rect = scrollPanel.getBoundingClientRect();
+    const bounds = {
+      left: rect.left + scrollPanel.clientLeft, top: rect.top + scrollPanel.clientTop,
+      width: scrollPanel.clientWidth, height: scrollPanel.clientHeight,
+      viewportWidth: ownerWindow.innerWidth, viewportHeight: ownerWindow.innerHeight,
+    };
+    if (bounds.width <= 0 || bounds.height <= 0 || bounds.left < -1 || bounds.top < -1 ||
+        bounds.left + bounds.width > ownerWindow.innerWidth + 1 || bounds.top + bounds.height > ownerWindow.innerHeight + 1 ||
+        (initialPanelMetrics && JSON.stringify(bounds) !== JSON.stringify(initialPanelMetrics.captureBounds))) {
+      throw new Error("The scrolling content moved during capture. Keep the pane fully visible and try again.");
+    }
+    return { documentWidth: Math.max(scrollPanel.scrollWidth, bounds.width),
+      documentHeight: Math.max(scrollPanel.scrollHeight, bounds.height),
+      viewportWidth: bounds.width, viewportHeight: bounds.height, captureBounds: bounds };
+  };
+
   return {
     async prepare() {
       originalScroll = { x: ownerWindow.scrollX, y: ownerWindow.scrollY };
       uiHidden = true;
       await setUiHidden(true);
       const elements = pageElements(ownerDocument);
+      // Viewport-constrained apps (including webmail) must keep their layout.
+      // Expanding their flex/fixed panels can leave a tall but unscrollable root.
+      const root = ownerDocument.scrollingElement ?? ownerDocument.documentElement;
+      const constrained = [ownerDocument.documentElement, ownerDocument.body].some(element => element &&
+        /^(hidden|clip)$/.test(ownerWindow.getComputedStyle(element).overflowY));
+      const hasViewportContainer = (element: Element) => {
+        for (let node: Element | null = element; node && node !== ownerDocument.body && node !== ownerDocument.documentElement; node = parentElement(node)) {
+          const style = ownerWindow.getComputedStyle(node);
+          const bounds = node.getBoundingClientRect();
+          if ((/^(hidden|clip)$/.test(style.overflowY) || style.position === "fixed") &&
+              bounds.height > 0 && bounds.height <= ownerWindow.innerHeight + 1) return true;
+        }
+        return false;
+      };
+      {
+        const candidates = elements.filter(element => {
+          if (element === ownerDocument.documentElement || element === ownerDocument.body) return false;
+          const rect = element.getBoundingClientRect();
+          return /^(auto|scroll)$/.test(ownerWindow.getComputedStyle(element).overflowY) &&
+            element.scrollHeight > element.clientHeight + 1 && element.clientWidth >= ownerWindow.innerWidth * .3 &&
+            element.clientHeight >= ownerWindow.innerHeight * .4 && rect.left >= 0 && rect.top >= 0 &&
+            rect.right <= ownerWindow.innerWidth + 1 && rect.bottom <= ownerWindow.innerHeight + 1 &&
+            (constrained || root.scrollHeight <= ownerWindow.innerHeight + 1 || hasViewportContainer(element));
+        });
+        const contentScore = (element: StyledElement) => {
+          // Prefer an email/document pane to a virtualized message list.
+          const documentContent = element.matches('[role="document"], article') || !!element.querySelector('[role="document"], article');
+          const listContent = element.matches('[role="listbox"], [role="grid"]') || !!element.querySelector('[role="listbox"], [role="grid"]');
+          return (documentContent ? 4 : 0) + (element.contains(ownerDocument.activeElement) && ownerDocument.activeElement !== ownerDocument.body ? 2 : 0) - (listContent ? 1 : 0);
+        };
+        candidates.sort((a, b) => contentScore(b) - contentScore(a) ||
+          b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight ||
+          b.getBoundingClientRect().left - a.getBoundingClientRect().left);
+        scrollPanel = candidates[0];
+        if (scrollPanel) {
+          expanded = [{ element: scrollPanel, x: scrollPanel.scrollLeft, y: scrollPanel.scrollTop }];
+          for (const [property, value] of [['scroll-behavior', 'auto'], ['scroll-snap-type', 'none'], ['overflow-anchor', 'none']] as const) {
+            setStyle(scrollPanel, property, value);
+          }
+          // Reversed flex conversations have zero at the bottom and negative
+          // offsets above it. Probe the real scroll range instead of assuming a
+          // CSS class or flex direction, then give the stitcher top-based offsets.
+          scrollPanel.scrollTop = -1;
+          reversedPanelY = scrollPanel.scrollTop < 0;
+          fixedElements = [];
+          for (const element of elements.filter(element => element !== scrollPanel && scrollPanel!.contains(element))) {
+            const position = ownerWindow.getComputedStyle(element).position;
+            if (position === 'sticky') setStyle(element, 'position', 'static');
+            else if (position === 'fixed') fixedElements.push(element);
+          }
+          scrollPanel.scrollLeft = 0;
+          scrollPanel.scrollTop = reversedPanelY ? -(scrollPanel.scrollHeight - scrollPanel.clientHeight) : 0;
+          await waitForPaint();
+          initialPanelMetrics = panelMetrics();
+          return initialPanelMetrics;
+        }
+      }
       // Expand substantial page panels, leaving small widgets alone. Viewport
       // capture can then include their complete contents and the surrounding page.
       const panels = elements.filter((element) => {
@@ -122,13 +200,19 @@ export function createFullPageCaptureController(
       return documentDimensions(ownerWindow, ownerDocument);
     },
 
-    async measure() { return documentDimensions(ownerWindow, ownerDocument); },
+    async measure() { return scrollPanel ? panelMetrics() : documentDimensions(ownerWindow, ownerDocument); },
 
     async scrollTo(x, y, tileIndex) {
       if (tileIndex > 0) for (const element of fixedElements) setStyle(element, "visibility", "hidden");
-      ownerWindow.scrollTo(x, y);
+      if (scrollPanel) {
+        scrollPanel.scrollLeft = x;
+        scrollPanel.scrollTop = reversedPanelY ? y - (scrollPanel.scrollHeight - scrollPanel.clientHeight) : y;
+      }
+      else ownerWindow.scrollTo(x, y);
       await waitForPaint();
-      return { x: ownerWindow.scrollX, y: ownerWindow.scrollY };
+      return scrollPanel ? { x: scrollPanel.scrollLeft,
+        y: scrollPanel.scrollTop + (reversedPanelY ? scrollPanel.scrollHeight - scrollPanel.clientHeight : 0) }
+        : { x: ownerWindow.scrollX, y: ownerWindow.scrollY };
     },
 
     async restore() {
@@ -143,7 +227,7 @@ export function createFullPageCaptureController(
         ownerWindow.scrollTo({ left: originalScroll.x, top: originalScroll.y, behavior: "instant" });
         await waitForPaint();
       } finally {
-        styles.clear(); fixedElements = []; expanded = [];
+        styles.clear(); fixedElements = []; expanded = []; scrollPanel = undefined; initialPanelMetrics = undefined; reversedPanelY = false;
         if (uiHidden) { uiHidden = false; await setUiHidden(false); }
       }
     },

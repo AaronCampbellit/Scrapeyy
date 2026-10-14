@@ -190,7 +190,9 @@ function services(
     loadRunScreenshot: vi
       .fn()
       .mockResolvedValue("data:image/png;base64,c2NyZWVuc2hvdA=="),
-    openPreview: vi.fn().mockResolvedValue(undefined),
+    loadPreview: vi.fn().mockImplementation(async (runId: string) => ({
+      run: { ...data.runs[0]!, id: runId }, title: 'Selected capture', theme: 'dark',
+    })),
     pinRun: vi.fn(),
     requestOriginAccess: vi.fn().mockResolvedValue(true),
     revokeOriginAccess: vi.fn(),
@@ -265,11 +267,15 @@ describe("PopupApp", () => {
     expect(api.saveSettings).toHaveBeenCalledWith({ ...data.settings, screenshotDestination: "inbox" });
     await user.click(screen.getByRole("tab", { name: "Inbox" }));
     expect(await screen.findByAltText("Captured screenshot")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Pop out preview" }));
-    expect(api.openPreview).toHaveBeenCalledWith("png", "screenshot");
+    await user.click(screen.getByRole("button", { name: "Expand preview" }));
+    expect(await screen.findByRole('region', { name: 'Expanded capture preview' })).toBeVisible();
+    expect(api.loadPreview).toHaveBeenCalledWith("png");
+    await user.click(screen.getByRole('button', { name: '← Back to Inbox' }));
     await user.click(screen.getByRole("button", { name: /^Text$/ }));
-    await user.click(screen.getByRole("button", { name: "Pop out preview" }));
-    expect(api.openPreview).toHaveBeenLastCalledWith("png", "text");
+    await user.click(screen.getByRole("button", { name: "Expand preview" }));
+    expect(await screen.findByText('title: Alpha')).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('region', { name: 'Expanded capture preview' })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Save screenshot PNG" }));
     expect(api.exportRun).toHaveBeenCalledWith("png");

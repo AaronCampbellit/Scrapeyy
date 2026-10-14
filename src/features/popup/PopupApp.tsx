@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type {
   CaptureRun,
@@ -22,7 +22,8 @@ import type { SharePointMetadata } from "../../sharepoint/scrape";
 import type { VideoInventory } from "../../media/videos";
 import type { VideoTextRequest } from "../../media/video-text";
 import { CAPTURE_VERSION, type ScreenshotResult } from "../../platform/screenshot-messages";
-import type { PreviewType } from "../../platform/preview-window";
+import { previewPaneWidth, type PreviewType } from "../../platform/preview-layout";
+import { PreviewApp, type PreviewCapture } from "../preview/PreviewApp";
 import type { EmbeddedViewerPermission } from "../../platform/embedded-frame-capture";
 
 export interface PopupSite {
@@ -67,7 +68,7 @@ export interface PopupServices {
   deleteRun(runId: string): Promise<void>;
   clearInbox(): Promise<void>;
   loadRunScreenshot(runId: string): Promise<string | undefined>;
-  openPreview(runId: string, preview: PreviewType): Promise<void>;
+  loadPreview(runId: string): Promise<PreviewCapture | undefined>;
   pinRun(runId: string, pinned: boolean): Promise<void>;
   requestOriginAccess(origin: string): Promise<boolean>;
   revokeOriginAccess(origin: string): Promise<boolean>;
@@ -106,6 +107,32 @@ export function PopupApp({ services }: { services: PopupServices }) {
   const [sharePointMetadata, setSharePointMetadata] =
     useState<SharePointMetadata>();
   const resumeAttempted = useRef(false);
+  const [expandedPreview, setExpandedPreview] = useState<{ runId: string; view: PreviewType }>();
+  const [previewWidth, setPreviewWidth] = useState(previewPaneWidth());
+  const previewTrigger = useRef<HTMLElement | null>(null);
+  const expandedServices = useMemo(() => ({
+    load: services.loadPreview,
+    exportRun: services.exportRun,
+    copyScreenshot: async () => { if (expandedPreview) await services.copyRunScreenshot(expandedPreview.runId); },
+  }), [services, expandedPreview?.runId]);
+
+  // Firefox sizes toolbar popups from body, rather than the root element.
+  useLayoutEffect(() => {
+    const oldWidth = document.body.style.width;
+    document.body.classList.add("scrapeyy-popup");
+    return () => { document.body.classList.remove("scrapeyy-popup"); document.body.style.width = oldWidth; };
+  }, []);
+  useLayoutEffect(() => {
+    document.body.style.width = `${expandedPreview ? previewWidth : 420}px`;
+  }, [!!expandedPreview, previewWidth]);
+
+  const closePreview = useCallback(() => {
+    setExpandedPreview(undefined);
+    requestAnimationFrame(() => { if (previewTrigger.current?.isConnected) previewTrigger.current.focus({ preventScroll: true }); });
+  }, []);
+  const updatePreviewLayout = useCallback((preview: PreviewType, dimensions?: { width: number; height: number }) => {
+    setPreviewWidth(previewPaneWidth(preview === "screenshot" ? dimensions?.width : undefined, screen.availWidth || 800));
+  }, []);
 
   const refresh = async () => {
     const loaded = await services.load();
@@ -198,7 +225,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
 
   return (
     <main
-      className="popup-shell"
+      className={`popup-shell${expandedPreview ? " popup-shell-expanded" : ""}`}
       aria-busy={loading}
       data-theme={data.settings.theme}
     >
@@ -219,7 +246,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
             aria-label={label}
             aria-selected={view === id}
             key={id}
-            onClick={() => setView(id)}
+            onClick={() => { setExpandedPreview(undefined); setView(id); }}
             role="tab"
             type="button"
           >
@@ -248,7 +275,11 @@ export function PopupApp({ services }: { services: PopupServices }) {
         </button>
       </section> : null}
 
-      <div className="popup-content">
+      {expandedPreview ? <div className="popup-expanded-preview">
+        <PreviewApp runId={expandedPreview.runId} initialView={expandedPreview.view} services={expandedServices}
+          onClose={closePreview} onLayoutChange={updatePreviewLayout} />
+      </div> : null}
+      <div className="popup-content" hidden={!!expandedPreview}>
         {view === "capture" ? (
           <CaptureView
             settings={data.settings}
@@ -350,7 +381,12 @@ export function PopupApp({ services }: { services: PopupServices }) {
               data.runs.find((run) => run.id === runId)?.screenshot ? "Screenshot saved to device." : "Export started.")}
             onCopyScreenshot={(runId) => perform(() => services.copyRunScreenshot(runId), COPIED_NOTICE)}
             onLoadScreenshot={services.loadRunScreenshot}
-            onOpenPreview={(runId, preview) => perform(() => services.openPreview(runId, preview))}
+            onOpenPreview={(runId, preview) => {
+              previewTrigger.current = document.activeElement as HTMLElement;
+              setNotice(undefined);
+              setPreviewWidth(previewPaneWidth());
+              setExpandedPreview({ runId, view: preview });
+            }}
             onPin={(runId, pinned) =>
               performAndRefresh(() => services.pinRun(runId, pinned))
             }

@@ -19,9 +19,11 @@ until the user exports them.
 - Bounded Next-button and infinite-scroll traversal.
 - Reusable projects and recipes with manual or scheduled runs.
 - Local capture inbox with partial/error recovery.
-- Inbox **Pop out ↗** opens the selected capture in a separate resizable preview
-  window. Switch between text and screenshots, scroll long PNGs, use Fit width,
-  100%, or 25–400% zoom, and save/export without keeping the toolbar popup open.
+- Inbox **Expand ⤢** opens the selected capture inside the existing pane, which
+  smoothly widens to fit the screenshot within the browser's toolbar limits.
+  Switch between text and screenshots, scroll long PNGs, use Fit width, 100%,
+  or 25–400% zoom, and copy/save directly. **Back to Inbox** or Escape restores
+  the compact pane and selected capture. Reduced-motion preferences are honored.
 - Deterministic JSON, CSV, and design-reference ZIP exports.
 - Optional per-origin permission for scheduled captures.
 
@@ -102,7 +104,7 @@ The main popup's **Screenshot** section has its own **Save screenshots to** sett
   opens a copy window that closes automatically; Firefox and Zen copy directly.
 
 Saved captures with a screenshot also offer **Copy image** directly before
-**Save PNG…** in the Inbox and in the pop-out preview. This button is available
+**Save PNG…** in the Inbox and in the expanded preview. This button is available
 regardless of the screenshot save destination.
 Copying requires clipboard-write permission. Scrapeyy does not read the clipboard.
 
@@ -111,6 +113,12 @@ All three capture tools use the selected screenshot destination:
 
 - **Visible page** captures the current viewport.
 - **Full page** scrolls and stitches the page, then restores the original position.
+  In viewport-constrained apps such as Outlook on the web, it captures the
+  scrolling email/document pane directly instead of expanding the app layout.
+  The resulting PNG contains the full pane, excluding the surrounding folders,
+  message list, and app toolbar; the pane's original scroll position is restored.
+  Reversed conversation scrollers with negative offsets are normalized so the
+  image runs from the oldest content at the top to the latest at the bottom.
   Substantial nested scrolling panels are temporarily expanded, sticky sections
   stay at their natural document positions, and original styles and panel scroll
   positions are restored afterward. The capture follows newly loaded content

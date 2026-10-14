@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { CaptureRun } from "../../contracts/models";
-import type { PreviewType } from "../../platform/preview-window";
+import type { PreviewType } from "../../platform/preview-layout";
 import type { AppTheme } from "../../storage/app-settings";
 import { captureText } from "./capture-text";
 import { COPIED_NOTICE } from "../../platform/image-clipboard";
@@ -25,10 +25,14 @@ export function PreviewApp({
   runId,
   initialView,
   services,
+  onClose,
+  onLayoutChange,
 }: {
   runId: string | null;
   initialView: PreviewType;
   services: PreviewServices;
+  onClose?: () => void;
+  onLayoutChange?: (view: PreviewType, dimensions?: { width: number; height: number }) => void;
 }) {
   const [capture, setCapture] = useState<PreviewCapture>();
   const [loading, setLoading] = useState(true);
@@ -44,6 +48,21 @@ export function PreviewApp({
   const [exporting, setExporting] = useState(false);
   const [copying, setCopying] = useState(false);
   const [notice, setNotice] = useState<string>();
+  const embedded = !!onClose;
+  const Shell = embedded ? "section" : "main";
+
+  useEffect(() => {
+    onLayoutChange?.(view, dimensions);
+  }, [view, dimensions, onLayoutChange]);
+
+  useEffect(() => {
+    if (!onClose) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); onClose(); }
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
 
   useEffect(() => {
     let active = true;
@@ -94,10 +113,11 @@ export function PreviewApp({
   }, [capture?.screenshot]);
 
   useEffect(() => {
+    if (embedded) return;
     document.title = capture
       ? `${capture.title} · Scrapeyy preview`
       : "Scrapeyy preview";
-  }, [capture?.title]);
+  }, [capture?.title, embedded]);
 
   const exportCapture = async () => {
     if (!capture) return;
@@ -139,8 +159,9 @@ export function PreviewApp({
   };
 
   return (
-    <main
-      className="preview-shell"
+    <Shell
+      className={`preview-shell${embedded ? " preview-embedded" : ""}`}
+      aria-label="Expanded capture preview"
       data-theme={capture?.theme ?? "dark"}
       aria-busy={loading}
     >
@@ -180,8 +201,8 @@ export function PreviewApp({
                 : "Export"}
           </button>
         ) : null}
-        <button type="button" onClick={() => window.close()}>
-          Close
+        <button className="preview-back" type="button" autoFocus={embedded} onClick={onClose ?? (() => window.close())}>
+          {embedded ? "← Back to Inbox" : "Close"}
         </button>
       </header>
       {capture ? (
@@ -329,6 +350,6 @@ export function PreviewApp({
         ) : null}
         {notice ? <span role="status">{notice}</span> : null}
       </footer>
-    </main>
+    </Shell>
   );
 }

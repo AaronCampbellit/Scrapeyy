@@ -7,6 +7,20 @@
   min-height: 0;
 }
 
+.preview-embedded {
+  height: 100%;
+}
+.preview-embedded .preview-header { gap: 8px; padding: 12px 16px; }
+.preview-embedded .preview-title h1 { font-size: 16px; }
+.preview-embedded .preview-eyebrow { display: none; }
+.preview-embedded .preview-toolbar,
+.preview-embedded .preview-footer { padding: 8px 16px; }
+.preview-embedded .preview-content { padding: 16px; }
+.preview-embedded .preview-back { order: -1; }
+.preview-embedded .preview-title { flex-basis: auto; min-width: 160px; }
+.preview-embedded .preview-header { flex-wrap: wrap; }
+.preview-embedded .preview-back { margin-right: auto; }
+
 .preview-header {
   align-items: center;
   background: var(--surface);
@@ -144,6 +158,7 @@
 }
 
 @media (max-width: 600px) {
+  .preview-embedded .preview-title { flex-basis: 100%; order: 1; }
   .preview-header {
     flex-wrap: wrap;
     padding: 14px;

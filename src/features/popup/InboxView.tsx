@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { CaptureRun, Recipe } from "../../contracts/models";
 import { captureText } from "../preview/capture-text";
-import type { PreviewType } from "../../platform/preview-window";
+import type { PreviewType } from "../../platform/preview-layout";
 
 interface InboxViewProps {
   runs: CaptureRun[];
@@ -165,10 +165,10 @@ export function InboxView({
               ) : null}
               <div className="preview-heading">
                 <h3>Preview</h3>
-                <button className="small-button preview-popout" type="button"
-                  aria-label="Pop out preview" disabled={disabled}
+                <button className="small-button preview-expand" type="button"
+                  aria-label="Expand preview" disabled={disabled}
                   onClick={() => void onOpenPreview(selected.id, preview)}>
-                  Pop out ↗
+                  Expand ⤢
                 </button>
                 <div className="preview-tabs" role="group" aria-label="Preview type">
                   <button
