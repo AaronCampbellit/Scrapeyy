@@ -13,6 +13,8 @@ import {
 import "../shared/theme.css";
 import "./popup.css";
 import { CaptureView } from "./CaptureView";
+import { BorrowSessionView } from "./BorrowSessionView";
+import type { SessionExportRequest, SessionExportResult } from "../../session/export";
 import { COPIED_NOTICE } from "../../platform/image-clipboard";
 import { InboxView } from "./InboxView";
 import { RecipesView } from "./RecipesView";
@@ -28,6 +30,7 @@ import type { EmbeddedViewerPermission } from "../../platform/embedded-frame-cap
 
 export interface PopupSite {
   origin: string;
+  tabId?: number;
   access: "one-time" | "persistent" | "unavailable";
 }
 
@@ -47,7 +50,8 @@ export interface PopupWorkspaceData {
 }
 
 export interface PopupServices {
-  openBorrowSession?(): Promise<void>;
+  requestSessionAccess(origins: string[]): Promise<boolean>;
+  exportSession(request: SessionExportRequest): Promise<SessionExportResult>;
   openPreviewWindow?(runId: string, preview: PreviewType): Promise<void>;
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
@@ -79,13 +83,14 @@ export interface PopupServices {
   saveSettings(settings: AppSettings): Promise<AppSettings>;
 }
 
-type PopupView = "capture" | "inbox" | "recipes" | "sharepoint" | "settings";
+type PopupView = "capture" | "inbox" | "recipes" | "sharepoint" | "session" | "settings";
 
 const popupTabs: Array<{ id: PopupView; label: string }> = [
   { id: "capture", label: "Capture" },
   { id: "inbox", label: "Inbox" },
   { id: "recipes", label: "Recipes" },
   { id: "sharepoint", label: "SharePoint" },
+  { id: "session", label: "Borrow session" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -239,12 +244,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
           <h1>Scrapeyy</h1>
           <p>Local capture studio · {CAPTURE_VERSION}</p>
         </div>
-        <div className="popup-header-actions">
-          <span className="local-badge">Local-only</span>
-          {services.openBorrowSession ? <button className="small-button" type="button"
-            disabled={loading || busy || data.site?.access === "unavailable"}
-            onClick={() => void perform(services.openBorrowSession!)}>Borrow session</button> : null}
-        </div>
+        <span className="local-badge">Local-only</span>
       </header>
 
       <nav className="popup-tabs" role="tablist" aria-label="Scrapeyy sections">
@@ -287,6 +287,8 @@ export function PopupApp({ services }: { services: PopupServices }) {
           onClose={closePreview} onLayoutChange={updatePreviewLayout} />
       </div> : null}
       <div className="popup-content" hidden={!!expandedPreview}>
+        {view === "session" ? <BorrowSessionView site={data.site}
+          onRequestAccess={services.requestSessionAccess} onExport={services.exportSession} /> : null}
         {view === "capture" ? (
           <CaptureView
             settings={data.settings}

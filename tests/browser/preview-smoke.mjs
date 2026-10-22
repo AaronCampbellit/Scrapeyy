@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { decryptSession } from "../../scripts/decrypt-session.mjs";
 
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
@@ -39,6 +40,8 @@ try {
   });
   const exports = [];
   const windows = [];
+  const sessionDownloads = [];
+  await context.exposeFunction("saveSessionDownload", (options) => { sessionDownloads.push(options); return 1; });
   await context.exposeFunction("sendRuntime", (message) => {
     if (message.type === "SCRAPEYY_EXPORT_RUN") exports.push(message.runId);
     return {};
@@ -67,10 +70,18 @@ try {
         },
       },
       tabs: {
+        get: async (id) => ({ id, url: "https://fixture.test/" }),
         query: async () => [{ id: 1, url: "https://fixture.test/" }],
         sendMessage: async () => ({ active: false }),
       },
-      permissions: { contains: async () => false },
+      permissions: { contains: async () => false, request: async () => true },
+      downloads: { download: (options) => window.saveSessionDownload(options) },
+      cookies: {
+        getAllCookieStores: async () => [{ id: "fixture", tabIds: [1] }],
+        getAll: async () => [{ name: "fixture-session", value: "synthetic-only", domain: "fixture.test", path: "/", hostOnly: true,
+          secure: true, httpOnly: true, sameSite: "lax", session: true, storeId: "fixture" }],
+      },
+      scripting: { executeScript: async () => [{ result: { origin: "https://fixture.test", localStorage: [{ name: "fixture-local", value: "synthetic-storage" }], sessionStorage: [] } }] },
     };
   });
   const popup = await context.newPage();
@@ -139,6 +150,36 @@ try {
     db.close();
   });
   await popup.goto("https://extension.test/popup.html");
+  await popup.getByRole("tab", { name: "Borrow session", exact: true }).click();
+  await popup.getByLabel("File protection", { exact: true }).waitFor();
+  assert.equal(await popup.getByLabel("File protection", { exact: true }).inputValue(), "encrypted");
+  assert.equal(await popup.getByLabel("Approved origins (one per line)", { exact: true }).inputValue(), "https://fixture.test");
+  assert.equal(await popup.getByRole("tab").count(), 6, "Borrow session shares the existing navigation");
+  assert.equal(context.pages().length, 1, "Borrow session opens no browser page or window");
+  assert.equal(windows.length, 0);
+  assert.equal(await popup.evaluate(() => document.body.scrollWidth <= 420), true, "Six tabs fit the popup width");
+  await popup.locator("main.popup-shell").screenshot({ path: path.join(output, "borrow-session-tab.png") });
+  await popup.getByRole("checkbox", { name: /I approve exporting cookies/ }).scrollIntoViewIfNeeded();
+  await popup.getByRole("button", { name: "Export borrowed session" }).scrollIntoViewIfNeeded();
+  await popup.locator("main.popup-shell").screenshot({ path: path.join(output, "borrow-session-export.png") });
+  await popup.getByLabel("PIN or passphrase", { exact: true }).fill("fixture passphrase");
+  await popup.getByLabel("Confirm PIN or passphrase", { exact: true }).fill("fixture passphrase");
+  await popup.getByRole("checkbox", { name: /I approve exporting cookies/ }).check();
+  await popup.getByRole("button", { name: "Export borrowed session" }).click();
+  await popup.getByRole("status").filter({ hasText: "Download requested" }).waitFor();
+  assert.equal(sessionDownloads.length, 1);
+  assert.equal(sessionDownloads[0].saveAs, true);
+  const sessionText = options => Buffer.from(options.url.split(",")[1], "base64").toString("utf8");
+  const borrowed = await decryptSession(sessionText(sessionDownloads[0]), "fixture passphrase");
+  assert.equal(borrowed.cookies[0].value, "synthetic-only");
+  assert.equal(borrowed.storage[0].localStorage[0].value, "synthetic-storage");
+  assert.equal(await popup.getByLabel("PIN or passphrase", { exact: true }).inputValue(), "");
+  await popup.getByLabel("File protection", { exact: true }).selectOption("plaintext");
+  await popup.getByRole("button", { name: "Export borrowed session" }).click();
+  await popup.waitForFunction(() => document.querySelector('[role="status"]')?.textContent?.startsWith("Download requested"));
+  assert.equal(sessionDownloads.length, 2);
+  assert.deepEqual(JSON.parse(sessionText(sessionDownloads[1])).cookies, borrowed.cookies);
+  assert.equal(context.pages().length, 1, "Session settings and both exports remain inside the same popup");
   await popup.getByRole("tab", { name: "Inbox" }).click();
   await popup.getByAltText("Captured screenshot").waitFor();
   const inlineCopy = popup.getByRole("button", { name: "Copy image", exact: true });

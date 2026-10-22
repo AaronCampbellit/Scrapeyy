@@ -129,7 +129,7 @@ browser copies, and authenticated cross-device sessions remain manual checks.
 
 ## Scope and limitations
 
-This is a development extension, currently **0.1.19**. Captures and configuration
+This is a development extension, currently **0.1.20**. Captures and configuration
 are stored in the browser; explicit exports and configured automatic downloads
 write files to the device. Asset and SharePoint requests can use your existing
 website session. Captured text and images may contain sensitive information, so
@@ -148,7 +148,8 @@ Aaron Campbell reserves all rights to the original material he owns; see [LICENS
 
 ### Borrow a signed-in session
 
-**Borrow session** exports explicitly approved sites' cookies and browser storage
+The **Borrow session** tab contains all origin, encryption, PIN, approval, and
+export controls inside the extension popup. It exports explicitly approved sites' cookies and browser storage
 for other VMs/projects. Optional PIN/passphrase encryption is enabled by default;
 plaintext requires an explicit selection. See [usage, format, and standalone
 decryption](docs/SESSION_BORROWING.md). This separate workflow requests optional

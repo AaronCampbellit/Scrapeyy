@@ -28,7 +28,15 @@ try {
  await context.addCookies([{name:'fixture-http-only',value:'synthetic-cookie',url:origin+'/orders',httpOnly:true,sameSite:'Lax'},{name:'foreign-cookie',value:'excluded',url:'http://example.com/'}]);
  const tabId=await worker.evaluate(async origin=>(await chrome.tabs.query({})).find(tab=>tab.url?.startsWith(origin))?.id,origin);
  assert.equal(typeof tabId,'number');
- const page=await context.newPage();await page.goto(extensionOrigin+'/borrow-session.html?'+new URLSearchParams({origin,tabId:String(tabId)}));
+ // A real toolbar popup sees the website as active; this page-based harness pins that same source.
+ await context.addInitScript(({tabId})=>{
+   if(location.protocol!=='chrome-extension:')return;
+   const query=chrome.tabs.query.bind(chrome.tabs);
+   chrome.tabs.query=async options=>options.active && options.currentWindow ? [await chrome.tabs.get(tabId)] : query(options);
+ },{tabId});
+ const page=await context.newPage();await page.goto(extensionOrigin+'/popup.html');
+ await page.getByRole('tab',{name:'Borrow session',exact:true}).click();
+ await page.getByLabel('Approved origins (one per line)',{exact:true}).fill(origin);
  await page.getByLabel('I approve exporting cookies', {exact:false}).check();
  await page.getByLabel('PIN or passphrase',{exact:true}).fill('1234');
  await page.getByLabel('Confirm PIN or passphrase',{exact:true}).fill('1234');

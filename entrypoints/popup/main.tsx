@@ -14,6 +14,7 @@ import {
 import { extensionBrowser } from "../../src/platform/browser-api";
 import { copyScreenshotToClipboard } from "../../src/platform/image-clipboard";
 import { openCapturePreview } from "../../src/platform/preview-window";
+import { exportBorrowedSession, requestSessionAccess } from "../../src/session/export";
 import { ensureContentScript } from "../../src/platform/content-injection";
 import { prepareEmbeddedViewerAccess, requestEmbeddedViewerPermission } from "../../src/platform/embedded-frame-capture";
 import { assertSelectionReady, screenshotSaved } from "../../src/platform/screenshot-messages";
@@ -75,6 +76,7 @@ async function currentSite(): Promise<PopupSite> {
   }
   return {
     origin,
+    ...(tab?.id !== undefined ? { tabId: tab.id } : {}),
     access: (await hasOriginAccess(origin)) ? "persistent" : "one-time",
   };
 }
@@ -117,14 +119,8 @@ async function pendingRecipeStatus(tabId?: number): Promise<boolean> {
 
 const services: PopupServices = {
   openPreviewWindow: openCapturePreview,
-  async openBorrowSession() {
-    const tab = await activeTab();
-    const origin = httpOrigin(tab?.url);
-    if (tab?.id === undefined || !origin) throw new Error("Open a website first.");
-    await extensionBrowser.tabs.create({
-      url: extensionBrowser.runtime.getURL("/borrow-session.html") + "?" + new URLSearchParams({tabId:String(tab.id),origin}),
-    });
-  },
+  requestSessionAccess,
+  exportSession: exportBorrowedSession,
   async prepareFullPageAccess(expectedTabId) {
     const tab = await activeTab();
     if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");

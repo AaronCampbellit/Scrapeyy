@@ -64,16 +64,6 @@ body.scrapeyy-popup {
   letter-spacing: -0.02em;
 }
 
-.popup-header-actions {
-  align-items: flex-end;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.popup-header-actions .small-button { white-space: nowrap; }
-
 .popup-header p {
   color: var(--muted);
   font-size: 11px;
@@ -111,7 +101,7 @@ body.scrapeyy-popup {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   padding: 0 5px;
 }
 
@@ -443,10 +433,20 @@ body.scrapeyy-popup {
 }
 
 .settings-field input,
-.settings-field select {
+.settings-field select,
+.settings-field textarea {
   font-size: 11px;
   min-height: 32px;
 }
+
+.session-form { border: 0; display: grid; gap: 12px; margin: 0; min-width: 0; padding: 0; }
+.session-intro, .session-status, .session-warning { font-size: 11px; line-height: 1.45; margin: 0; overflow-wrap: anywhere; }
+.session-approval { align-items: flex-start; display: flex; font-size: 11px; gap: 8px; line-height: 1.45; }
+.session-approval input { accent-color: var(--blue); flex: 0 0 auto; margin-top: 2px; }
+.session-warning { color: var(--amber); }
+.session-status { color: var(--ink-soft); }
+.session-details summary { cursor: pointer; font-size: 11px; font-weight: 700; }
+.borrow-session-view textarea { resize: vertical; width: 100%; }
 
 .settings-save {
   background: var(--blue);

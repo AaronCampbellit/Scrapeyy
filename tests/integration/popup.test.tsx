@@ -14,7 +14,7 @@ import { captionTextKey, videoTextKey } from "../../src/media/video-text";
 import type { VideoInventory } from "../../src/media/videos";
 
 const data: PopupWorkspaceData = {
-  site: { origin: "https://example.test", access: "one-time" },
+  site: { origin: "https://example.test", access: "one-time", tabId: 7 },
   projects: [
     {
       id: "project-1",
@@ -160,6 +160,8 @@ function services(
   overrides: Partial<PopupServices> = {},
 ): PopupServices {
   return {
+    requestSessionAccess: vi.fn().mockResolvedValue(true),
+    exportSession: vi.fn().mockResolvedValue({ cookieCount: 1, storageOriginCount: 1, warnings: [] }),
     load: vi.fn().mockResolvedValue(data),
     startQuickCapture: vi.fn(),
     takeScreenshot: vi.fn().mockResolvedValue(undefined),
@@ -210,13 +212,14 @@ describe("PopupApp", () => {
       kind: "visible" as const, title: "Example page", filename: "example.png", sourceUrl: "https://example.test/",
     } };
     const api = services({
-      openBorrowSession: vi.fn().mockResolvedValue(undefined),
       openPreviewWindow: vi.fn().mockResolvedValue(undefined),
       load: vi.fn().mockResolvedValue({ ...data, runs: [run] }),
     });
     render(<PopupApp services={api} />);
-    await user.click(await screen.findByRole("button", { name: "Borrow session" }));
-    expect(api.openBorrowSession).toHaveBeenCalledOnce();
+    await user.click(await screen.findByRole("tab", { name: "Borrow session" }));
+    expect(screen.getByRole("region", { name: "Borrow session" })).toBeVisible();
+    expect(screen.getByLabelText("File protection")).toHaveValue("encrypted");
+    await user.click(screen.getByRole("tab", { name: "Capture" }));
     expect(screen.getByRole("button", { name: "Scan videos" })).toBeVisible();
     await user.selectOptions(screen.getByRole("combobox", { name: "Save screenshots to" }), "clipboard");
     expect(api.saveSettings).toHaveBeenCalledWith({ ...data.settings, screenshotDestination: "clipboard" });
@@ -456,7 +459,7 @@ describe("PopupApp", () => {
 
     expect(
       screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label")),
-    ).toEqual(["Capture", "Inbox", "Recipes", "SharePoint", "Settings"]);
+    ).toEqual(["Capture", "Inbox", "Recipes", "SharePoint", "Borrow session", "Settings"]);
 
     await user.click(screen.getByRole("tab", { name: "Inbox" }));
     expect(screen.getByLabelText("Selected capture")).toBeVisible();
