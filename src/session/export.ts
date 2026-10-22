@@ -1,5 +1,5 @@
 import { extensionBrowser } from "../platform/browser-api";
-import { blobDataUrl } from "../platform/downloads";
+import { SESSION_DOWNLOAD_ERROR } from "./download";
 import { captureSession } from "./capture";
 import { encodeSession, parseOrigins } from "./format";
 
@@ -32,13 +32,13 @@ export async function exportBorrowedSession(request: SessionExportRequest): Prom
   if (request.passphrase && new TextEncoder().encode(request.passphrase).length > 4096) throw new Error("PIN/passphrase exceeds 4096 UTF-8 bytes.");
   const bundle = await captureSession(origins, request.tabId);
   const text = await encodeSession(bundle, request.protection === "encrypted" ? request.passphrase : undefined);
-  // A data URL remains usable if the popup closes when the browser opens Save As.
-  const url = await blobDataUrl(new Blob([text], { type: "application/json" }));
-  await extensionBrowser.downloads.download({
-    url,
-    filename: `scrapeyy-session-${request.protection === "encrypted" ? "encrypted" : "PLAINTEXT"}-${Date.now()}.json`,
-    saveAs: true,
-    conflictAction: "uniquify",
-  });
+  try {
+    const response = await extensionBrowser.runtime.sendMessage({
+      type: "SCRAPEYY_DOWNLOAD_SESSION", text, protection: request.protection,
+    }) as { ok?: boolean } | undefined;
+    if (response?.ok !== true) throw new Error(SESSION_DOWNLOAD_ERROR);
+  } catch {
+    throw new Error(SESSION_DOWNLOAD_ERROR);
+  }
   return { cookieCount: bundle.cookies.length, storageOriginCount: bundle.storage.length, warnings: bundle.warnings };
 }

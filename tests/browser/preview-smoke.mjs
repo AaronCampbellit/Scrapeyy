@@ -43,6 +43,7 @@ try {
   const sessionDownloads = [];
   await context.exposeFunction("saveSessionDownload", (options) => { sessionDownloads.push(options); return 1; });
   await context.exposeFunction("sendRuntime", (message) => {
+    if (message.type === "SCRAPEYY_DOWNLOAD_SESSION") { sessionDownloads.push(message); return { ok: true }; }
     if (message.type === "SCRAPEYY_EXPORT_RUN") exports.push(message.runId);
     return {};
   });
@@ -168,8 +169,8 @@ try {
   await popup.getByRole("button", { name: "Export borrowed session" }).click();
   await popup.getByRole("status").filter({ hasText: "Download requested" }).waitFor();
   assert.equal(sessionDownloads.length, 1);
-  assert.equal(sessionDownloads[0].saveAs, true);
-  const sessionText = options => Buffer.from(options.url.split(",")[1], "base64").toString("utf8");
+  assert.equal(sessionDownloads[0].protection, "encrypted");
+  const sessionText = options => options.text;
   const borrowed = await decryptSession(sessionText(sessionDownloads[0]), "fixture passphrase");
   assert.equal(borrowed.cookies[0].value, "synthetic-only");
   assert.equal(borrowed.storage[0].localStorage[0].value, "synthetic-storage");

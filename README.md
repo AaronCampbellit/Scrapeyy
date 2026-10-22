@@ -131,7 +131,7 @@ browser copies, and authenticated cross-device sessions remain manual checks.
 
 ## Scope and limitations
 
-This is a development extension, currently **0.1.21**. Captures and configuration
+This is a development extension, currently **0.1.22**. Captures and configuration
 are stored in the browser; explicit exports and configured automatic downloads
 write files to the device. Asset and SharePoint requests can use your existing
 website session. Captured text and images may contain sensitive information, so

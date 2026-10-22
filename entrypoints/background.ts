@@ -1,3 +1,4 @@
+import { handleSessionDownload } from "../src/session/download";
 import type {
   CaptureRun,
   Project,
@@ -731,6 +732,7 @@ export default defineBackground(() => {
     (message: unknown, sender) => {
       if (typeof message !== "object" || message === null) return undefined;
       const value = message as Record<string, unknown>;
+      if (value.type === "SCRAPEYY_DOWNLOAD_SESSION") return handleSessionDownload(value, sender);
       if (value.type === "SCRAPEYY_SCREENSHOT" && typeof value.tabId === "number" &&
           (value.kind === "visible" || value.kind === "full-page")) {
         return saveScreenshot(value.tabId, value.kind);
