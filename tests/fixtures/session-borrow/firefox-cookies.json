@@ -1,0 +1,5 @@
+[
+  {"name":"firefox-unpartitioned","value":"synthetic","domain":".example.test","path":"/orders","hostOnly":false,"secure":true,"httpOnly":true,"sameSite":"lax","session":true,"storeId":"container","partitionKey":null},
+  {"name":"firefox-partitioned","value":"synthetic","domain":".example.test","path":"/orders","hostOnly":false,"secure":true,"httpOnly":true,"sameSite":"lax","session":true,"storeId":"container","partitionKey":{"topLevelSite":"https://shop.example.test"}},
+  {"name":"firefox-empty-partition","value":"synthetic","domain":".example.test","path":"/orders","hostOnly":false,"secure":true,"httpOnly":true,"sameSite":"lax","session":true,"storeId":"container","partitionKey":{}}
+]

@@ -5,7 +5,7 @@ export interface SessionCookie {
   hostOnly: boolean; secure: boolean; httpOnly: boolean;
   sameSite: 'no_restriction' | 'lax' | 'strict' | 'unspecified';
   session: boolean; expirationDate?: number; storeId: string;
-  partitionKey?: object; firstPartyDomain?: string;
+  partitionKey?: object | null; firstPartyDomain?: string;
 }
 export interface SessionBundle {
   format: 'scrapeyy-session'; version: 1; createdAt: string;

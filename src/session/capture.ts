@@ -25,7 +25,10 @@ export async function captureSession(origins: string[], selectedTabId: number): 
     for (const query of queries) {
       const cookies = await browser.cookies.getAll({...query,partitionKey:{},...(import.meta.env.BROWSER === "firefox" ? {firstPartyDomain:null} : {})});
       for (const raw of cookies) {
-        const cookie = raw as SessionCookie;
+        const cookie: SessionCookie = { ...raw };
+        // Firefox uses null for unpartitioned cookies. Canonical exports omit it;
+        // actual partition objects must remain intact for the exclusion below.
+        if (cookie.partitionKey === null) delete cookie.partitionKey;
         if (!cookieMatches(cookie,origins)) continue;
         const id = JSON.stringify([cookie.domain,cookie.path,cookie.name,cookie.storeId,cookie.partitionKey,cookie.firstPartyDomain]);
         if (seen.has(id)) continue; seen.add(id);

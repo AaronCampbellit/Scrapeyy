@@ -30,3 +30,15 @@ it('omits storage when navigation races execution without exporting another orig
  const result=await captureSession([origin],7);
  expect(result.storage).toEqual([]);expect(result.warnings.join()).toContain('Storage unavailable');
 });
+
+it('normalizes Firefox null partition keys without treating actual partition objects as unpartitioned',async()=>{
+ const {default:firefoxCookies}=await import('../fixtures/session-borrow/firefox-cookies.json');
+ api.cookies.getAll.mockResolvedValue(firefoxCookies);
+ const result=await captureSession([origin],7);
+ expect(result.cookies).toHaveLength(1);
+ expect(result.cookies[0]!.name).toBe('firefox-unpartitioned');
+ expect(result.cookies[0]).not.toHaveProperty('partitionKey');
+ expect(result.warnings.join()).toContain('2 partitioned');
+ expect(firefoxCookies[0]!.partitionKey).toBeNull();
+ expect(firefoxCookies[1]!.partitionKey).toEqual({topLevelSite:origin});
+});
