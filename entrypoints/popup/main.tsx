@@ -13,6 +13,7 @@ import {
 } from "../../src/features/popup/PopupApp";
 import { extensionBrowser } from "../../src/platform/browser-api";
 import { copyScreenshotToClipboard } from "../../src/platform/image-clipboard";
+import { openCapturePreview } from "../../src/platform/preview-window";
 import { ensureContentScript } from "../../src/platform/content-injection";
 import { prepareEmbeddedViewerAccess, requestEmbeddedViewerPermission } from "../../src/platform/embedded-frame-capture";
 import { assertSelectionReady, screenshotSaved } from "../../src/platform/screenshot-messages";
@@ -115,6 +116,15 @@ async function pendingRecipeStatus(tabId?: number): Promise<boolean> {
 }
 
 const services: PopupServices = {
+  openPreviewWindow: openCapturePreview,
+  async openBorrowSession() {
+    const tab = await activeTab();
+    const origin = httpOrigin(tab?.url);
+    if (tab?.id === undefined || !origin) throw new Error("Open a website first.");
+    await extensionBrowser.tabs.create({
+      url: extensionBrowser.runtime.getURL("/borrow-session.html") + "?" + new URLSearchParams({tabId:String(tab.id),origin}),
+    });
+  },
   async prepareFullPageAccess(expectedTabId) {
     const tab = await activeTab();
     if (tab?.id === undefined || !httpOrigin(tab.url)) throw new Error("Open a website first.");

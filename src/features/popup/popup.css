@@ -64,6 +64,16 @@ body.scrapeyy-popup {
   letter-spacing: -0.02em;
 }
 
+.popup-header-actions {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.popup-header-actions .small-button { white-space: nowrap; }
+
 .popup-header p {
   color: var(--muted);
   font-size: 11px;
@@ -646,6 +656,8 @@ body.scrapeyy-popup {
 .preview-heading {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   justify-content: space-between;
 }
 

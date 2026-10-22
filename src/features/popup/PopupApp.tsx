@@ -47,6 +47,8 @@ export interface PopupWorkspaceData {
 }
 
 export interface PopupServices {
+  openBorrowSession?(): Promise<void>;
+  openPreviewWindow?(runId: string, preview: PreviewType): Promise<void>;
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
   takeScreenshot(kind: "visible" | "full-page" | "selection", expectedTabId?: number): Promise<ScreenshotResult | void>;
@@ -237,7 +239,12 @@ export function PopupApp({ services }: { services: PopupServices }) {
           <h1>Scrapeyy</h1>
           <p>Local capture studio · {CAPTURE_VERSION}</p>
         </div>
-        <span className="local-badge">Local-only</span>
+        <div className="popup-header-actions">
+          <span className="local-badge">Local-only</span>
+          {services.openBorrowSession ? <button className="small-button" type="button"
+            disabled={loading || busy || data.site?.access === "unavailable"}
+            onClick={() => void perform(services.openBorrowSession!)}>Borrow session</button> : null}
+        </div>
       </header>
 
       <nav className="popup-tabs" role="tablist" aria-label="Scrapeyy sections">
@@ -381,6 +388,8 @@ export function PopupApp({ services }: { services: PopupServices }) {
               data.runs.find((run) => run.id === runId)?.screenshot ? "Screenshot saved to device." : "Export started.")}
             onCopyScreenshot={(runId) => perform(() => services.copyRunScreenshot(runId), COPIED_NOTICE)}
             onLoadScreenshot={services.loadRunScreenshot}
+            onPopOutPreview={services.openPreviewWindow ? (runId, preview) =>
+              perform(() => services.openPreviewWindow!(runId, preview)) : undefined}
             onOpenPreview={(runId, preview) => {
               previewTrigger.current = document.activeElement as HTMLElement;
               setNotice(undefined);

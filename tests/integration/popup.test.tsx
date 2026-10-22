@@ -204,6 +204,32 @@ function services(
 }
 
 describe("PopupApp", () => {
+  it("keeps session borrowing, screenshot clipboard, inline preview and pop-out preview available together", async () => {
+    const user = userEvent.setup();
+    const run = { ...data.runs[0]!, id: "combined", screenshot: {
+      kind: "visible" as const, title: "Example page", filename: "example.png", sourceUrl: "https://example.test/",
+    } };
+    const api = services({
+      openBorrowSession: vi.fn().mockResolvedValue(undefined),
+      openPreviewWindow: vi.fn().mockResolvedValue(undefined),
+      load: vi.fn().mockResolvedValue({ ...data, runs: [run] }),
+    });
+    render(<PopupApp services={api} />);
+    await user.click(await screen.findByRole("button", { name: "Borrow session" }));
+    expect(api.openBorrowSession).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Scan videos" })).toBeVisible();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Save screenshots to" }), "clipboard");
+    expect(api.saveSettings).toHaveBeenCalledWith({ ...data.settings, screenshotDestination: "clipboard" });
+    await user.click(screen.getByRole("tab", { name: "Inbox" }));
+    await user.click(screen.getByRole("button", { name: "Pop out ↗" }));
+    expect(api.openPreviewWindow).toHaveBeenCalledWith("combined", "screenshot");
+    await user.click(screen.getByRole("button", { name: "Expand preview" }));
+    expect(await screen.findByRole("region", { name: "Expanded capture preview" })).toBeVisible();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Copy image" }));
+    expect(api.copyRunScreenshot).toHaveBeenCalledWith("combined");
+  });
+
   it("uses two fresh Allow clicks and calls the permission API inside each click before capturing", async () => {
     const user = userEvent.setup();
     const discovery: EmbeddedViewerPermission = { kind: "discovery", tabId: 7 };

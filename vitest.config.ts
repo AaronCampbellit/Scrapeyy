@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   cacheDir: "work/vitest-cache",
@@ -6,5 +6,6 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     clearMocks: true,
+    exclude: [...configDefaults.exclude, "work/**"],
   },
 });

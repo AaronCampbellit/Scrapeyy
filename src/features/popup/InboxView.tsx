@@ -14,6 +14,7 @@ interface InboxViewProps {
   onCopyScreenshot(runId: string): void | Promise<void>;
   onLoadScreenshot(runId: string): Promise<string | undefined>;
   onOpenPreview(runId: string, preview: PreviewType): void | Promise<void>;
+  onPopOutPreview?: ((runId: string, preview: PreviewType) => void | Promise<void>) | undefined;
   onPin(runId: string, pinned: boolean): void | Promise<void>;
   onRetry(recipeId: string): void | Promise<void>;
 }
@@ -28,6 +29,7 @@ export function InboxView({
   onCopyScreenshot,
   onLoadScreenshot,
   onOpenPreview,
+  onPopOutPreview,
   onPin,
   onRetry,
 }: InboxViewProps) {
@@ -164,6 +166,10 @@ export function InboxView({
                 </div>
               ) : null}
               <div className="preview-heading">
+                {onPopOutPreview ? <button className="small-button" type="button"
+                  disabled={disabled} onClick={() => void onPopOutPreview(selected.id, preview)}>
+                  Pop out ↗
+                </button> : null}
                 <h3>Preview</h3>
                 <button className="small-button preview-expand" type="button"
                   aria-label="Expand preview" disabled={disabled}
