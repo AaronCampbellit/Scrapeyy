@@ -1,0 +1,1 @@
+Synthetic public interoperability fixture. Encryption PIN: `1234`. This contains no real account/session data. `encrypted.json` authenticates and decrypts to `plaintext.json`; generated using `src/session/format.ts`.

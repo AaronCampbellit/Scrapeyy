@@ -46,11 +46,11 @@ export default defineConfig({
       ...(manifestVersion === 2
         ? {
             optional_permissions:
-              optionalOrigins as unknown as NonNullable<
+              ["cookies", ...optionalOrigins] as unknown as NonNullable<
                 UserManifest["optional_permissions"]
               >,
           }
-        : { optional_host_permissions: optionalOrigins }),
+        : { optional_permissions: ["cookies"], optional_host_permissions: optionalOrigins }),
       browser_specific_settings: {
         gecko: {
           id: "scrapeyy@local",
