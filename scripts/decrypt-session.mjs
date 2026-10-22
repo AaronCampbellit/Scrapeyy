@@ -13,6 +13,7 @@ function from64(value, length) {
   return bytes;
 }
 export async function decryptSession(text, pin) {
+  if (typeof pin !== 'string' || Buffer.byteLength(pin, 'utf8') > 4096) throw new Error('PIN/passphrase exceeds 4096 UTF-8 bytes.');
   if (Buffer.byteLength(text) > MAX * 1.4) throw new Error('Export is too large.');
   const envelope = JSON.parse(text);
   if (envelope.format !== 'scrapeyy-session-encrypted' || envelope.version !== 1 || envelope.kdf?.name !== 'PBKDF2' || envelope.kdf.hash !== 'SHA-256' || !Number.isInteger(envelope.kdf.iterations) || envelope.kdf.iterations < 100000 || envelope.kdf.iterations > 1000000 || envelope.cipher?.name !== 'AES-GCM' || envelope.cipher.tagLength !== 128) throw new Error('Unsupported encryption envelope.');

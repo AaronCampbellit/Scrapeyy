@@ -39,5 +39,7 @@ describe('portable session format',()=>{
  it('requires explicit plaintext selection and retains every cookie attribute',async()=>{
   expect(JSON.parse(await encodeSession(bundle))).toEqual(bundle);
   await expect(encodeSession(bundle,'')).rejects.toThrow('Enter');
+  await expect(encodeSession(bundle,'x'.repeat(4097))).rejects.toThrow('4096');
+  await expect(decryptSession('{}','x'.repeat(4097))).rejects.toThrow('4096');
  });
 });
