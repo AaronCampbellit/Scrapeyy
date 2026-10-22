@@ -19,7 +19,7 @@ The inventory also includes WXT's tooling, Vite, TypeScript, Vitest, Babel, plat
 
 ## Publication assets and provenance
 
-The current icon is original geometric SVG artwork rendered locally. Three unreferenced old concept images and unverified icon rasters were removed or replaced. See [asset provenance](docs/ASSET_PROVENANCE.md).
+The original paintbrush/document icons were restored at the owner's explicit request in 0.1.19. The publication SVG remains an alternate design. Three unreferenced concept images remain private. See [asset provenance](docs/ASSET_PROVENANCE.md) for the available records and their limits.
 
 The implementation screenshots in `docs/screenshots/` are documented local captures of synthetic content in `docs/screenshots/README.md`. Underlying third-party code/assets/marks retain their own rights. Scraping/capturing an external website through Scrapeyy does not transfer the website's copyright or grant permission to republish its content.
 
