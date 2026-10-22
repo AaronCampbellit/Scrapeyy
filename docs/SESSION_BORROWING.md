@@ -35,3 +35,14 @@ node scripts/decrypt-session.mjs encrypted.json session.json
 It prompts privately for the secret, authenticates the file, and exclusively creates the output with owner-only POSIX permissions. It will not overwrite an existing file. On Windows, place it in a directory with appropriate ACLs; POSIX mode is not a Windows access-control guarantee. This utility decrypts only; the destination importer must validate every origin/cookie and enforce its own allowed-site policy before applying the state. For Playwright, preserve host-only cookies via an exact-host URL plus the original path, map expiration seconds only for persistent cookies, and load sessionStorage before the target navigation (Playwright storageState does not include sessionStorage). Do not send secrets to unrelated domains or log their contents. Delete plaintext after use. First perform a read-only login/account check on the destination; a parseable bundle does not prove the session is valid.
 
 Browser API references: [Chrome cookies](https://developer.chrome.com/docs/extensions/reference/api/cookies), [Firefox cookies.getAll](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/cookies/getAll).
+
+## Manual browser acceptance
+
+The automated suite covers encryption/decryption, tamper rejection, scoped cookie-store selection, partition exclusion, and navigation races. Before relying on a real session, load the packaged build in each target browser and check:
+
+1. In a synthetic signed-in site, include an HttpOnly cookie, host-only cookie, parent-domain cookie on the current non-root path, localStorage, and sessionStorage. Open a second origin and a second container/profile with different synthetic values.
+2. Select only the intended origins. Cancel the optional permission prompt and confirm no download. Retry, grant it, and export with a PIN. Close the source tab or navigate it to an unselected origin and confirm capture fails.
+3. Decrypt locally and verify only the selected store and origins were captured; preserve cookie attributes and verify partition exclusions/omitted-storage warnings. Repeat with plaintext explicitly selected. Check that ordinary inbox/configuration exports contain none of the synthetic session values.
+4. Import into a disposable destination browser context and verify the expected account through a read-only page. Confirm that expiry and device binding are not bypassed. Repeat the extension permission and Save As flow on Windows Chrome and Firefox.
+
+Real Windows/browser permission dialogs and authenticated cross-device sessions have not been validated by the automated tests.
