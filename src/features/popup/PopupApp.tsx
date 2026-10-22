@@ -238,7 +238,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
     >
       <header className="popup-header">
         <div className="brand-mark" aria-hidden="true">
-          <img alt="" src="/icon/32.png" />
+          <img alt="" src="/icon/96.png" width="34" height="34" />
         </div>
         <div>
           <h1>Scrapeyy</h1>

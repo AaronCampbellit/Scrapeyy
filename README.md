@@ -1,5 +1,7 @@
 # Scrapeyy
 
+<img src="public/icon/128.png" width="80" height="80" alt="Scrapeyy scraper icon">
+
 **Turn a page selection into structured data and a design reference.**
 
 Scrapeyy is a local-first browser extension built with TypeScript, React, and WXT.
@@ -17,7 +19,7 @@ builds share the same capture engine.
   <tr><td align="center">Choose a capture tool</td><td align="center">Preview, pin, or export the result</td></tr>
 </table>
 
-Actual extension UI with synthetic local data. A [separate preview window](docs/screenshots/capture-preview.png)
+Current extension pages rendered with synthetic browser API fixtures. A [separate preview window](docs/screenshots/capture-preview.png)
 keeps long captures readable after the toolbar popup closes.
 [Screenshot provenance and demo page](docs/screenshots/README.md).
 
@@ -129,7 +131,7 @@ browser copies, and authenticated cross-device sessions remain manual checks.
 
 ## Scope and limitations
 
-This is a development extension, currently **0.1.20**. Captures and configuration
+This is a development extension, currently **0.1.21**. Captures and configuration
 are stored in the browser; explicit exports and configured automatic downloads
 write files to the device. Asset and SharePoint requests can use your existing
 website session. Captured text and images may contain sensitive information, so

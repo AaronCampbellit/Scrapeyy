@@ -19,7 +19,7 @@ The inventory also includes WXT's tooling, Vite, TypeScript, Vitest, Babel, plat
 
 ## Publication assets and provenance
 
-The original paintbrush/document icons were restored at the owner's explicit request in 0.1.19. The publication SVG remains an alternate design. Three unreferenced concept images remain private. See [asset provenance](docs/ASSET_PROVENANCE.md) for the available records and their limits.
+The scraper icon introduced in 0.1.21 was generated with the built-in OpenAI image generation tool at the owner's request. Its master, complete prompt, and deterministic resize instructions are recorded in [branding provenance](docs/branding/README.md). Earlier designs remain historical archives. See [asset provenance](docs/ASSET_PROVENANCE.md) for the available records.
 
 The implementation screenshots in `docs/screenshots/` are documented local captures of synthetic content in `docs/screenshots/README.md`. Underlying third-party code/assets/marks retain their own rights. Scraping/capturing an external website through Scrapeyy does not transfer the website's copyright or grant permission to republish its content.
 

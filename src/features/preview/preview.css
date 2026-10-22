@@ -31,6 +31,13 @@
   padding: 18px 24px;
 }
 
+.preview-brand-icon {
+  display: block;
+  flex: 0 0 auto;
+  height: 40px;
+  width: 40px;
+}
+
 .preview-title {
   flex: 1;
   min-width: 0;
@@ -165,6 +172,9 @@
   }
   .preview-title {
     flex-basis: 100%;
+  }
+  .preview-brand-icon + .preview-title {
+    flex-basis: calc(100% - 52px);
   }
   .preview-title h1 {
     font-size: 17px;

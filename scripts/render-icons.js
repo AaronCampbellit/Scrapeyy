@@ -1,21 +1,33 @@
-// Run from the repository root with the installed Playwright CLI:
-// playwright-cli -s=scrapeyy-icons open about:blank
-// playwright-cli -s=scrapeyy-icons run-code --filename=scripts/render-icons.js
-// playwright-cli -s=scrapeyy-icons close
-// The inline vector below is the alternate public/icon/source.svg drawing.
-// The original active public/icon/*.png files are intentionally preserved.
-async (page) => {
-  await (await import('node:fs/promises')).mkdir('work/alternate-icons', { recursive: true });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="28" fill="#14243d"/>
-  <path d="M32 26h49l16 16v59H32z" fill="#eef6ff"/>
-  <path d="M81 26v16h16" fill="#aac7e8"/>
-  <path d="M44 54h39M44 67h39M44 80h24" stroke="#4879b6" stroke-width="6" stroke-linecap="round"/>
-  <path d="m76 75 26 10-12 7-6 13z" fill="#ffb154" stroke="#14243d" stroke-width="3" stroke-linejoin="round"/>
-</svg>`;
-  await page.setContent(`<style>html,body{margin:0;padding:0;background:transparent}svg{width:100vw;height:100vh;display:block}</style>${svg}`);
+// Run with Node and Playwright installed, or set PLAYWRIGHT_MODULE to its module URL.
+// Every active icon is derived from the same approved master, without redrawing it.
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
+const master = new URL("../docs/branding/scrapeyy-icon.png", import.meta.url);
+const output = new URL("../public/icon/", import.meta.url);
+await mkdir(output, { recursive: true });
+const dataUrl = `data:image/png;base64,${(await readFile(master)).toString("base64")}`;
+const browser = await chromium.launch({ headless: true });
+try {
+  const page = await browser.newPage();
   for (const size of [16, 32, 48, 96, 128]) {
-    await page.setViewportSize({ width: size, height: size });
-    await page.screenshot({ path: `work/alternate-icons/${size}.png`, omitBackground: true });
+    const png = await page.evaluate(async ({ dataUrl, size }) => {
+      const image = new Image();
+      image.src = dataUrl;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const context = canvas.getContext("2d");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(image, 0, 0, size, size);
+      return canvas.toDataURL("image/png").split(",")[1];
+    }, { dataUrl, size });
+    const target = new URL(`${size}.png`, output);
+    await writeFile(target, Buffer.from(png, "base64"));
+    console.log(fileURLToPath(target));
   }
+} finally {
+  await browser.close();
 }

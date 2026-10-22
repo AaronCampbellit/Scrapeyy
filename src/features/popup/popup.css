@@ -71,9 +71,6 @@ body.scrapeyy-popup {
 }
 
 .brand-mark {
-  background: var(--blue-soft);
-  border-radius: 9px;
-  color: #fff;
   display: grid;
   flex: 0 0 auto;
   height: 34px;
@@ -83,8 +80,8 @@ body.scrapeyy-popup {
 
 .brand-mark img {
   display: block;
-  height: 28px;
-  width: 28px;
+  height: 34px;
+  width: 34px;
 }
 
 .local-badge {

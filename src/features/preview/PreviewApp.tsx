@@ -166,6 +166,7 @@ export function PreviewApp({
       aria-busy={loading}
     >
       <header className="preview-header">
+        {!embedded ? <img className="preview-brand-icon" src="/icon/96.png" alt="Scrapeyy" width="40" height="40" /> : null}
         <div className="preview-title">
           <span className="preview-eyebrow">Scrapeyy · Inbox preview</span>
           <h1>{capture?.title ?? "Capture preview"}</h1>
