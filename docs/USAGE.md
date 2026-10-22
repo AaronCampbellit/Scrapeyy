@@ -27,7 +27,9 @@ until the user exports them.
 - Deterministic JSON, CSV, and design-reference ZIP exports.
 - Optional per-origin permission for scheduled captures.
 
-Scrapeyy does not export browser cookies or browser storage, and design exports
+The explicit **Borrow session** workflow can export scoped browser cookies and storage
+with optional PIN/passphrase encryption; see [session borrowing](SESSION_BORROWING.md).
+Ordinary captures and design exports do not include cookie/storage exports. Design exports
 remove executable page scripts. Asset requests can use the existing browser
 session. Captured text and images can still contain sensitive information; review
 exports before sharing them. It does not bypass authentication, CAPTCHAs, or

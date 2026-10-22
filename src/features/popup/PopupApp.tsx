@@ -43,6 +43,7 @@ export interface PopupWorkspaceData {
 }
 
 export interface PopupServices {
+  openBorrowSession?(): Promise<void>;
   load(): Promise<PopupWorkspaceData>;
   startQuickCapture(): Promise<void>;
   takeScreenshot(kind: "visible" | "full-page" | "selection"): Promise<ScreenshotResult | void>;
@@ -184,6 +185,8 @@ export function PopupApp({ services }: { services: PopupServices }) {
         </div>
         <span className="local-badge">Local-only</span>
       </header>
+
+      {services.openBorrowSession ? <button type="button" disabled={loading || data.site?.access === "unavailable"} onClick={() => void perform(services.openBorrowSession!)}>Borrow session</button> : null}
 
       <nav className="popup-tabs" role="tablist" aria-label="Scrapeyy sections">
         {popupTabs.map(({ id, label }) => (

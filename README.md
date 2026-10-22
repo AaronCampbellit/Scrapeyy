@@ -130,3 +130,11 @@ exposed direct file; streaming playlists and blob-backed players remain metadata
 ## License
 
 Aaron Campbell reserves all rights to the original material he owns; see [LICENSE](LICENSE). Third-party code, dependencies, and assets retain their own licenses and notices. See [third-party notices](THIRD_PARTY_NOTICES.md) for reviewed components and outstanding publication or distribution requirements.
+
+### Borrow a signed-in session
+
+**Borrow session** exports explicitly approved sites' cookies and browser storage
+for other VMs/projects. Optional PIN/passphrase encryption is enabled by default;
+plaintext requires an explicit selection. See [usage, format, and standalone
+decryption](docs/SESSION_BORROWING.md). This separate workflow requests optional
+cookie access and does not save account secrets in ordinary captures or backups.
