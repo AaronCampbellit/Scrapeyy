@@ -1,4 +1,4 @@
-# Reviewer source and testing instructions — 0.1.23
+# Reviewer source and testing instructions — 0.1.24
 
 ## Reproduce the submitted code
 
@@ -16,12 +16,12 @@ WXT outputs `.output/firefox-mv2` and `.output/chrome-mv3`. The submitted Firefo
 
 ## Review notes
 
-- Version 0.1.23 disables private-window operation and requires Firefox 140+ (Android manifest minimum 142; mobile behavior is not validated).
+- Version 0.1.24 disables private-window operation and requires Firefox 140+ (Android manifest minimum 142; mobile behavior is not validated).
 - Permissions: activeTab/scripting for deliberate page capture; storage for local state; downloads for local exports; alarms for opt-in schedules; clipboardWrite for explicit copy actions. Optional cookies/site access is for Borrow session; optional webNavigation discovers embedded frames for requested screenshots.
 - `docs/HTTP_REQUEST_AUDIT.md` maps all request paths and HTTP preservation choices. No application code is fetched for execution. No page CSP/security headers are relaxed.
 - `docs/PRIVACY.md` describes local data handling, website requests, scheduled browsing and optional session export. No remote backup/telemetry endpoint is implemented.
-- Mozilla validator warnings from React's innerHTML implementation and DOMPurify internals originate in unmodified npm release libraries. Application `src/design/snapshot.ts` assigns only the output of `sanitizeElement` (DOMPurify) to an inert template. See sanitization tests.
-- JSZip's unmodified `setimmediate` dependency contains a legacy Function-constructor branch for string callbacks. The inspected JSZip call uses a function; Scrapeyy does not supply string callbacks, enable unsafe-eval, or modify this library. Provide source for reviewer assessment; do not suppress warnings or assert automatic approval.
+- `npm ci` applies reviewed, hash-pinned dependency restrictions using `scripts/harden-dependencies.mjs`. Builds/tests verify them again. See `docs/DEPENDENCY_HARDENING.md` and the exact before/after patch manifest. React DOM, DOMPurify and JSZip/setimmediate are locally modified; no warning suppression or dynamic property-name evasion is used.
+- Snapshot capture consumes DOMPurify's sanitized DocumentFragment directly. React raw-HTML props and string scheduler callbacks are rejected; DOMPurify throws if its normal parser is unavailable. The Firefox package validates with zero warnings/errors; this does not constitute Mozilla approval.
 
 ## Functional checks
 

@@ -131,7 +131,7 @@ browser copies, and authenticated cross-device sessions remain manual checks.
 
 ## Scope and limitations
 
-This is a development extension, currently **0.1.23**. Captures and configuration
+This is a development extension, currently **0.1.24**. Captures and configuration
 are stored in the browser; explicit exports and configured automatic downloads
 write files to the device. HTTPS asset and SharePoint requests can use your existing
 website session. Private windows are not supported. HTTP pages still support
@@ -164,3 +164,5 @@ for other VMs/projects. Optional PIN/passphrase encryption is enabled by default
 plaintext requires an explicit selection. See [usage, format, and standalone
 decryption](docs/SESSION_BORROWING.md). This separate workflow requests optional
 cookie access and does not save account secrets in ordinary captures or backups.
+
+Dependency restrictions and regression limits: [hardening notes](docs/DEPENDENCY_HARDENING.md).

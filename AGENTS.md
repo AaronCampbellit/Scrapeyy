@@ -50,3 +50,5 @@ For documentation-only changes, do not rebuild or reload unchanged extension cod
 - Preserve extraction and screenshots on HTTP pages; keep optional HTTP host permissions for explicit captures/recipes. Follow `docs/HTTP_REQUEST_AUDIT.md`: follow-up asset/media requests use HTTPS without insecure redirects; HTTP upgrades omit credentials. Preserve references, loaded pixels/cues and visible warnings when originals cannot be retrieved.
 - Keep private-window operation disabled and do not reuse private tabs for recipes.
 - When dependencies or data flows change, update privacy/reviewer documentation, license records and meaningful transport regression tests. Package matching reviewer sources; do not claim Mozilla approval or installed-browser verification based on lint/build success.
+
+- Dependency hardening is hash-pinned in `scripts/dependency-hardening.json`; run the verifier before programmatic builds too. Do not suppress lint warnings or bypass hash mismatches when updating dependencies. Re-review patches and regression limits in `docs/DEPENDENCY_HARDENING.md`.

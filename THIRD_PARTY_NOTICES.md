@@ -329,3 +329,7 @@ The last column links preserved texts. The lock's dev flag describes installatio
 WXT’s `build:done` hook copies the collected legal documents to `legal/` for Chrome and Firefox builds, including the extension ZIP produced by `wxt zip`. Preserve that directory with the artifact. The inventory conservatively includes build-tool notices too; inclusion is not a claim that every listed package is shipped. DOMPurify uses its Apache-2.0 alternative and JSZip its MIT alternative.
 
 `stackback@0.0.2` and `@napi-rs/lzma-linux-x64-gnu@1.5.1` declare MIT in their npm metadata, but their pinned upstream sources supply no full grant text. They run in the build/test toolchain and are excluded from extension code and source bundles as installed dependencies. This is not a license pack for redistributing those tool binaries. The manifest records the verified revisions and this remaining upstream documentation limitation.
+
+## Local modifications in 0.1.24
+
+React DOM 19.2.8, DOMPurify 3.4.17, setimmediate 1.0.5 and the setimmediate copy bundled in JSZip 3.10.1 carry local restrictions. These distributions are not unmodified upstream builds. Original license/copyright notices remain intact. Exact patches and original/result SHA-256 hashes are in `scripts/dependency-hardening.json`; `scripts/harden-dependencies.mjs` applies them reproducibly. See `docs/DEPENDENCY_HARDENING.md` for behavior changes and maintenance requirements. JSZip's browser entry uses its readable distribution before the normal production bundler minifies it.

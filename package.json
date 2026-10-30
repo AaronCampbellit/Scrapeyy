@@ -1,6 +1,6 @@
 {
   "name": "scrapeyy",
-  "version": "0.1.23",
+  "version": "0.1.24",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,14 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "fixtures": "vite --config tests/fixtures/vite.config.ts",
-    "postinstall": "wxt prepare"
+    "postinstall": "node scripts/harden-dependencies.mjs && wxt prepare",
+    "pretest": "node scripts/harden-dependencies.mjs",
+    "prebuild": "node scripts/harden-dependencies.mjs",
+    "prebuild:firefox": "node scripts/harden-dependencies.mjs",
+    "predev": "node scripts/harden-dependencies.mjs",
+    "predev:firefox": "node scripts/harden-dependencies.mjs",
+    "prezip": "node scripts/harden-dependencies.mjs",
+    "prezip:firefox": "node scripts/harden-dependencies.mjs"
   },
   "dependencies": {
     "@wxt-dev/module-react": "1.2.2",
