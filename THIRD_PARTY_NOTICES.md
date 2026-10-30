@@ -6,7 +6,7 @@ Original Scrapeyy software is separate from the libraries, tooling and assets li
 
 Source imports confirm React/React DOM, DOMPurify and JSZip in the extension. WXT is a build tool and also provides imported browser/shadow-root helpers. Runtime imports include `wxt/browser` → `@wxt-dev/browser` and `wxt/utils/content-script-ui/shadow-root` → `@webext-core/isolated-element`. Other WXT/build dependencies should not automatically be described as shipped application code just because the lockfile marks them non-dev.
 
-- **DOMPurify 3.4.16:** Apache-2.0 is the selected option from `(MPL-2.0 OR Apache-2.0)`. Preserve the Apache text and the Cure53/contributor copyright notice from `dompurify/dist/purify.es.mjs`. Source: [Cure53 DOMPurify](https://github.com/cure53/DOMPurify).
+- **DOMPurify 3.4.17:** Apache-2.0 is the selected option from `(MPL-2.0 OR Apache-2.0)`. Preserve the Apache text and the Cure53/contributor copyright notice from `dompurify/dist/purify.es.mjs`. Source: [Cure53 DOMPurify](https://github.com/cure53/DOMPurify).
 - **JSZip 3.10.1:** MIT is the selected option from `(MIT OR GPL-3.0-or-later)`. Its preserved MIT section contains copyright 2009–2016 Stuart Knightley, David Duponchel, Franz Buchinger and António Afonso. See the [release license](https://github.com/Stuk/jszip/blob/v3.10.1/LICENSE.markdown).
 - **pako:** Both the root MIT text and `lib/zlib/README` zlib notices are preserved. The latter credits Jean-loup Gailly, Mark Adler, Vitaly Puzrin and Andrey Tupitsin. A rights-reserved statement for Scrapeyy does not claim their code.
 - **React and React DOM:** Preserve their MIT copyright/license with bundled portions. The inventory includes their exact installed versions and texts.
@@ -23,6 +23,10 @@ The scraper icon introduced in 0.1.21 was generated with the built-in OpenAI ima
 
 The implementation screenshots in `docs/screenshots/` are documented local captures of synthetic content in `docs/screenshots/README.md`. Underlying third-party code/assets/marks retain their own rights. Scraping/capturing an external website through Scrapeyy does not transfer the website's copyright or grant permission to republish its content.
 
+
+## 0.1.23 dependency refresh
+
+On 2026-10-30 the lockfile and installed license/copyright texts were rechecked for these updated packages: @vitest/expect 4.1.11 → 4.1.12, @vitest/mocker 4.1.11 → 4.1.12, @vitest/pretty-format 4.1.11 → 4.1.12, @vitest/runner 4.1.11 → 4.1.12, @vitest/snapshot 4.1.11 → 4.1.12, @vitest/spy 4.1.11 → 4.1.12, @vitest/utils 4.1.11 → 4.1.12, dompurify 3.4.16 → 3.4.17, undici 8.11.2 → 8.12.3, vite 7.3.6 → 7.3.7, vitest 4.1.11 → 4.1.12. Existing inventory limitations below still apply.
 
 ## Inventory limits
 
@@ -110,13 +114,13 @@ The last column links preserved texts. The lock's dev flag describes installatio
 | `@types/trusted-types` | `2.0.7` | MIT | declared non-dev | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) · [text 1](third-party-licenses/texts/c2cfccb812fe482101a8--LICENSE) |
 | `@typescript/typescript-linux-x64` | `7.0.2` | Apache-2.0 | declared non-dev | [source](https://github.com/microsoft/TypeScript) · [text 1](third-party-licenses/texts/a7d00bfd54525bc694b6--LICENSE), [text 2](third-party-licenses/texts/f5c708b59114507b8b27--NOTICE.txt) |
 | `@vitejs/plugin-react` | `5.2.0` | MIT | declared non-dev | [source](https://github.com/vitejs/vite-plugin-react) · [text 1](third-party-licenses/texts/29b68325fe026047d13e--LICENSE) |
-| `@vitest/expect` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
-| `@vitest/mocker` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
-| `@vitest/pretty-format` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
-| `@vitest/runner` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
-| `@vitest/snapshot` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
-| `@vitest/spy` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
-| `@vitest/utils` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
+| `@vitest/expect` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
+| `@vitest/mocker` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
+| `@vitest/pretty-format` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
+| `@vitest/runner` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
+| `@vitest/snapshot` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
+| `@vitest/spy` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
+| `@vitest/utils` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE) |
 | `@webext-core/fake-browser` | `2.0.1` | MIT | declared non-dev | [source](https://github.com/aklinker1/webext-core) · [text 1](third-party-licenses/texts/3ecd2df3daf4e8ad35ab---webext-core__fake-browser-2.0.1-LICENSE) |
 | `@webext-core/isolated-element` | `3.0.0` | MIT | declared non-dev | [source](https://github.com/aklinker1/webext-core) · [text 1](third-party-licenses/texts/3ecd2df3daf4e8ad35ab---webext-core__isolated-element-3.0.0-LICENSE) |
 | `@webext-core/match-patterns` | `2.0.0` | MIT | declared non-dev | [source](https://github.com/aklinker1/webext-core) · [text 1](third-party-licenses/texts/3ecd2df3daf4e8ad35ab---webext-core__match-patterns-2.0.0-LICENSE) |
@@ -163,7 +167,7 @@ The last column links preserved texts. The lock's dev flag describes installatio
 | `dom-serializer` | `3.1.1` | MIT | declared non-dev | [source](https://github.com/cheeriojs/dom-serializer) · [text 1](third-party-licenses/texts/fd495b1bdd024995c6b3--LICENSE) |
 | `domelementtype` | `3.0.0` | BSD-2-Clause | declared non-dev | [source](https://github.com/fb55/domelementtype) · [text 1](third-party-licenses/texts/cb992345949ccd6e8394--LICENSE) |
 | `domhandler` | `6.0.1` | BSD-2-Clause | declared non-dev | [source](https://github.com/fb55/domhandler) · [text 1](third-party-licenses/texts/cb992345949ccd6e8394--LICENSE) |
-| `dompurify` | `3.4.16` | Apache-2.0 (selected alternative) | declared non-dev | [source](https://github.com/cure53/DOMPurify) · [text 1](third-party-licenses/texts/cfc7749b96f63bd31c3c--LICENSE), [text 2](third-party-licenses/texts/eb5c0821d669f781f7f6--purify.es.mjs) |
+| `dompurify` | `3.4.17` | Apache-2.0 (selected alternative) | declared non-dev | [source](https://github.com/cure53/DOMPurify) · [text 1](third-party-licenses/texts/cfc7749b96f63bd31c3c--LICENSE), [text 2](third-party-licenses/texts/f8373e211651504bdcf2--purify.es.mjs) |
 | `domutils` | `4.0.2` | BSD-2-Clause | declared non-dev | [source](https://github.com/fb55/domutils) · [text 1](third-party-licenses/texts/cb992345949ccd6e8394--LICENSE) |
 | `dotenv` | `17.4.2` | BSD-2-Clause | declared non-dev | [source](https://github.com/motdotla/dotenv) · [text 1](third-party-licenses/texts/74b629b24865e1e83c52--LICENSE) |
 | `dotenv-expand` | `13.0.0` | BSD-2-Clause | declared non-dev | [source](https://github.com/motdotla/dotenv-expand) · [text 1](third-party-licenses/texts/3726b9470c3a6b54e1eb--LICENSE) |
@@ -292,7 +296,7 @@ The last column links preserved texts. The lock's dev flag describes installatio
 | `typescript` | `7.0.2` | Apache-2.0 | declared non-dev | [source](https://github.com/microsoft/TypeScript) · [text 1](third-party-licenses/texts/a7d00bfd54525bc694b6--LICENSE), [text 2](third-party-licenses/texts/f5c708b59114507b8b27--NOTICE.txt) |
 | `ufo` | `1.6.4` | MIT | declared non-dev | [source](https://github.com/unjs/ufo) · [text 1](third-party-licenses/texts/46231df5a7733c3f52f1--LICENSE) |
 | `uhyphen` | `0.2.0` | ISC | declared non-dev | [source](https://github.com/WebReflection/uhyphen) · [text 1](third-party-licenses/texts/2b0748436e16684ec912--LICENSE) |
-| `undici` | `8.11.2` | MIT | dev/build | [source](https://github.com/nodejs/undici) · [text 1](third-party-licenses/texts/a6db8096b2707bc0102d--LICENSE) |
+| `undici` | `8.12.3` | MIT | dev/build | [source](https://github.com/nodejs/undici) · [text 1](third-party-licenses/texts/a6db8096b2707bc0102d--LICENSE) |
 | `undici-types` | `7.18.2` | MIT | declared non-dev | [source](https://github.com/nodejs/undici) · [text 1](third-party-licenses/texts/a6db8096b2707bc0102d--LICENSE) |
 | `unimport` | `6.4.0` | MIT | declared non-dev | [source](https://github.com/unjs/unimport) · [text 1](third-party-licenses/texts/5af3c68995307360b313--LICENSE) |
 | `magic-string` | `1.1.0` | MIT | declared non-dev | [source](https://github.com/Rich-Harris/magic-string) · [text 1](third-party-licenses/texts/1cbe51b907662f6cb149--LICENSE) |
@@ -300,8 +304,8 @@ The last column links preserved texts. The lock's dev flag describes installatio
 | `unplugin-utils` | `0.3.2` | MIT | declared non-dev | [source](https://github.com/sxzz/unplugin-utils) · [text 1](third-party-licenses/texts/fdb4c7395791e3ba534b--LICENSE) |
 | `update-browserslist-db` | `1.2.3` | MIT | declared non-dev | [source](https://github.com/browserslist/update-db) · [text 1](third-party-licenses/texts/c414dde36704bd9c8a76--LICENSE) |
 | `util-deprecate` | `1.0.2` | MIT | declared non-dev | [source](https://github.com/TooTallNate/util-deprecate) · [text 1](third-party-licenses/texts/0154425673db15cdfa80--LICENSE) |
-| `vite` | `7.3.6` | MIT | declared non-dev | [source](https://github.com/vitejs/vite) · [text 1](third-party-licenses/texts/a77a1c089806b39ad339--LICENSE.md) |
-| `vitest` | `4.1.11` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/881d660c26831481b697--LICENSE.md) |
+| `vite` | `7.3.7` | MIT | declared non-dev | [source](https://github.com/vitejs/vite) · [text 1](third-party-licenses/texts/a77a1c089806b39ad339--LICENSE.md) |
+| `vitest` | `4.1.12` | MIT | dev/build | [source](https://github.com/vitest-dev/vitest) · [text 1](third-party-licenses/texts/881d660c26831481b697--LICENSE.md) |
 | `w3c-xmlserializer` | `5.0.0` | MIT | dev/build | [source](https://github.com/jsdom/w3c-xmlserializer) · [text 1](third-party-licenses/texts/ab654de803cdaa9e2819--LICENSE.md) |
 | `webidl-conversions` | `8.0.1` | BSD-2-Clause | dev/build | [source](https://github.com/jsdom/webidl-conversions) · [text 1](third-party-licenses/texts/a889cc4dbee2ae172c17--LICENSE.md) |
 | `webpack-virtual-modules` | `0.6.2` | MIT | declared non-dev | [source](https://github.com/sysgears/webpack-virtual-modules) · [text 1](third-party-licenses/texts/aa523c5b0d9c02231b38--LICENSE) |

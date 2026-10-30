@@ -1454,14 +1454,14 @@
     {
       "component_root": ".",
       "package": "@vitest/expect",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/@vitest/expect",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/@vitest/expect/-/expect-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/@vitest/expect/-/expect-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -1470,19 +1470,20 @@
           "copied_text": "third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE",
           "original_package_file": "node_modules/@vitest/expect/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
       "package": "@vitest/mocker",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/@vitest/mocker",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/@vitest/mocker/-/mocker-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/@vitest/mocker/-/mocker-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -1491,19 +1492,20 @@
           "copied_text": "third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE",
           "original_package_file": "node_modules/@vitest/mocker/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
       "package": "@vitest/pretty-format",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/@vitest/pretty-format",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/@vitest/pretty-format/-/pretty-format-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/@vitest/pretty-format/-/pretty-format-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -1512,19 +1514,20 @@
           "copied_text": "third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE",
           "original_package_file": "node_modules/@vitest/pretty-format/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
       "package": "@vitest/runner",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/@vitest/runner",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/@vitest/runner/-/runner-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/@vitest/runner/-/runner-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -1533,19 +1536,20 @@
           "copied_text": "third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE",
           "original_package_file": "node_modules/@vitest/runner/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
       "package": "@vitest/snapshot",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/@vitest/snapshot",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/@vitest/snapshot/-/snapshot-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/@vitest/snapshot/-/snapshot-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -1554,19 +1558,20 @@
           "copied_text": "third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE",
           "original_package_file": "node_modules/@vitest/snapshot/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
       "package": "@vitest/spy",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/@vitest/spy",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/@vitest/spy/-/spy-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/@vitest/spy/-/spy-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -1575,19 +1580,20 @@
           "copied_text": "third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE",
           "original_package_file": "node_modules/@vitest/spy/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
       "package": "@vitest/utils",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/@vitest/utils",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/@vitest/utils/-/utils-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/@vitest/utils/-/utils-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -1596,7 +1602,8 @@
           "copied_text": "third-party-licenses/texts/04575fc5bfae19a9b631--LICENSE",
           "original_package_file": "node_modules/@vitest/utils/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
@@ -2575,14 +2582,14 @@
     {
       "component_root": ".",
       "package": "dompurify",
-      "version": "3.4.16",
+      "version": "3.4.17",
       "license": "Apache-2.0 (selected alternative)",
       "declared_license": "(MPL-2.0 OR Apache-2.0)",
       "lock_path": "node_modules/dompurify",
       "lock_dev": false,
       "role": "extension code or imported extension helper; WXT also supplies the build tool",
       "source_url": "https://github.com/cure53/DOMPurify",
-      "npm_tarball": "https://registry.npmjs.org/dompurify/-/dompurify-3.4.16.tgz",
+      "npm_tarball": "https://registry.npmjs.org/dompurify/-/dompurify-3.4.17.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -2593,12 +2600,13 @@
         },
         {
           "kind": "verbatim-installed-copyright-header",
-          "sha256": "eb5c0821d669f781f7f6a68a59df9cb97211dcc0dfc20e77ebec1d8aa7ea23e8",
+          "sha256": "f8373e211651504bdcf212b8e202bb0ea4499b3258c4e3cb5fc51efefb0cb963",
           "selection": "First-line copyright/license notice only; Apache-2.0 alternative selected.",
-          "copied_text": "third-party-licenses/texts/eb5c0821d669f781f7f6--purify.es.mjs",
+          "copied_text": "third-party-licenses/texts/f8373e211651504bdcf2--purify.es.mjs",
           "original_package_file": "node_modules/dompurify/dist/purify.es.mjs"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
@@ -5300,14 +5308,14 @@
     {
       "component_root": ".",
       "package": "undici",
-      "version": "8.11.2",
+      "version": "8.12.3",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/undici",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/nodejs/undici",
-      "npm_tarball": "https://registry.npmjs.org/undici/-/undici-8.11.2.tgz",
+      "npm_tarball": "https://registry.npmjs.org/undici/-/undici-8.12.3.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -5316,7 +5324,8 @@
           "copied_text": "third-party-licenses/texts/a6db8096b2707bc0102d--LICENSE",
           "original_package_file": "node_modules/undici/LICENSE"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
@@ -5468,14 +5477,14 @@
     {
       "component_root": ".",
       "package": "vite",
-      "version": "7.3.6",
+      "version": "7.3.7",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/vite",
       "lock_dev": false,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitejs/vite",
-      "npm_tarball": "https://registry.npmjs.org/vite/-/vite-7.3.6.tgz",
+      "npm_tarball": "https://registry.npmjs.org/vite/-/vite-7.3.7.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -5484,19 +5493,20 @@
           "copied_text": "third-party-licenses/texts/a77a1c089806b39ad339--LICENSE.md",
           "original_package_file": "node_modules/vite/LICENSE.md"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
       "package": "vitest",
-      "version": "4.1.11",
+      "version": "4.1.12",
       "license": "MIT",
       "declared_license": "MIT",
       "lock_path": "node_modules/vitest",
       "lock_dev": true,
       "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
       "source_url": "https://github.com/vitest-dev/vitest",
-      "npm_tarball": "https://registry.npmjs.org/vitest/-/vitest-4.1.11.tgz",
+      "npm_tarball": "https://registry.npmjs.org/vitest/-/vitest-4.1.12.tgz",
       "texts": [
         {
           "kind": "installed-license",
@@ -5505,7 +5515,8 @@
           "copied_text": "third-party-licenses/texts/881d660c26831481b697--LICENSE.md",
           "original_package_file": "node_modules/vitest/LICENSE.md"
         }
-      ]
+      ],
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
@@ -5824,5 +5835,6 @@
         }
       ]
     }
-  ]
+  ],
+  "last_dependency_refresh": "2026-10-30"
 }

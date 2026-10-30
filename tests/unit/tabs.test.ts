@@ -60,3 +60,10 @@ describe("recipe tabs", () => {
     expect(tabApi.create).not.toHaveBeenCalled();
   });
 });
+
+it("does not reuse a private tab for a regular recipe", async () => {
+  tabApi.query.mockResolvedValue([{ id: 9, url: "http://intranet.test/list", incognito: true }]);
+  tabApi.create.mockResolvedValue({ id: 42 });
+  tabApi.get.mockResolvedValue({ id: 42, status: "complete" });
+  expect(await acquireRecipeTab("http://intranet.test/list", "http://intranet.test")).toEqual({ tabId: 42, created: true });
+});

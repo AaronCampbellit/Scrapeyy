@@ -1,6 +1,6 @@
 {
   "name": "scrapeyy",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@wxt-dev/module-react": "1.2.2",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "jszip": "3.10.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -34,7 +34,7 @@
     "fake-indexeddb": "6.2.5",
     "jsdom": "30.0.1",
     "typescript": "7.0.2",
-    "vite": "7.3.6",
-    "vitest": "4.1.11"
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
   }
 }

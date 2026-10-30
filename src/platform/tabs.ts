@@ -14,7 +14,7 @@ export async function acquireRecipeTab(
     const existing = await extensionBrowser.tabs.query({
       url: `${new URL(origin).origin}/*`,
     });
-    const reusable = existing.find((tab) => tab.id !== undefined);
+    const reusable = existing.find((tab) => tab.id !== undefined && !tab.incognito);
     if (reusable?.id !== undefined) {
       if (reusable.url !== startUrl) {
         await extensionBrowser.tabs.update(reusable.id, { url: startUrl });

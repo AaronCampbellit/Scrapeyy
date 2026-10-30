@@ -131,10 +131,14 @@ browser copies, and authenticated cross-device sessions remain manual checks.
 
 ## Scope and limitations
 
-This is a development extension, currently **0.1.22**. Captures and configuration
+This is a development extension, currently **0.1.23**. Captures and configuration
 are stored in the browser; explicit exports and configured automatic downloads
-write files to the device. Asset and SharePoint requests can use your existing
-website session. Captured text and images may contain sensitive information, so
+write files to the device. HTTPS asset and SharePoint requests can use your existing
+website session. Private windows are not supported. HTTP pages still support
+text, table, HTML/CSS, link, media-metadata and screenshot capture; additional
+asset/media transfers try HTTPS and never fall back to HTTP. Already-loaded
+images may be saved as PNGs, and loaded captions remain exportable if a complete
+track cannot be fetched. See [HTTP request audit](docs/HTTP_REQUEST_AUDIT.md). Captured text and images may contain sensitive information, so
 review an export before sharing it.
 
 Scrapeyy does not bypass login, CAPTCHAs, or anti-bot controls. Design references
@@ -143,6 +147,10 @@ roots, canvas-only content, protected assets, virtualized feeds, and extremely
 large pages can limit capture. A schedule needs the browser running, the required
 origin permission, and a valid website session. Video downloads require an
 exposed direct file; streaming playlists and blob-backed players remain metadata.
+
+## Privacy and submission
+
+See [privacy and network behavior](docs/PRIVACY.md), [reviewer build/test instructions](docs/AMO_REVIEW.md), and [listing description](docs/AMO_LISTING.md).
 
 ## License
 

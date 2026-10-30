@@ -44,3 +44,9 @@ For authorized changes to extension code, assets, manifests, or dependencies, up
 8. For an authorized release or synchronization task, commit and push the source and project-instruction changes, then verify the remote SHA. Report build/package validation and installed-browser validation separately.
 
 For documentation-only changes, do not rebuild or reload unchanged extension code unnecessarily. Verify existing source/build versions and file hashes when freshness is in question. These instructions govern future authorized work; they do not install a background updater or authorize changes during read-only reviews.
+
+## HTTP capture and publication compliance
+
+- Preserve extraction and screenshots on HTTP pages; keep optional HTTP host permissions for explicit captures/recipes. Follow `docs/HTTP_REQUEST_AUDIT.md`: follow-up asset/media requests use HTTPS without insecure redirects; HTTP upgrades omit credentials. Preserve references, loaded pixels/cues and visible warnings when originals cannot be retrieved.
+- Keep private-window operation disabled and do not reuse private tabs for recipes.
+- When dependencies or data flows change, update privacy/reviewer documentation, license records and meaningful transport regression tests. Package matching reviewer sources; do not claim Mozilla approval or installed-browser verification based on lint/build success.

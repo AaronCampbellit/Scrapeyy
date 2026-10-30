@@ -102,6 +102,8 @@ export async function scrapeSharePointMetadata(
   const getJson = async (url: string) => {
     const response = await fetchJson(url, {
       credentials: "same-origin",
+      redirect: "error",
+      referrerPolicy: "no-referrer",
       headers: { Accept: "application/json;odata=nometadata" },
     });
     if (!response.ok) {

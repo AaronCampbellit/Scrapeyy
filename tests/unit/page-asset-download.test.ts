@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { downloadReferencedAssetsFromPage } from "../../src/platform/page-asset-download";
 
 describe("page asset download", () => {
-  it("fetches referenced assets in the page world and decodes them for storage", async () => {
+  it("fetches referenced assets in the isolated page world and decodes them for storage", async () => {
     const executeScript = vi.fn().mockResolvedValue([
       {
         result: {
@@ -32,7 +32,7 @@ describe("page asset download", () => {
     expect(executeScript).toHaveBeenCalledOnce();
     expect(executeScript.mock.calls[0]![0]).toMatchObject({
       target: { tabId: 42 },
-      world: "MAIN",
+      world: "ISOLATED",
       args: [
         [
           { url: "https://example.test/missing.png", kind: "image" },
@@ -63,4 +63,12 @@ describe("page asset download", () => {
     ).resolves.toEqual({ assets: [], warnings: [] });
     expect(executeScript).not.toHaveBeenCalled();
   });
+});
+
+it("labels a recovered SVG image as a PNG rather than an original vector", async () => {
+  const result = await downloadReferencedAssetsFromPage(1, [{url:"http://site.test/a.svg",kind:"image"}], {
+    executeScript: vi.fn().mockResolvedValue([{result:{assets:[{url:"http://site.test/a.svg",mimeType:"image/png",base64:btoa("pixels"),rendered:true}],warnings:[]}}]),
+  });
+  expect(result.assets[0]!.filename).toBe("001-loaded-image.png");
+  expect(result.assets[0]!.blob.type).toBe("image/png");
 });

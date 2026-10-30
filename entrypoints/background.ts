@@ -1,3 +1,4 @@
+import { downloadMediaFile } from "../src/platform/media-download";
 import { handleSessionDownload } from "../src/session/download";
 import type {
   CaptureRun,
@@ -768,8 +769,7 @@ export default defineBackground(() => {
           }
           const settings = await appSettings.get();
           const name = safePathSegment(source.filename || decodeURIComponent(new URL(url).pathname.split("/").pop() || "video"));
-          return extensionBrowser.downloads.download({ url, filename: settings.downloadSubfolder + "/Videos/" + name,
-            saveAs: settings.downloadBehavior === "ask", conflictAction: "uniquify" });
+          return downloadMediaFile(url, settings.downloadSubfolder + "/Videos/" + name, settings.downloadBehavior === "ask");
         })();
       }
       if ((value.type === "SCRAPEYY_EXPORT_VIDEO_TEXT" || value.type === "SCRAPEYY_READ_VIDEO_TEXT") && typeof value.tabId === "number" &&

@@ -79,6 +79,7 @@ export function formatCaptionText(cues: Cue[], format: "vtt" | "srt"): string {
 async function fetchCaptions(url: string, fetcher: typeof fetch): Promise<Cue[]> {
   const parsed = new URL(url);
   if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password) throw new Error("This caption URL is unsupported.");
+  if (parsed.protocol === "http:") parsed.protocol = "https:";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -116,10 +117,17 @@ export async function createVideoTextExport(inventory: VideoInventory, request: 
   let cues = validCues(caption.cues);
   // Wistia exposes a complete transcript in metadata, so TXT needs no subtitle/video transfer.
   const transcript = caption.text ? captionPlainText(caption.text) : "";
-  if (caption.url && (request.format !== "txt" || !transcript)) cues = await fetchCaptions(caption.url, fetcher);
+  let usedLoadedFallback = false;
+  if (caption.url && (request.format !== "txt" || !transcript)) {
+    try { cues = await fetchCaptions(caption.url, fetcher); }
+    catch (error) {
+      if (!cues.length) throw error;
+      usedLoadedFallback = true;
+    }
+  }
   const body = request.format === "txt" ? transcript || cues.map((cue) => cue.text).filter((text, index, all) => !index || text !== all[index - 1]).join("\n") : formatCaptionText(cues, request.format);
   if (!body.trim()) throw new Error("No caption or transcript text is available for this track.");
-  const partial = caption.partial && !caption.url && !transcript;
+  const partial = usedLoadedFallback || (caption.partial && !caption.url && !transcript);
   const content = request.format === "txt" ? `${video.title}\n${caption.label || caption.language || "Transcript"}\nSource: ${sanitizeCapturedUrl(inventory.pageUrl)}\n${partial ? "Loaded captions only; the transcript may be incomplete.\n" : ""}\n${body}\n` : body;
   const filename = `${safePathSegment(video.title).slice(0, 60)}-${safePathSegment(caption.language || "und").slice(0, 24)}${partial ? "-loaded" : ""}.${request.format}`;
   return { blob: new Blob([content], { type: request.format === "vtt" ? "text/vtt;charset=utf-8" : "text/plain;charset=utf-8" }), filename };

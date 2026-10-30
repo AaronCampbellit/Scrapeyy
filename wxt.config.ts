@@ -28,8 +28,9 @@ export default defineConfig({
     return {
       name: "Scrapeyy",
       description:
-        "Capture structured data and design references from websites.",
+        "Capture pages, screenshots and media; schedule captures; explicitly export selected signed-in sessions locally.",
       icons,
+      incognito: "not_allowed",
       ...(manifestVersion === 2
         ? { browser_action: { default_icon: icons } }
         : { action: { default_icon: icons } }),
@@ -52,8 +53,10 @@ export default defineConfig({
           }
         : { optional_permissions: ["cookies", "webNavigation"], optional_host_permissions: optionalOrigins }),
       browser_specific_settings: {
+        gecko_android: { strict_min_version: "142.0" },
         gecko: {
           id: "scrapeyy@local",
+          strict_min_version: "140.0",
           data_collection_permissions: {
             required: ["none"],
           },

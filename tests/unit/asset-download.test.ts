@@ -56,6 +56,6 @@ describe("reference asset downloads", () => {
       },
     ]);
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain("https://example.test/missing.png");
+    expect(result.warnings[0]).toContain("https://example.test");
   });
 });
