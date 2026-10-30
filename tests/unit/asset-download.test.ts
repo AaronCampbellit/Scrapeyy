@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { downloadReferencedAssets } from "../../src/platform/asset-download";
 
@@ -56,6 +56,16 @@ describe("reference asset downloads", () => {
       },
     ]);
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain("https://example.test");
+    expect(result.warnings[0]).toContain("https://example.test/missing.png");
   });
+});
+
+it("preserves HTTP sessions, redirects and more than 100 references", async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("font", {headers: {"content-type":"font/woff2"}}));
+  // A fresh response per request models consumed network bodies.
+  fetcher.mockImplementation(async () => new Response("font", {headers: {"content-type":"font/woff2"}}));
+  const refs = Array.from({length:101}, (_,i) => ({kind:"font" as const,url:`http://intranet.test/font-${i}.woff2`}));
+  const result = await downloadReferencedAssets(refs, fetcher);
+  expect(result.assets).toHaveLength(101); expect(result.warnings).toEqual([]);
+  expect(fetcher).toHaveBeenCalledWith(refs[0]!.url, {credentials:"include"});
 });

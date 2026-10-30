@@ -1,3 +1,5 @@
+> Historical compliance-release documentation. For current 0.1.25 behavior and build instructions, see [FUNCTIONALITY_RESTORATION.md](FUNCTIONALITY_RESTORATION.md).
+
 # HTTP request audit — 0.1.23
 
 Audited 2026-10-30 against source 89fe4ff (0.1.22), before implementing the changes below. Scope: src/, entrypoints/, browser download and tab-navigation calls. The audit distinguishes reading rendered content, browser navigation and extension-initiated file/API requests. It does not claim Mozilla approval.

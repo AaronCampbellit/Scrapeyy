@@ -95,11 +95,11 @@ describe("captions and transcript exports", () => {
   });
 });
 
-it("upgrades HTTP captions and preserves loaded cues when HTTPS is unavailable", async () => {
+it("preserves HTTP caption URLs and falls back to loaded cues when unavailable", async () => {
   const { inventory, request } = fixture({ url: "http://site.test/captions.vtt", cues: [{start: 0, end: 1, text: "Already loaded"}] });
-  const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new Error("HTTPS unavailable"));
+  const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new Error("Server unavailable"));
   const result = await createVideoTextExport(inventory, request, fetcher);
-  expect(fetcher).toHaveBeenCalledWith("https://site.test/captions.vtt", expect.objectContaining({ credentials: "omit", redirect: "error" }));
+  expect(fetcher).toHaveBeenCalledWith("http://site.test/captions.vtt", expect.objectContaining({ credentials: "omit", redirect: "error" }));
   expect(await result.blob.text()).toContain("Already loaded");
   expect(result.filename).toContain("-loaded");
   expect(await result.blob.text()).toContain("may be incomplete");

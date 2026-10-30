@@ -79,7 +79,6 @@ export function formatCaptionText(cues: Cue[], format: "vtt" | "srt"): string {
 async function fetchCaptions(url: string, fetcher: typeof fetch): Promise<Cue[]> {
   const parsed = new URL(url);
   if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password) throw new Error("This caption URL is unsupported.");
-  if (parsed.protocol === "http:") parsed.protocol = "https:";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {

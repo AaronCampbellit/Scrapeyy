@@ -333,3 +333,7 @@ WXT’s `build:done` hook copies the collected legal documents to `legal/` for C
 ## Local modifications in 0.1.24
 
 React DOM 19.2.8, DOMPurify 3.4.17, setimmediate 1.0.5 and the setimmediate copy bundled in JSZip 3.10.1 carry local restrictions. These distributions are not unmodified upstream builds. Original license/copyright notices remain intact. Exact patches and original/result SHA-256 hashes are in `scripts/dependency-hardening.json`; `scripts/harden-dependencies.mjs` applies them reproducibly. See `docs/DEPENDENCY_HARDENING.md` for behavior changes and maintenance requirements. JSZip's browser entry uses its readable distribution before the normal production bundler minifies it.
+
+## Restoration in 0.1.25
+
+The local modifications described for 0.1.24 above are historical and have been removed. React DOM, DOMPurify, JSZip and setimmediate now use their unmodified pinned upstream distributions. Dependency versions and license texts remain unchanged.

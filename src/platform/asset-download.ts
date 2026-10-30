@@ -1,4 +1,3 @@
-import { fetchReferenceAssets } from "./asset-transfer";
 import type { AssetReference } from "../design/assets";
 import type { DownloadedAsset } from "../export/bundle";
 
@@ -55,15 +54,47 @@ export async function downloadReferencedAssets(
   references: AssetReference[],
   fetchAsset: AssetFetch = fetch,
 ): Promise<AssetDownloadResult> {
-  const unique = [...new Map(references.map(reference => [reference.url, reference])).values()]
-    .sort((left, right) => left.url.localeCompare(right.url));
-  const result = await fetchReferenceAssets(unique, MAX_ASSET_BYTES, fetchAsset as typeof fetch, undefined);
-  return {
-    assets: result.assets.map((asset, index) => ({
-      url: asset.url,
-      filename: asset.rendered ? `${String(index + 1).padStart(3, "0")}-loaded-image.png` : assetFilename(asset.url, asset.mimeType, index + 1),
-      blob: new Blob([Uint8Array.from(atob(asset.base64), char => char.charCodeAt(0))], { type: asset.mimeType }),
-    })),
-    warnings: result.warnings,
-  };
+  const assets: DownloadedAsset[] = [];
+  const warnings: string[] = [];
+  const unique = [...new Map(references.map((reference) => [
+    reference.url,
+    reference,
+  ])).values()].sort((left, right) => left.url.localeCompare(right.url));
+
+  for (const reference of unique) {
+    try {
+      const response = await fetchAsset(reference.url, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const contentType = (
+        response.headers.get("content-type") ?? ""
+      ).split(";")[0]!.trim();
+      if (
+        reference.kind === "image" &&
+        contentType &&
+        !contentType.startsWith("image/")
+      ) {
+        throw new Error(`unexpected content type ${contentType}`);
+      }
+      const blob = await response.blob();
+      if (blob.size > MAX_ASSET_BYTES) {
+        throw new Error("file exceeds 25 MB");
+      }
+      assets.push({
+        url: reference.url,
+        filename: assetFilename(reference.url, contentType, assets.length + 1),
+        blob,
+      });
+    } catch (error) {
+      warnings.push(
+        `Could not download reference asset ${reference.url}: ${
+          error instanceof Error ? error.message : "download failed"
+        }`,
+      );
+    }
+  }
+  return { assets, warnings };
 }

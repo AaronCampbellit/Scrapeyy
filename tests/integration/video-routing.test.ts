@@ -32,7 +32,7 @@ beforeAll(async () => {
 beforeEach(() => {
   state.download.mockReset().mockResolvedValue(27);
   state.send.mockReset().mockResolvedValue(inventory);
-  state.fetch.mockReset().mockImplementation(async (url) => new Response(String(url) === assetUrl ? "video bytes" : JSON.stringify(metadata)));
+  state.fetch.mockReset().mockImplementation(async () => new Response(JSON.stringify(metadata)));
   vi.stubGlobal("fetch", state.fetch);
 });
 
@@ -83,15 +83,11 @@ describe("background video tools", () => {
   });
 
   it("revalidates a provider asset against the current page and saves it as mp4", async () => {
-    vi.useFakeTimers();
-    try {
-      await expect(state.listener!({ type: "SCRAPEYY_DOWNLOAD_VIDEO", tabId: 1, url: assetUrl }, {})).resolves.toBe(27);
-      expect(state.fetch).toHaveBeenCalledTimes(2);
-      expect(state.fetch).toHaveBeenLastCalledWith(assetUrl, expect.objectContaining({ redirect: "error" }));
-      expect(state.download).toHaveBeenCalledWith({ url: expect.stringMatching(/^blob:/),
-        filename: DEFAULT_APP_SETTINGS.downloadSubfolder + "/Videos/IT Glue webinar-1080p.mp4",
-        saveAs: DEFAULT_APP_SETTINGS.downloadBehavior === "ask", conflictAction: "uniquify" });
-    } finally { vi.runAllTimers(); vi.useRealTimers(); }
+    await expect(state.listener!({ type: "SCRAPEYY_DOWNLOAD_VIDEO", tabId: 1, url: assetUrl }, {})).resolves.toBe(27);
+    expect(state.fetch).toHaveBeenCalledTimes(1);
+    expect(state.download).toHaveBeenCalledWith({ url: assetUrl,
+      filename: DEFAULT_APP_SETTINGS.downloadSubfolder + "/Videos/IT Glue webinar-1080p.mp4",
+      saveAs: DEFAULT_APP_SETTINGS.downloadBehavior === "ask", conflictAction: "uniquify" });
   });
 
   it("rejects an arbitrary file URL that the current scan did not expose", async () => {

@@ -45,10 +45,10 @@ For authorized changes to extension code, assets, manifests, or dependencies, up
 
 For documentation-only changes, do not rebuild or reload unchanged extension code unnecessarily. Verify existing source/build versions and file hashes when freshness is in question. These instructions govern future authorized work; they do not install a background updater or authorize changes during read-only reviews.
 
-## HTTP capture and publication compliance
+## Personal-use capture behavior (0.1.25 onward)
 
-- Preserve extraction and screenshots on HTTP pages; keep optional HTTP host permissions for explicit captures/recipes. Follow `docs/HTTP_REQUEST_AUDIT.md`: follow-up asset/media requests use HTTPS without insecure redirects; HTTP upgrades omit credentials. Preserve references, loaded pixels/cues and visible warnings when originals cannot be retrieved.
-- Keep private-window operation disabled and do not reuse private tabs for recipes.
-- When dependencies or data flows change, update privacy/reviewer documentation, license records and meaningful transport regression tests. Package matching reviewer sources; do not claim Mozilla approval or installed-browser verification based on lint/build success.
-
-- Dependency hardening is hash-pinned in `scripts/dependency-hardening.json`; run the verifier before programmatic builds too. Do not suppress lint warnings or bypass hash mismatches when updating dependencies. Re-review patches and regression limits in `docs/DEPENDENCY_HARDENING.md`.
+- The owner explicitly requested restoration of pre-compliance functionality, accepting that it may not meet Mozilla requirements. Preserve original HTTP asset/caption URLs, browser-managed video downloads, page-world authenticated asset retrieval and normal asset/SharePoint redirects.
+- Dependencies remain at updated versions but use unmodified upstream code; the 0.1.24 library patches were removed. Do not silently reapply the earlier compliance restrictions.
+- Private-window capture may be enabled by the user through browser controls. Captures persist in the local Inbox; do not reuse private tabs for background recipes.
+- Keep consent and transient-secret handling for Borrow session, content sanitization, current-page video validation and ordinary browser security boundaries. No certificate/CORS/DRM bypass.
+- Update privacy and build notes to match the actual distribution. Historical AMO notes apply to 0.1.24 only; do not claim this personal-use build is approved or compliant.

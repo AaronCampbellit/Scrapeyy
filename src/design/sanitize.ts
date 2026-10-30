@@ -68,7 +68,7 @@ function scrubElement(element: Element): void {
   }
 }
 
-export function sanitizeElementFragment(element: Element): DocumentFragment {
+export function sanitizeElement(element: Element): string {
   const clone = element.cloneNode(true) as Element;
   for (const candidate of [clone, ...clone.querySelectorAll("*")]) {
     if (!isSafeCaptureElement(candidate)) {
@@ -82,13 +82,5 @@ export function sanitizeElementFragment(element: Element): DocumentFragment {
     FORBID_TAGS: [...forbiddenTags].map((tag) => tag.toLowerCase()),
     FORBID_ATTR: ["srcdoc"],
     ALLOW_DATA_ATTR: true,
-    RETURN_DOM_FRAGMENT: true,
   });
-}
-
-/** Compatibility string export; DOM snapshots use the sanitized nodes directly. */
-export function sanitizeElement(element: Element): string {
-  const template = document.createElement("template");
-  template.content.append(sanitizeElementFragment(element));
-  return template.innerHTML;
 }

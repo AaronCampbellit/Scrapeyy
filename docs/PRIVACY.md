@@ -1,8 +1,8 @@
 # Scrapeyy privacy and network behavior
 
-Version 0.1.23 — 2026-10-30
+Version 0.1.25 — 2026-10-30
 
-Scrapeyy captures content you select from websites: text, tables, links, images, media metadata, page markup/styles and screenshots. Captures are stored in the browser's local Inbox; recipes, schedules and settings are also stored locally. No analytics, advertising identifier, developer telemetry or upload service is implemented. Private-window use is disabled.
+Scrapeyy captures content you select from websites: text, tables, links, images, media metadata, page markup/styles and screenshots. Captures are stored in the browser's local Inbox; recipes, schedules and settings are also stored locally. No analytics, advertising identifier, developer telemetry or upload service is implemented. Private-window capture is available only when enabled in the browser. Captured private-page content is saved to the persistent local Inbox; it is not automatically erased when a private window closes. Background recipes do not reuse private tabs.
 
 ## Your controls
 
@@ -12,11 +12,11 @@ You can export files to your device or copy content to the clipboard. The system
 
 ## Requests made to websites
 
-Capturing design references may retrieve images/assets from their source websites. HTTPS requests can include the site's existing cookies. HTTP references are tried over HTTPS without cookies; failure retains the reference and may preserve an already-loaded image as PNG. No plaintext fallback or redirect is followed by these requests.
+Capturing design references retrieves original HTTP or HTTPS asset URLs using the site's session and normal redirects. Page-world retrieval can use the site's fetch implementation. HTTP requests and redirects may be unencrypted; browser cookie, mixed-content and certificate rules still apply. The original 25 MiB per-asset limit remains; the added 100-reference/50 MiB total/time limits are removed.
 
-Video tools can contact Wistia over HTTPS to resolve a player already present on the page. Provider metadata and captions use no cookies or referrer. Direct media files use HTTPS and can use the site's cookies; inaccessible files keep their links. SharePoint tools query your current SharePoint site's HTTPS API using your existing session. Remote services receive ordinary request information such as your IP address and requested URL. Responses are treated as content, not executable code.
+Captions retain their original HTTP(S) URL and anonymous request policy; loaded cues remain a labelled fallback. Wistia metadata still uses its existing HTTPS endpoint. Direct video files are handed to the browser download manager with normal session/redirect handling, without the extension's 512 MiB/two-minute buffering limit. SharePoint API requests use the existing same-origin session and follow redirects. Services receive ordinary request information such as IP address and requested URL. No developer upload service is added.
 
-Capturing an HTTP page does not make that website secure: navigation, pagination and the website's own resource requests are handled normally by the browser. See [the request audit](HTTP_REQUEST_AUDIT.md) for details and limits.
+See [restoration notes](FUNCTIONALITY_RESTORATION.md) for limits and distribution status.
 
 ## Borrow session — optional account-secret export
 

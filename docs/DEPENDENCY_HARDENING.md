@@ -1,3 +1,5 @@
+> Historical compliance-release documentation. For current 0.1.25 behavior and build instructions, see [FUNCTIONALITY_RESTORATION.md](FUNCTIONALITY_RESTORATION.md).
+
 # 0.1.24 dependency restrictions and regression inventory
 
 All seven warnings from 0.1.23 are removed by deleting unsupported execution paths, not by obscuring assignments or suppressing validator rules. Original package versions and license notices are retained. This is a local fork of the affected dependency code, not an upstream fix or Mozilla approval.

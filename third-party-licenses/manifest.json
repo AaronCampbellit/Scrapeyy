@@ -2606,8 +2606,7 @@
           "original_package_file": "node_modules/dompurify/dist/purify.es.mjs"
         }
       ],
-      "reviewed_date": "2026-10-30",
-      "local_modifications": "0.1.24 restrictions; see scripts/dependency-hardening.json and docs/DEPENDENCY_HARDENING.md. License texts unchanged."
+      "reviewed_date": "2026-10-30"
     },
     {
       "component_root": ".",
@@ -3551,8 +3550,7 @@
           "copied_text": "third-party-licenses/texts/566c953c6090b1218ca6--LICENSE.markdown",
           "original_package_file": "node_modules/jszip/LICENSE.markdown"
         }
-      ],
-      "local_modifications": "0.1.24 restrictions; see scripts/dependency-hardening.json and docs/DEPENDENCY_HARDENING.md. License texts unchanged."
+      ]
     },
     {
       "component_root": ".",
@@ -4462,8 +4460,7 @@
           "copied_text": "third-party-licenses/texts/da6d3703ed11cbe42bd2--LICENSE",
           "original_package_file": "node_modules/react-dom/LICENSE"
         }
-      ],
-      "local_modifications": "0.1.24 restrictions; see scripts/dependency-hardening.json and docs/DEPENDENCY_HARDENING.md. License texts unchanged."
+      ]
     },
     {
       "component_root": ".",
@@ -4759,8 +4756,7 @@
           "copied_text": "third-party-licenses/texts/c4b4ad3a5746f1f5249a--LICENSE.txt",
           "original_package_file": "node_modules/setimmediate/LICENSE.txt"
         }
-      ],
-      "local_modifications": "0.1.24 restrictions; see scripts/dependency-hardening.json and docs/DEPENDENCY_HARDENING.md. License texts unchanged."
+      ]
     },
     {
       "component_root": ".",

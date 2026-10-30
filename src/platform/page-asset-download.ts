@@ -1,4 +1,3 @@
-import { fetchReferenceAssets } from "./asset-transfer";
 import type { AssetReference } from "../design/assets";
 import type { DownloadedAsset } from "../export/bundle";
 import {
@@ -13,7 +12,6 @@ interface PageAssetPayload {
     url: string;
     mimeType: string;
     base64: string;
-    rendered?: boolean;
   }>;
   warnings: string[];
 }
@@ -26,13 +24,66 @@ interface PageAssetRequest {
 interface PageAssetScriptingApi {
   executeScript(details: {
     target: { tabId: number };
-    world: "ISOLATED";
+    world: "MAIN";
     func: (
       references: PageAssetRequest[],
       maxAssetBytes: number,
     ) => Promise<PageAssetPayload>;
     args: [PageAssetRequest[], number];
   }): Promise<Array<{ result?: PageAssetPayload }>>;
+}
+
+async function fetchAssetsInPage(
+  references: PageAssetRequest[],
+  maxAssetBytes: number,
+): Promise<PageAssetPayload> {
+  const assets: PageAssetPayload["assets"] = [];
+  const warnings: string[] = [];
+  for (const reference of references) {
+    const { url } = reference;
+    try {
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      if (
+        reference.kind === "image" &&
+        blob.type &&
+        !blob.type.startsWith("image/")
+      ) {
+        throw new Error(`unexpected content type ${blob.type}`);
+      }
+      if (blob.size > maxAssetBytes) throw new Error("file exceeds 25 MB");
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener(
+          "load",
+          () => {
+            const result = String(reader.result ?? "");
+            resolve(result.slice(result.indexOf(",") + 1));
+          },
+          { once: true },
+        );
+        reader.addEventListener(
+          "error",
+          () => reject(reader.error ?? new Error("could not read asset")),
+          { once: true },
+        );
+        reader.readAsDataURL(blob);
+      });
+      assets.push({
+        url,
+        mimeType: blob.type,
+        base64,
+      });
+    } catch (error) {
+      warnings.push(
+        `Could not download reference asset ${url}: ${
+          error instanceof Error ? error.message : "download failed"
+        }`,
+      );
+    }
+  }
+  return { assets, warnings };
 }
 
 const defaultApi: PageAssetScriptingApi = {
@@ -65,8 +116,8 @@ export async function downloadReferencedAssetsFromPage(
 
   const [{ result } = {}] = await api.executeScript({
     target: { tabId },
-    world: "ISOLATED",
-    func: fetchReferenceAssets,
+    world: "MAIN",
+    func: fetchAssetsInPage,
     args: [unique, MAX_ASSET_BYTES],
   });
   if (!result) {
@@ -81,7 +132,7 @@ export async function downloadReferencedAssetsFromPage(
   ]));
   const assets: DownloadedAsset[] = [];
   const warnings = [...result.warnings];
-  for (const { url, mimeType, base64, rendered } of result.assets) {
+  for (const { url, mimeType, base64 } of result.assets) {
     if (
       referencesByUrl.get(url)?.kind === "image" &&
       mimeType &&
@@ -94,9 +145,7 @@ export async function downloadReferencedAssetsFromPage(
     }
     assets.push({
       url,
-      filename: rendered
-        ? `${String(assets.length + 1).padStart(3, "0")}-loaded-image.png`
-        : assetFilename(url, mimeType, assets.length + 1),
+      filename: assetFilename(url, mimeType, assets.length + 1),
       blob: new Blob([decodeBase64(base64)], { type: mimeType }),
     });
   }

@@ -1,3 +1,5 @@
+> Historical compliance-release documentation. For current 0.1.25 behavior and build instructions, see [FUNCTIONALITY_RESTORATION.md](FUNCTIONALITY_RESTORATION.md).
+
 # Reviewer source and testing instructions — 0.1.24
 
 ## Reproduce the submitted code

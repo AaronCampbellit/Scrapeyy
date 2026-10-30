@@ -30,7 +30,7 @@ export default defineConfig({
       description:
         "Capture pages, screenshots and media; schedule captures; explicitly export selected signed-in sessions locally.",
       icons,
-      incognito: "not_allowed",
+      incognito: "spanning",
       ...(manifestVersion === 2
         ? { browser_action: { default_icon: icons } }
         : { action: { default_icon: icons } }),
