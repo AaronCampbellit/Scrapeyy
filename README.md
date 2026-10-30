@@ -50,8 +50,8 @@ the existing settings, screenshot destinations, permission workflow, and exports
 Requires **Node.js 24** and npm. From this checkout:
 
 ```bash
-git clone https://github.com/AaronCampbellit/Scrapeyy-public.git
-cd Scrapeyy-public
+git clone https://github.com/AaronCampbellit/Scrapeyy.git
+cd Scrapeyy
 npm ci
 npm run build
 npm exec -- vite docs/screenshots --host 127.0.0.1 --port 4173
