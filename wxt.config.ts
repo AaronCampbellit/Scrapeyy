@@ -47,11 +47,11 @@ export default defineConfig({
       ...(manifestVersion === 2
         ? {
             optional_permissions:
-              ["cookies", "webNavigation", ...optionalOrigins] as unknown as NonNullable<
+              ["cookies", "tabs", "webNavigation", "webRequest", ...optionalOrigins] as unknown as NonNullable<
                 UserManifest["optional_permissions"]
               >,
           }
-        : { optional_permissions: ["cookies", "webNavigation"], optional_host_permissions: optionalOrigins }),
+        : { optional_permissions: ["cookies", "tabs", "webNavigation", "webRequest"], optional_host_permissions: optionalOrigins }),
       browser_specific_settings: {
         gecko_android: { strict_min_version: "142.0" },
         gecko: {

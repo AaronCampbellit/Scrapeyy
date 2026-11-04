@@ -1,3 +1,4 @@
+import { MAX_ORIGINS } from "./discovery";
 export const MAX_BYTES = 20 * 1024 * 1024;
 export const AAD = 'scrapeyy-session-encrypted:1';
 export interface SessionCookie {
@@ -19,7 +20,7 @@ export function parseOrigins(input: string): string[] {
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hostname.includes('*') || url.pathname !== '/' || url.search || url.hash) throw new Error('Enter exact HTTP(S) origins without paths, credentials, or wildcards.');
     return url.origin;
   }))];
-  if (!origins.length || origins.length > 20) throw new Error('Select between 1 and 20 origins.');
+  if (!origins.length || origins.length > MAX_ORIGINS) throw new Error('Select between 1 and 100 origins.');
   return origins;
 }
 export function cookieMatches(cookie: SessionCookie, origins: string[]): boolean {

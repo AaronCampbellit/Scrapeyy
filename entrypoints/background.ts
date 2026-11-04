@@ -1,3 +1,4 @@
+import { createDiscoveryController } from "../src/session/discovery-background";
 import { handleSessionDownload } from "../src/session/download";
 import type {
   CaptureRun,
@@ -122,6 +123,8 @@ function recipeFromPicker(
 }
 
 export default defineBackground(() => {
+  const discovery = createDiscoveryController();
+  discovery.install();
   const storage = extensionBrowser.storage.local as StorageArea;
   const projects = createSettingsRepository<Project>(storage, "projects");
   const recipes = createSettingsRepository<Recipe>(storage, "recipes");
@@ -732,6 +735,7 @@ export default defineBackground(() => {
     (message: unknown, sender) => {
       if (typeof message !== "object" || message === null) return undefined;
       const value = message as Record<string, unknown>;
+      if (value.type === "SCRAPEYY_SESSION_DISCOVERY") return discovery.handle(value, sender);
       if (value.type === "SCRAPEYY_DOWNLOAD_SESSION") return handleSessionDownload(value, sender);
       if (value.type === "SCRAPEYY_SCREENSHOT" && typeof value.tabId === "number" &&
           (value.kind === "visible" || value.kind === "full-page")) {

@@ -20,6 +20,7 @@ vi.mock("../../src/platform/browser-api", () => ({ extensionBrowser: {
   alarms: { onAlarm: { addListener: vi.fn() } },
   tabs: { get: async () => ({ id: 1, active: true, url: "https://example.test/page", title: "Example page" }), sendMessage: vi.fn() },
 } }));
+vi.mock("../../src/session/discovery-background", () => ({ createDiscoveryController: () => ({ install: vi.fn(), handle: vi.fn() }) }));
 vi.mock("../../src/platform/content-injection", () => ({ ensureContentScript: vi.fn() }));
 vi.mock("../../src/platform/embedded-frame-capture", () => ({ createEmbeddedFrameCaptureController: vi.fn(async () => undefined) }));
 vi.mock("../../src/platform/screenshots", () => ({

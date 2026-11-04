@@ -1,3 +1,4 @@
+import type { DiscoveryClient } from "../../session/discovery";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -50,6 +51,7 @@ export interface PopupWorkspaceData {
 }
 
 export interface PopupServices {
+  discovery?: DiscoveryClient;
   requestSessionAccess(origins: string[]): Promise<boolean>;
   exportSession(request: SessionExportRequest): Promise<SessionExportResult>;
   openPreviewWindow?(runId: string, preview: PreviewType): Promise<void>;
@@ -287,7 +289,7 @@ export function PopupApp({ services }: { services: PopupServices }) {
           onClose={closePreview} onLayoutChange={updatePreviewLayout} />
       </div> : null}
       <div className="popup-content" hidden={!!expandedPreview}>
-        {view === "session" ? <BorrowSessionView site={data.site}
+        {view === "session" ? <BorrowSessionView site={data.site} discovery={services.discovery}
           onRequestAccess={services.requestSessionAccess} onExport={services.exportSession} /> : null}
         {view === "capture" ? (
           <CaptureView

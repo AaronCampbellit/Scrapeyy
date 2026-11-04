@@ -337,3 +337,7 @@ React DOM 19.2.8, DOMPurify 3.4.17, setimmediate 1.0.5 and the setimmediate copy
 ## Restoration in 0.1.25
 
 The local modifications described for 0.1.24 above are historical and have been removed. React DOM, DOMPurify, JSZip and setimmediate now use their unmodified pinned upstream distributions. Dependency versions and license texts remain unchanged.
+
+## 0.1.26 session discovery
+
+TL DTS (`tldts` 7.4.19 and `tldts-core` 7.4.20) supplies registrable-domain and private-suffix parsing. Both packages are MIT licensed, copyright Thomas Parisot and Remi Berson. Their complete upstream license is preserved in the inventory and shipped in `legal/`.

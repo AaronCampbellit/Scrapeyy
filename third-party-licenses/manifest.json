@@ -5153,48 +5153,6 @@
     },
     {
       "component_root": ".",
-      "package": "tldts",
-      "version": "7.4.10",
-      "license": "MIT",
-      "declared_license": "MIT",
-      "lock_path": "node_modules/tldts",
-      "lock_dev": true,
-      "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
-      "source_url": null,
-      "npm_tarball": "https://registry.npmjs.org/tldts/-/tldts-7.4.10.tgz",
-      "texts": [
-        {
-          "kind": "installed-license",
-          "sha256": "c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb",
-          "selection": null,
-          "copied_text": "third-party-licenses/texts/c64182d48160db948b6a--LICENSE",
-          "original_package_file": "node_modules/tldts/LICENSE"
-        }
-      ]
-    },
-    {
-      "component_root": ".",
-      "package": "tldts-core",
-      "version": "7.4.10",
-      "license": "MIT",
-      "declared_license": "MIT",
-      "lock_path": "node_modules/tldts-core",
-      "lock_dev": true,
-      "role": "development/build dependency or unconfirmed runtime transitive; lock dev flag is not proof of bundling",
-      "source_url": null,
-      "npm_tarball": "https://registry.npmjs.org/tldts-core/-/tldts-core-7.4.10.tgz",
-      "texts": [
-        {
-          "kind": "installed-license",
-          "sha256": "c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb",
-          "selection": null,
-          "copied_text": "third-party-licenses/texts/c64182d48160db948b6a--LICENSE",
-          "original_package_file": "node_modules/tldts-core/LICENSE"
-        }
-      ]
-    },
-    {
-      "component_root": ".",
       "package": "tough-cookie",
       "version": "6.0.2",
       "license": "BSD-3-Clause",
@@ -5832,6 +5790,48 @@
           "selection": null,
           "copied_text": "third-party-licenses/texts/365496ca1f56da40b23c--LICENSE.txt",
           "original_package_file": "node_modules/yargs-parser/LICENSE.txt"
+        }
+      ]
+    },
+    {
+      "component_root": ".",
+      "package": "tldts",
+      "version": "7.4.19",
+      "license": "MIT",
+      "declared_license": "MIT",
+      "lock_path": "node_modules/tldts",
+      "lock_dev": false,
+      "role": "bundled session discovery domain parsing",
+      "source_url": "https://github.com/remusao/tldts",
+      "npm_tarball": "https://registry.npmjs.org/tldts/-/tldts-7.4.19.tgz",
+      "texts": [
+        {
+          "kind": "installed-license",
+          "sha256": "c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb",
+          "selection": null,
+          "copied_text": "third-party-licenses/texts/c64182d48160db948b6a--license",
+          "original_package_file": "node_modules/tldts/LICENSE"
+        }
+      ]
+    },
+    {
+      "component_root": ".",
+      "package": "tldts-core",
+      "version": "7.4.20",
+      "license": "MIT",
+      "declared_license": "MIT",
+      "lock_path": "node_modules/tldts-core",
+      "lock_dev": false,
+      "role": "bundled session discovery domain parsing",
+      "source_url": "https://github.com/remusao/tldts",
+      "npm_tarball": "https://registry.npmjs.org/tldts-core/-/tldts-core-7.4.20.tgz",
+      "texts": [
+        {
+          "kind": "installed-license",
+          "sha256": "c64182d48160db948b6aa97a984f1a32974ce4d2053900361264cd33853796cb",
+          "selection": null,
+          "copied_text": "third-party-licenses/texts/c64182d48160db948b6a--license",
+          "original_package_file": "node_modules/tldts-core/LICENSE"
         }
       ]
     }

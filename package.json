@@ -1,6 +1,6 @@
 {
   "name": "scrapeyy",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "private": true,
   "type": "module",
   "scripts": {
@@ -21,6 +21,7 @@
     "jszip": "3.10.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tldts": "7.4.19",
     "wxt": "0.21.3"
   },
   "devDependencies": {

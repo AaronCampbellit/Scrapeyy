@@ -1,3 +1,4 @@
+import { discoveryClient } from "../../src/session/discovery-client";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
@@ -120,6 +121,7 @@ async function pendingRecipeStatus(tabId?: number): Promise<boolean> {
 const services: PopupServices = {
   openPreviewWindow: openCapturePreview,
   requestSessionAccess,
+  discovery: discoveryClient,
   exportSession: exportBorrowedSession,
   async prepareFullPageAccess(expectedTabId) {
     const tab = await activeTab();

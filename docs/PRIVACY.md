@@ -1,6 +1,6 @@
 # Scrapeyy privacy and network behavior
 
-Version 0.1.25 — 2026-10-30
+Version 0.1.26 - 2026-11-04
 
 Scrapeyy captures content you select from websites: text, tables, links, images, media metadata, page markup/styles and screenshots. Captures are stored in the browser's local Inbox; recipes, schedules and settings are also stored locally. No analytics, advertising identifier, developer telemetry or upload service is implemented. Private-window capture is available only when enabled in the browser. Captured private-page content is saved to the persistent local Inbox; it is not automatically erased when a private window closes. Background recipes do not reuse private tabs.
 
@@ -23,6 +23,8 @@ See [restoration notes](FUNCTIONALITY_RESTORATION.md) for limits and distributio
 This separate popup tab exports selected origins' cookies (including HttpOnly cookies), localStorage and sessionStorage from the source cookie store. These files can grant access to your accounts. Export requires your explicit approval and optional cookie/site permissions. Partitioned/first-party-isolated cookies are excluded. Encryption with a PIN/passphrase is the default; plaintext requires selecting that option. Prefer a strong passphrase and protect exported files.
 
 Session exports and passphrases are not saved to the Inbox or configuration backups. Only a local file is created; Scrapeyy does not send it to another VM, application or server. Moving/importing the file elsewhere is your separate action. Deleting the export does not revoke the original website session; use the website's account/session controls if needed.
+
+Optional **Scan sites** reads links, forms, frames, related tab URLs and cookie domains after browser permission. **Record sign-in** requests cross-site access and records only origins from the starting tab and its sign-in child tabs in the same cookie store. It does not retain URL paths, query strings, fragments, request headers/bodies, form values or cookie values. Discovery metadata and valid selected-origin edits are held only in `storage.session`, surviving popup closure and worker restarts for up to one hour. They are cleared by browser restart/extension reload, expiry or Clear discovery. Recording stops after 10 minutes or explicit Stop; browser grants remain until revoked. Other borrowed-session secrets and approval remain transient in the popup. See [discovery instructions and limits](SESSION_BORROWING.md#discover-related-sites-0126).
 
 ## Data declaration
 

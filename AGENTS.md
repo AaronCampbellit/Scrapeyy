@@ -52,3 +52,9 @@ For documentation-only changes, do not rebuild or reload unchanged extension cod
 - Private-window capture may be enabled by the user through browser controls. Captures persist in the local Inbox; do not reuse private tabs for background recipes.
 - Keep consent and transient-secret handling for Borrow session, content sanitization, current-page video validation and ordinary browser security boundaries. No certificate/CORS/DRM bypass.
 - Update privacy and build notes to match the actual distribution. Historical AMO notes apply to 0.1.24 only; do not claim this personal-use build is approved or compliant.
+
+## Borrow session discovery (0.1.26 onward)
+
+- Keep scan/record work in the background and restore origin-only discovery metadata from `storage.session`. Never persist account secrets, raw URLs containing tokens, PINs or export approval.
+- Preserve cookie-store isolation, registrable/private-suffix boundaries, explicit permissions from button gestures, recording time limits, candidate review and cancellation. Do not assume every page link or request domain is needed for authentication.
+- Preserve user edits/exclusions while new observations arrive. Discovery may survive popup closure and worker restart; it must not silently resume recording after Stop, source-tab closure, permission removal or expiry.

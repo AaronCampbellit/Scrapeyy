@@ -16,6 +16,7 @@ vi.mock("../../src/platform/browser-api", () => ({ extensionBrowser: {
   tabs: { get: async () => ({ id: 1, active: true, url: "https://community.kaseya.com/webinar" }), sendMessage: state.send },
   downloads: { download: state.download },
 } }));
+vi.mock("../../src/session/discovery-background", () => ({ createDiscoveryController: () => ({ install: vi.fn(), handle: vi.fn() }) }));
 vi.mock("../../src/platform/content-injection", () => ({ ensureContentScript: vi.fn() }));
 
 const assetUrl = "https://embed-ssl.wistia.com/deliveries/webinar.bin";
