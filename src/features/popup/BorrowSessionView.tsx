@@ -28,6 +28,7 @@ export function BorrowSessionView({ site, discovery, onRequestAccess, onExport }
   const dirty = useRef(false);
   const latest = useRef<DiscoveryState | undefined>(undefined);
   const mounted = useRef(true);
+  const startAttempt = useRef<AbortController | undefined>(undefined);
   const originsRef = useRef(origins);
   originsRef.current = origins;
   const active = !!scan && ["waiting", "scanning", "recording"].includes(scan.status);
@@ -57,10 +58,17 @@ export function BorrowSessionView({ site, discovery, onRequestAccess, onExport }
   }, [discovery, site?.tabId]);
   async function startScan(record: boolean) {
     if (!discovery || site?.tabId === undefined) return;
-    setError(""); setApproved(false); setConnecting(true); dirty.current = false;
-    try { accept(await discovery.start(site.tabId, site.origin, record)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Discovery failed. Try again."); }
-    finally { setConnecting(false); }
+    const attempt = new AbortController();
+    startAttempt.current = attempt;
+    setError(""); setStatus(""); setApproved(false); setConnecting(true); dirty.current = false;
+    try {
+      const next = await discovery.start(site.tabId, site.origin, record, attempt.signal);
+      if (startAttempt.current === attempt) accept(next);
+    } catch (cause) {
+      if (mounted.current && startAttempt.current === attempt) setError(cause instanceof Error ? cause.message : "Discovery failed. Try again.");
+    } finally {
+      if (mounted.current && startAttempt.current === attempt) { startAttempt.current = undefined; setConnecting(false); }
+    }
   }
   function editOrigins(text: string) {
     setOrigins(text); originsRef.current = text; setApproved(false); setError(""); dirty.current = true;
@@ -73,6 +81,12 @@ export function BorrowSessionView({ site, discovery, onRequestAccess, onExport }
     } catch { /* Partial input stays local until it forms a valid list of origins. */ }
   }
   async function stopScan(clear = false) {
+    if (startAttempt.current) {
+      startAttempt.current.abort(); startAttempt.current = undefined;
+      setConnecting(false); setError("");
+      setStatus("Discovery canceled. You can dismiss the browser permission prompt and retry.");
+      return;
+    }
     if (!discovery || !scan || site?.tabId === undefined) return;
     setError("");
     try {
@@ -82,6 +96,7 @@ export function BorrowSessionView({ site, discovery, onRequestAccess, onExport }
   }
 
   useEffect(() => {
+    startAttempt.current = undefined; setConnecting(false);
     dirty.current = false; latest.current = undefined; setScan(undefined);
     setOrigins(available ? site.origin : ""); setApproved(false);
     setPin(""); setConfirm(""); setStatus(""); setError("");
@@ -119,20 +134,24 @@ export function BorrowSessionView({ site, discovery, onRequestAccess, onExport }
       <strong>Find session sites</strong>
       <small>Find related links, frames, open tabs and cookie domains. Results fill the list below.</small>
       <div className="session-discovery-actions">
-        <button type="button" className="settings-save" disabled={!available || busy || connecting || active || restoring} onClick={() => void startScan(false)}>Scan sites</button>
+        <button type="button" className="settings-save" disabled={!available || busy || connecting || active || restoring} onClick={() => void startScan(false)}>{scan?.status === "error" ? "Retry scan" : "Scan sites"}</button>
         <button type="button" disabled={!available || busy || connecting || active || restoring} onClick={() => void startScan(true)}>Record sign-in</button>
-        {active ? <button type="button" onClick={() => void stopScan()}>Stop discovery</button> : null}
-        {scan && !active ? <button type="button" disabled={busy} onClick={() => void stopScan(true)}>Clear discovery</button> : null}
+        {active || connecting ? <button type="button" onClick={() => void stopScan()}>Stop discovery</button> : null}
+        {scan && !active && !connecting ? <button type="button" disabled={busy} onClick={() => void stopScan(true)}>Clear discovery</button> : null}
       </div>
       <details className="session-discovery-help"><summary>Access and continuity</summary>
         <small>Scan requests access to this site's domain family. Record sign-in requests access across websites to follow sign-in redirects, and watches only this tab and windows it opens for up to 10 minutes. Browser grants remain until revoked in extension settings.</small>
         <small>You can close the popup while discovery runs. Results last one hour or until browser restart. PINs and export approval must be entered again after closing the popup. Discovery does not guarantee a transferable session.</small>
       </details>
-      {restoring || connecting ? <p role="status">Connecting to discovery…</p> : null}
+      {restoring && !connecting ? <p role="status">Restoring saved discovery...</p> : null}
+      {connecting || scan?.status === "waiting" ? <div className="session-permission-notice" role="status">
+        <strong>Waiting for browser permission</strong>
+        <small>The browser prompt may be behind Scrapeyy. Close this popup if needed, approve the prompt in the main browser window, then reopen Borrow session. Discovery will continue in the background.</small>
+      </div> : null}
       {scan ? <>
-        <p className="session-status" role="status">{scan.status === "recording" ? "Recording sign-in — you can close this popup, sign in, then return and stop discovery." : scan.status === "waiting" ? "Waiting for browser permission…" : scan.status === "scanning" ? "Scanning sites — you can close this popup and return." : scan.status === "error" ? "Discovery needs attention." : "Discovery saved for this browser session."}</p>
+        {!connecting && scan.status !== "waiting" ? <p className="session-status" role="status">{scan.status === "recording" ? "Recording sign-in — you can close this popup, sign in, then return and stop discovery." : scan.status === "scanning" ? "Scanning sites — you can close this popup and return." : scan.status === "error" ? "Discovery needs attention." : "Discovery saved for this browser session."}</p> : null}
         <small>Source: {scan.sourceOrigin} · {scan.candidates.length} sites found. A new scan uses the current tab.</small>
-        {scan.warnings.map(warning => <small className="session-warning" key={warning}>{warning}</small>)}
+        {!connecting && scan.warnings.map(warning => <small className="session-warning" key={warning}>{warning}</small>)}
         {scan.candidates.length ? <details><summary>Review discovered sites ({scan.candidates.length})</summary>
           <div className="session-candidates">{scan.candidates.map(candidate => <label key={candidate.origin}>
             <input type="checkbox" disabled={busy} checked={origins.split(/\s+/).includes(candidate.origin)} onChange={event => {

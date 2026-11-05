@@ -16,7 +16,7 @@ function fixture() {
     cookies: { getAllCookieStores: vi.fn(async () => [{ id: "one", tabIds: [1, 2, 4] }, { id: "two", tabIds: [3, 5] }]),
       getAll: vi.fn(async () => [{ domain: ".auth.example.co.uk", value: "NEVER-STORE-COOKIE", secure: true },
         { domain: "partition.example.co.uk", value: "partition", secure: true, partitionKey: {} }]) },
-    permissions: { contains: vi.fn(async () => true) },
+    permissions: { contains: vi.fn(async (_permissions?: { permissions?: string[]; origins?: string[] }) => true) },
     webNavigation: { getAllFrames: vi.fn(async () => [{ frameId: 0, url: origin }]) },
     scripting: { executeScript: vi.fn(async (_args: { target: { tabId: number } }) => [{ result: { found: [
       { origin: "https://signin.example.co.uk", evidence: "page link" },
@@ -122,4 +122,33 @@ it("caps candidates and selection with visible warnings", () => {
   for (let i = 0; i < 300; i++) addCandidate(state, `https://site${i}.example.com`, "page link", true);
   expect(state.candidates).toHaveLength(250); expect(state.selected).toHaveLength(100);
   expect(state.warnings).toHaveLength(2);
+});
+it("stops a waiting scan without scanning or restarting when access arrives later", async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  f.api.permissions.contains.mockImplementation(async (permissions?: { permissions?: string[] }) => permissions?.permissions?.length === 1);
+  const state = (await f.command("start", { origin })).state!;
+  await vi.advanceTimersByTimeAsync(1);
+  expect((await f.command("get")).state?.status).toBe("waiting");
+  await f.command("stop", { id: state.id });
+  f.api.permissions.contains.mockResolvedValue(true);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await f.command("get")).state?.status).toBe("ready");
+  expect(f.api.scripting.executeScript).not.toHaveBeenCalled();
+  vi.useRealTimers();
+});
+it("expires a missed permission prompt and keeps the timeout after grants arrive", async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  f.api.permissions.contains.mockImplementation(async (permissions?: { permissions?: string[] }) => permissions?.permissions?.length === 1);
+  await f.command("start", { origin });
+  await vi.advanceTimersByTimeAsync(60_001);
+  const state = (await f.command("get")).state!;
+  expect(state.status).toBe("error");
+  expect(state.warnings.join()).toContain("prompt may be behind Scrapeyy");
+  f.api.permissions.contains.mockResolvedValue(true);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect((await f.command("get")).state?.status).toBe("error");
+  expect(f.api.scripting.executeScript).not.toHaveBeenCalled();
+  vi.useRealTimers();
 });

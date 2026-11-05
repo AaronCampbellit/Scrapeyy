@@ -838,3 +838,7 @@ body.scrapeyy-popup {
 .session-discovery small { overflow-wrap: anywhere; }
 
 .session-discovery-help small { display: block; margin-top: 8px; }
+
+.session-permission-notice { border-left: 3px solid var(--accent, #387df6); padding: 8px 10px; }
+.session-permission-notice strong, .session-permission-notice small { display: block; }
+.session-permission-notice small { margin-top: 6px; }

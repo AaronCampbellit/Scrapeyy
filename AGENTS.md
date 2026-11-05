@@ -58,3 +58,5 @@ For documentation-only changes, do not rebuild or reload unchanged extension cod
 - Keep scan/record work in the background and restore origin-only discovery metadata from `storage.session`. Never persist account secrets, raw URLs containing tokens, PINs or export approval.
 - Preserve cookie-store isolation, registrable/private-suffix boundaries, explicit permissions from button gestures, recording time limits, candidate review and cancellation. Do not assume every page link or request domain is needed for authentication.
 - Preserve user edits/exclusions while new observations arrive. Discovery may survive popup closure and worker restart; it must not silently resume recording after Stop, source-tab closure, permission removal or expiry.
+
+- Permission waits must visibly explain where the browser prompt can appear, remain cancellable, and have a bounded timeout. Never leave retry controls disabled indefinitely; late responses from canceled attempts must not change a newer attempt.

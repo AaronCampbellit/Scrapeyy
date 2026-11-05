@@ -1,3 +1,5 @@
+> **0.1.27 permission recovery:** Borrow session clearly points to the browser permission prompt and keeps missed prompts stoppable and retryable. See [release notes](docs/RELEASE_0.1.27.md).
+
 > **0.1.26 session discovery:** Scan sites and optional Record sign-in populate Borrow session and survive closing the popup. See [release notes](docs/RELEASE_0.1.26.md).
 
 > **0.1.25 personal-use restoration:** restores pre-compliance capture/download behavior. See [restoration notes](docs/FUNCTIONALITY_RESTORATION.md). This is not the Mozilla-compliance submission package.
@@ -135,7 +137,7 @@ browser copies, and authenticated cross-device sessions remain manual checks.
 
 ## Scope and limitations
 
-This is a development extension, currently **0.1.26**. Captures and configuration
+This is a development extension, currently **0.1.27**. Captures and configuration
 are stored in the browser; explicit exports and configured automatic downloads
 write files to the device. Original HTTP/HTTPS asset requests can use the site's
 session and normal redirects; videos use the browser download manager. Private

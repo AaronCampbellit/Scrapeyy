@@ -1,7 +1,7 @@
 import { extensionBrowser as browser } from "../platform/browser-api";
 import { parseOrigins } from "./format";
 import { addCandidate, DISCOVERY_KEY, DISCOVERY_TTL, discoveryPermissions, inspectPageOrigins,
-  RECORD_MS, safeOrigin, sameSite, siteDomain, warn, type DiscoveryState, type Evidence } from "./discovery";
+  RECORD_MS, PERMISSION_WAIT_MS, PERMISSION_TIMEOUT, PERMISSION_DENIED, PERMISSION_FAILED, safeOrigin, sameSite, siteDomain, warn, type DiscoveryState, type Evidence } from "./discovery";
 
 const ALARM = "scrapeyy-session-discovery";
 type States = Record<string, DiscoveryState>;
@@ -21,7 +21,12 @@ export function createDiscoveryController(api = browser) {
       const before = JSON.stringify(states);
       const now = Date.now();
       for (const [key, state] of Object.entries(states)) {
+        if (state.status === "waiting") state.permissionUntil ??= state.updatedAt + PERMISSION_WAIT_MS;
         if (state.expiresAt <= now) delete states[key];
+        else if (state.status === "waiting" && (state.permissionUntil ?? state.updatedAt + PERMISSION_WAIT_MS) <= now) {
+          state.status = "error"; delete state.recordUntil; delete state.scanPending;
+          warn(state, PERMISSION_TIMEOUT);
+        }
         else if (state.status === "recording" && (state.recordUntil || 0) <= now) {
           state.status = "ready"; warn(state, "Sign-in recording stopped after 10 minutes.");
         }
@@ -47,8 +52,10 @@ export function createDiscoveryController(api = browser) {
     return state;
   });
   async function scan(id: string) {
-    const state = await mutate(id, state => { state.scanPending = true; if (state.status !== "recording") state.status = "scanning"; });
-    if (!state) return;
+    const state = await mutate(id, state => {
+      if (state.status === "scanning" || state.status === "recording") state.scanPending = true;
+    });
+    if (!state || !["scanning", "recording"].includes(state.status)) return;
     const store = await storeFor(state.sourceTabId);
     if (store.id !== state.storeId) throw new Error("The source profile or container changed. Start a new scan.");
     const source = await api.tabs.get(state.sourceTabId);
@@ -124,26 +131,27 @@ export function createDiscoveryController(api = browser) {
       if (!state || !["waiting", "scanning"].includes(state.status)) return;
       // The request starts from the popup click, but the job survives that popup disappearing.
       const permission = discoveryPermissions(state.sourceOrigin, record);
-      const deadline = Date.now() + 60_000;
+      const deadline = state.permissionUntil ?? Date.now() + PERMISSION_WAIT_MS;
       while (!await api.permissions.contains(permission)) {
-        if (Date.now() >= deadline) throw new Error("Website permission was not granted. Click Scan sites or Record sign-in to retry.");
+        if (Date.now() >= deadline) throw new Error(PERMISSION_TIMEOUT);
         const pending = await mutate(id, () => {});
         if (!pending || !["waiting", "scanning"].includes(pending.status)) return;
         await new Promise(resolve => setTimeout(resolve, 400));
       }
       const started = await mutate(id, current => {
-        if (record && !current.recordUntil) return;
+        if (!["waiting", "scanning"].includes(current.status) || (record && !current.recordUntil)) return;
+        delete current.permissionUntil;
         current.status = record ? "recording" : "scanning";
         if (record) current.recordUntil = Date.now() + RECORD_MS;
       });
-      if (!started || (record && started.status !== "recording")) return;
+      if (!started || started.status !== (record ? "recording" : "scanning")) return;
       await scan(id);
       await mutate(id, current => { if (current.status === "scanning") current.status = "ready"; });
     } catch (error) {
       await mutate(id, current => {
         current.status = "error"; delete current.scanPending;
         // Never display browser errors that might echo URLs or cookie values.
-        warn(current, error instanceof Error && error.message.startsWith("Website permission") ? error.message :
+        warn(current, error instanceof Error && error.message === PERMISSION_TIMEOUT ? PERMISSION_TIMEOUT :
           "Discovery was interrupted. Check website permissions and that the original tab is open, then retry.");
       });
     } finally { jobs.delete(id); }
@@ -155,14 +163,20 @@ export function createDiscoveryController(api = browser) {
     try {
       if (message.action === "cancel" && typeof message.requestId === "string") {
         if (attempts.get(tabId as number) === message.requestId) attempts.delete(tabId as number);
-        await transact(states => { for (const [key, state] of Object.entries(states)) if (state.id === message.requestId) delete states[key]; });
+        await transact(states => { for (const state of Object.values(states)) if (state.id === message.requestId) {
+          state.status = message.reason === "timeout" || message.reason === "denied" || message.reason === "failed" ? "error" : "ready";
+          delete state.recordUntil; delete state.permissionUntil; delete state.scanPending;
+          warn(state, message.reason === "timeout" ? PERMISSION_TIMEOUT : message.reason === "denied" ? PERMISSION_DENIED :
+            message.reason === "failed" ? PERMISSION_FAILED : "Discovery canceled. Dismiss any browser permission prompt before retrying.");
+          state.updatedAt = Date.now();
+        } });
         return { ok: true };
       }
       const requestId = typeof message.requestId === "string" ? message.requestId : crypto.randomUUID();
       // No permissions on first open: show the scan button without prompting.
       if (message.action === "start") {
         attempts.set(tabId as number, requestId);
-        const deadline = Date.now() + 60_000;
+        const deadline = Date.now() + PERMISSION_WAIT_MS;
         while (!await api.permissions.contains({ permissions: ["cookies"] })) {
           if (Date.now() >= deadline || attempts.get(tabId as number) !== requestId) return { ok: false };
           await new Promise(resolve => setTimeout(resolve, 400));
@@ -175,17 +189,20 @@ export function createDiscoveryController(api = browser) {
         if (!origin || origin !== message.origin) return { ok: false };
         const record = message.record === true;
         const state = await transact(states => {
+          if (attempts.get(tabId as number) !== requestId) return;
           const previous = states[store.id];
           const resume = previous && previous.sourceTabId === tabId && previous.sourceOrigin === origin;
           const next: DiscoveryState = { id: requestId, sourceTabId: tabId as number, sourceOrigin: origin,
             storeId: store.id, tabIds: [tabId as number], candidates: resume ? previous.candidates : [],
-            selected: resume ? previous.selected : [], excluded: resume ? previous.excluded : [], status: "waiting", expiresAt: Date.now() + DISCOVERY_TTL,
+            selected: resume ? previous.selected : [], excluded: resume ? previous.excluded : [], status: "waiting", permissionUntil: Date.now() + PERMISSION_WAIT_MS, expiresAt: Date.now() + DISCOVERY_TTL,
             updatedAt: Date.now(), warnings: [], ...(record ? { recordUntil: Date.now() + RECORD_MS } : {}) };
           addCandidate(next, origin, "current site", true); states[store.id] = next; return next;
         });
+        if (!state) return { ok: false };
         void run(state.id, record);
         return { ok: true, state };
       }
+      let finalizeRecording = false;
       const state = await transact(states => {
         const current = states[store.id];
         if (!current || message.action === "get") return current;
@@ -195,11 +212,16 @@ export function createDiscoveryController(api = browser) {
           current.excluded = [...new Set([...current.excluded, ...current.selected.filter(o => !selected.includes(o))])].filter(o => !selected.includes(o));
           current.selected = selected;
         }
-        if (message.action === "stop") { current.status = "scanning"; delete current.recordUntil; }
+        if (message.action === "stop") {
+          finalizeRecording = current.status === "recording";
+          current.status = finalizeRecording ? "scanning" : "ready";
+          delete current.recordUntil; delete current.permissionUntil;
+          if (!finalizeRecording) { delete current.scanPending; warn(current, "Discovery stopped. You can retry when ready."); }
+        }
         if (message.action === "clear") { delete states[store.id]; return; }
         current.updatedAt = Date.now(); return current;
       });
-      if (message.action === "stop" && state) void scan(state.id)
+      if (finalizeRecording && state) void scan(state.id)
         .catch(() => mutate(state.id, current => warn(current, "The final cookie scan was incomplete.")))
         .finally(() => mutate(state.id, current => { if (current.status === "scanning") current.status = "ready"; }));
       return { ok: true, state };

@@ -5,17 +5,21 @@ export const MAX_ORIGINS = 100;
 export const MAX_CANDIDATES = 250;
 export const RECORD_MS = 10 * 60_000;
 export const DISCOVERY_TTL = 60 * 60_000;
+export const PERMISSION_WAIT_MS = 60_000;
+export const PERMISSION_TIMEOUT = "Still waiting for browser permission. The prompt may be behind Scrapeyy. Close this popup, approve or dismiss the browser prompt, then reopen Borrow session and retry.";
+export const PERMISSION_DENIED = "Website permission was declined. Click Scan sites or Record sign-in to retry, or enter origins manually.";
+export const PERMISSION_FAILED = "The browser permission request could not finish. Close this popup, check the browser prompt, then reopen Borrow session and retry.";
 export type Evidence = "current site" | "page link" | "form" | "frame" | "open tab" | "cookie" | "navigation" | "redirect" | "request";
 export interface Candidate { origin: string; evidence: Evidence[] }
 export interface DiscoveryState {
   id: string; sourceTabId: number; sourceOrigin: string; storeId: string;
   tabIds: number[]; candidates: Candidate[]; selected: string[]; excluded: string[];
   status: "waiting" | "scanning" | "recording" | "ready" | "error";
-  recordUntil?: number; scanPending?: boolean; expiresAt: number; updatedAt: number; warnings: string[];
+  recordUntil?: number; permissionUntil?: number; scanPending?: boolean; expiresAt: number; updatedAt: number; warnings: string[];
 }
 export interface DiscoveryClient {
   get(tabId: number): Promise<DiscoveryState | undefined>;
-  start(tabId: number, origin: string, record: boolean): Promise<DiscoveryState | undefined>;
+  start(tabId: number, origin: string, record: boolean, signal?: AbortSignal): Promise<DiscoveryState | undefined>;
   update(tabId: number, id: string, selected: string[]): Promise<DiscoveryState | undefined>;
   stop(tabId: number, id: string): Promise<DiscoveryState | undefined>;
   clear(tabId: number, id: string): Promise<void>;

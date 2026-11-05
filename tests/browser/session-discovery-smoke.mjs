@@ -7,6 +7,7 @@ const { chromium } = await import(process.env.SCRAPEYY_PLAYWRIGHT_MODULE || 'pla
 const root = resolve('work/discovery-smoke', String(Date.now()));
 await mkdir(root, { recursive: true });
 const build = resolve(process.argv[2] || '.output/chrome-mv3');
+const expectedVersion = JSON.parse(await readFile(join(build, 'manifest.json'), 'utf8')).version;
 let port;
 const server = createServer((request, response) => {
   if (request.url.startsWith('/redirect')) {
@@ -44,7 +45,7 @@ try {
       const popup = await context.newPage(); await popup.goto(popupUrl);
       await popup.getByRole('tab', { name: 'Borrow session', exact: true }).click();
       assert.equal(await popup.getByRole('button', { name: 'Scan sites' }).count(), 1);
-      assert.equal(await worker.evaluate(async () => (await chrome.runtime.getManifest()).version), '0.1.26');
+      assert.equal(await worker.evaluate(async () => (await chrome.runtime.getManifest()).version), expectedVersion);
       await context.close(); context = undefined; continue;
     }
     assert.equal(typeof tabId, 'number');

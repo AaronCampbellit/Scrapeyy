@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { BorrowSessionView } from "../../src/features/popup/BorrowSessionView";
 import type { DiscoveryClient, DiscoveryState } from "../../src/session/discovery";
@@ -26,6 +26,34 @@ it("starts from a direct button gesture, fills origins and restores after closin
   expect(screen.getByLabelText("PIN or passphrase", { exact: true })).toHaveValue("");
   expect(screen.getByRole("checkbox", { name: /I approve exporting/ })).not.toBeChecked();
   expect(JSON.stringify(state)).not.toContain("NEVER-PERSIST");
+});
+it("explains the hidden browser prompt immediately and allows Stop while permission is pending", async () => {
+  let signal: AbortSignal | undefined;
+  const client: DiscoveryClient = { get: vi.fn(async () => undefined), update: vi.fn(), stop: vi.fn(), clear: vi.fn(),
+    start: vi.fn((_tab, _origin, _record, abortSignal) => { signal = abortSignal; return new Promise<DiscoveryState | undefined>(() => {}); }) };
+  render(<BorrowSessionView site={site} discovery={client} onRequestAccess={vi.fn()} onExport={vi.fn()} />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Scan sites" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "Scan sites" }));
+  expect(screen.getByText("Waiting for browser permission")).toBeVisible();
+  expect(screen.getByText(/prompt may be behind Scrapeyy/)).toBeVisible();
+  expect(screen.queryByText(/Connecting to discovery/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Stop discovery" }));
+  expect(signal?.aborted).toBe(true);
+  expect(screen.getByRole("button", { name: "Scan sites" })).toBeEnabled();
+  expect(screen.queryByText("Waiting for browser permission")).not.toBeInTheDocument();
+});
+it("re-enables retry after a permission failure without leaving a connecting indicator", async () => {
+  let fail!: (error: Error) => void;
+  const client: DiscoveryClient = { get: vi.fn(async () => undefined), update: vi.fn(), stop: vi.fn(), clear: vi.fn(),
+    start: vi.fn(() => new Promise<DiscoveryState | undefined>((_resolve, reject) => { fail = reject; })) };
+  render(<BorrowSessionView site={site} discovery={client} onRequestAccess={vi.fn()} onExport={vi.fn()} />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Scan sites" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "Scan sites" }));
+  await act(async () => fail(new Error("Still waiting for browser permission. Retry.")));
+  expect(screen.getByRole("button", { name: "Scan sites" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Record sign-in" })).toBeEnabled();
+  expect(screen.queryByText("Waiting for browser permission")).not.toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent("Retry");
 });
 it("restores recording, retains editable origins, and stops before export", async () => {
   let state = { ...saved, status: "recording" as DiscoveryState["status"] };
